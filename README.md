@@ -41,18 +41,19 @@ static has all static assets js, css and images.
 adjudicator.py:
 Consist of the actual implementation of the Adjudicator. The game is started by invoking the method: 
 
-runGame(player1, player2)
+runGame(agentOne,agentTwo,diceThrows=None,chanceCards=None,communityCards=None)
+This method accepts 2 Agents and runs the game. Over the course of the game, it determines which Agent is the winner.
+The other 3 parameters are for testing purposes only.
+diceThrows: used to pass in an array of dice rolls (each a 2x1 array of 2 die). The test case would be evaluated by taking a dice roll from the array and applying it instead of using the random die.
+chanceCards: an array of ids of chance cards to be used for a particular testcases. For referencing the values of the ids, please check constants.py.
+chanceCards: an array of ids of community chest cards to be used for a particular testcases. For referencing the values of the ids, please check constants.py.
 
-This method accepts 2 Agents and runs the game. Over the course of the run, it determines which Agent is the winner.
+config.py
+Consists of configurations for logging to the monopoly.log file. You can modify the verbosity of logging for different flows of the adjudicator here.
 
-testcase_x.py:
+constants.py
+Contains the constant representations such as the board, chance cards and community chest cards that remain static throughout the runtime of the game.
 
-All files of this format represent test cases that can be independently run to simulate individual flows of the Adjudicator. The testcases may be run over a single game turn or over multiple turns.
+testcases.py:
+Consists of all the testcases written for and tested against the adjudicator. Each testcase contains a short description regarding what it is testing. The testcases each define their own Agents to suit their testing requirements. The testcases each receive an instance of the adjudicator as an argument and perform testcase validation by invoking the runGame method and observing the final results.
 The program accepts an Adjudicator and 2 Agents as arguments and checks whether the testcase passes for the simulation run.
-
-testsuite.py
-Runs all the testcases as a single suite.
-
-test_functional.py:
-
-Consists of testcases which test the correctness of individual functions. Used to ensure future code changes don't break the expected value from a function.
