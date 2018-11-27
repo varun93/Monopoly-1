@@ -22,13 +22,15 @@ export FLASK_APP=app.py
 flask run
 
 To run the adjudicator program without the UI implementation, run:
-python adjudicator.py
+from adjudicator import Adjudicator
+from agent import Agent
+agentOne = Agent(1)
+agentTwo = Agent(2)
+adjudicator = Adjudicator()
+adjudicator.runGame(agentOne, agentTwo)
 
 To run testcases, run:
-python testcases_x.py to run individual testcases.
-
-To run the entire suite, run:
-python testsuite.py
+python testcases.py
 
 To run the user interface
 cd react-user-interface
