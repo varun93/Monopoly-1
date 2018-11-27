@@ -41,6 +41,8 @@ npm start
 
 ## App Structure
 The master branch consists of the implementation of the Adjudicator for the monopoly game.
+The implementation also consists of a UI for going through the various game states after a game has been completed. 
+NOTE: The UI currently shows the board representation and basic information about each Agent on any given turn such as properties owned, cash constructions on each property etc. Finer information regarding the state still remains to be implemented for the UI and is in progress.
 
 app.py is the controller.  
 templates for rendering templates.  
