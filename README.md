@@ -2,12 +2,6 @@
 
 Data Science Project CSE 519
 Monopoly game playing AI Agent
-Done by Team 007
-
-Team Members:
-Pragesh Jagnani
-Sanjay Mathew Thomas
-Varun Hegde
 
 ## Install the Dependencies
 
@@ -73,21 +67,26 @@ The program accepts an Adjudicator and 2 Agents as arguments and checks whether 
 If an agent takes more than 3 seconds to respond to any call from the adjudicator, that agent loses. This is treated separately from the erroneous input situation where the agent passes in an incorrect value to a function call from the adjudicator. (For eg, passing in a string value/negative number to an auction, we default to a bid of 0).
 
 2. We make receiveState calls in the following scenarios:
+
 a) When a Chance or Community Chest card id drawn, it is called from both Agents.
 Phase Number will be 7 for Chance cards and 8 for Community.
 Phase payload will contain card id.
+
 b) Dice Roll
 Phase Number = 2
 Contains the die value for each dice and whether the player is eligible for another try in his current turn(effect of double. This is to account for cases where the player might not get another chance even if he rolls doubles in certain cases).
 Called for both Agents.
+
 c) Jail
 Phase Number = 6
 If an agent was in Jail at the start of his turn, this call informs both Agents whether he is still in Jail after his Jail decision was carried out by the adjudicator.
 Phase payload consists of a boolean with True meaning the agent is out of Jail.
-Called for both Agents
+Called for both Agents.
+
 d) Auction
 Phase Number = 4
-Called after an auction is completed to let both Agents know who won the auction. Payload consists of (Auctioned Property ID, winning agent id)
+Called after an auction is completed to let both Agents know who won the auction. Payload consists of (Auctioned Property ID, winning agent id).
+
 e) TradeResponse  
 Phase Number = 1 (Trade offer)
 If Agent 1 started a trade, and Agent 2 made a decision on it, this call informs Agent 1 regarding that decision.
