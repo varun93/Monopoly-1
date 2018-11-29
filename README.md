@@ -68,7 +68,7 @@ testcases.py:
 Consists of all the testcases written for and tested against the adjudicator. Each testcase contains a short description regarding what it is testing. The testcases each define their own Agents to suit their testing requirements. The testcases each receive an instance of the adjudicator as an argument and perform testcase validation by invoking the runGame method and observing the final results.
 The program accepts an Adjudicator and 2 Agents as arguments and checks whether the testcase passes for the simulation run.
 
-##Special Cases:
+## Special Cases:
 1. Timeout:
 If an agent takes more than 3 seconds to respond to any call from the adjudicator, that agent loses. This is treated separately from the erroneous input situation where the agent passes in an incorrect value to a function call from the adjudicator. (For eg, passing in a string value/negative number to an auction, we default to a bid of 0).
 
@@ -94,3 +94,16 @@ If Agent 1 started a trade, and Agent 2 made a decision on it, this call informs
 The payload is of the form:
 (tradeResponse,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
 where tradeResponse is a boolean value showing whether the trade was accepted by the other agent or not.
+
+3. State History:
+The state history is passed as part of the state always. A state is added to the state history whenever the state is handed to the agent as part of a function call from the adjudicator.(i.e., every instance of the state that the agent has seen would be recorded.)
+
+4. Auction:
+The way we have implemented BSTM invocation in our Adjudicator is to call it at 3 different points within a turn.
+a) Before the Dice Roll (Preturn BSTM)
+b) After the Dice Roll. (This would include current position info such as any possible debt or property id in case of unowned property.)
+c) Post Agent decisions (Post turn BSTM).
+
+Thus, there is a problem of BSTM not being invoked again for auctions. i.e., in the case where an agent falls on an unowned property, the BSTM call would be made while giving the player this information after moving him to this location. Thus, the current player has to make a decision to either buy or auction the property and make necessary BSTM operations to generate money here. This also puts the opponent at a disadvantage because if the player starts an auction, he wouldn't get a chance to make a BSTM to secure the money needed for the auction. He would instead, have to rely on his cash in hand at that time.
+
+We had implemented it this way as we felt it might lead to more strategy involving auctions. Please let us know if you feel another BSTM is needed before the auction.
