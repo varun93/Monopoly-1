@@ -49,12 +49,12 @@ static has all static assets js, css and images.
 adjudicator.py:
 Consist of the actual implementation of the Adjudicator. The game is started by invoking the method: 
 
-runGame(agentOne,agentTwo,diceThrows=None,chanceCards=None,communityCards=None)
-This method accepts 2 Agents and runs the game. Over the course of the game, it determines which Agent is the winner.
-The other 3 parameters are for testing purposes only.
-diceThrows: used to pass in an array of dice rolls (each a 2x1 array of 2 die). The test case would be evaluated by taking a dice roll from the array and applying it instead of using the random die.
-chanceCards: an array of ids of chance cards to be used for a particular testcases. For referencing the values of the ids, please check constants.py.
-chanceCards: an array of ids of community chest cards to be used for a particular testcases. For referencing the values of the ids, please check constants.py.
+runGame(agentOne,agentTwo,diceThrows=None,chanceCards=None,communityCards=None)<br>
+This method accepts 2 Agents and runs the game. Over the course of the game, it determines which Agent is the winner.<br>
+The other 3 parameters are for testing purposes only.<br>
+diceThrows: used to pass in an array of dice rolls (each a 2x1 array of 2 die). The test case would be evaluated by taking a dice roll from the array and applying it instead of using the random die.<br>
+chanceCards: an array of ids of chance cards to be used for a particular testcases. For referencing the values of the ids, please check constants.py.<br>
+communityCards: an array of ids of community chest cards to be used for a particular testcases. For referencing the values of the ids, please check constants.py.
 
 config.py
 Consists of configurations for logging to the monopoly.log file. You can modify the verbosity of logging for different flows of the adjudicator here.
