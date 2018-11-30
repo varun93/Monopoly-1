@@ -33,6 +33,9 @@ npm start
 
 ```
 
+## Issue Log
+If you face issues with running the code on Windows, please check the Issues list.
+
 ## App Structure
 The master branch consists of the implementation of the Adjudicator for the monopoly game.
 The implementation also consists of a UI for going through the various game states after a game has been completed. 
