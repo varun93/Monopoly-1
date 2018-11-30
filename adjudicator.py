@@ -282,7 +282,9 @@ class Adjudicator:
 		def handleBuy(agent,properties):
 			currentPlayer = agent.id
 			
-			invalidProperties = [x for x in properties if (x[1]<0) or (x[1]>5)]
+			#Checking if there are properties where houses can't be built
+			#Or has invalid number of houses to be built
+			invalidProperties = [x for x in properties if (x[1]<0) or (x[1]>5 or constants.board[x[0]]['class']!='Street' )]
 			if len(invalidProperties) > 0:
 				return False
 
@@ -331,6 +333,11 @@ class Adjudicator:
 
 		def handleSell(agent,properties):
 			currentPlayer = agent.id
+			
+			#Checking if there are properties where houses can't be built
+			invalidProperties = [x for x in properties if constants.board[x[0]]['class']!='Street' ]
+			if len(invalidProperties) > 0:
+				return False
 			
 			if not validBuyingSequence(currentPlayer,properties,-1):
 				return False
