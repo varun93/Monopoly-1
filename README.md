@@ -108,4 +108,4 @@ c) Post Agent decisions (Post turn BSTM).
 
 >>Thus, there is a scenario of BSTM not being invoked again for auctions. i.e., in the case where an agent falls on an unowned property, the BSTM call would be made while giving the player this information after moving him to this location. Thus, the current player has to make a decision to either buy or auction the property and make necessary BSTM operations to generate money here. This also puts the opponent at a disadvantage because if the player starts an auction, he wouldn't get a chance to make a BSTM to secure the money needed for the auction. He would instead, have to rely on his cash in hand at that time.
 
-We had implemented it this way as we felt it might lead to more strategy involving auctions. Please let us know if you feel another BSTM is needed before the auction.
+>>We had implemented it this way as we felt it might lead to more strategy involving auctions. Please let us know if you feel another BSTM is needed before the auction.
