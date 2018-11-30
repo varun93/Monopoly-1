@@ -434,11 +434,15 @@ class Adjudicator:
 				propertyStatus = getPropertyStatus(state,propertyOffer)
 				if not rightOwner(propertyStatus,currentPlayer):
 					return False
+				if abs(propertyStatus) > 1 and abs(propertyStatus) < 7:
+					return False
 
 			# check if the other agent actually cash and properties to offer
 			for propertyRequest in propertiesRequest:
 				propertyStatus = getPropertyStatus(state,propertyRequest)
 				if not rightOwner(propertyStatus,otherPlayer):
+					return False
+				if abs(propertyStatus) > 1 and abs(propertyStatus) < 7:
 					return False
 				
 			
