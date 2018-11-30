@@ -29,7 +29,7 @@ flask run
 cd react-user-interface
 npm install
 npm start
-
+#The server starts up on part 3000
 ```
 
 ## Issue Log
