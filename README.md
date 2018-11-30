@@ -12,9 +12,6 @@ pip install -r requirements.txt
 ## Run the code
 
 ```
-export FLASK_APP=app.py
-flask run
-
 To run the adjudicator program without the UI implementation, run:
 from adjudicator import Adjudicator
 from agent import Agent
@@ -26,7 +23,9 @@ adjudicator.runGame(agentOne, agentTwo)
 To run testcases, run:
 python testcases.py
 
-To run the user interface
+To run the user interface:
+export FLASK_APP=app.py
+flask run
 cd react-user-interface
 npm install
 npm start
