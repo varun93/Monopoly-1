@@ -26,6 +26,7 @@ python testcases.py
 To run the user interface:
 export FLASK_APP=app.py
 flask run
+#In a separate terminal window, run the below mentioned code
 cd react-user-interface
 npm install
 npm start
