@@ -34,7 +34,8 @@ npm start
 ```
 
 ## Issue Log
-If you face issues with running the code on Windows, please check the Issues list.
+1) If you face issues with running the code on Windows, please check the Issues list.
+2) The code doesn't contain an agent. You would need to add your agent in. You can check out testcases.py to get an idea of some sample agents.
 
 ## App Structure
 The master branch consists of the implementation of the Adjudicator for the monopoly game.
