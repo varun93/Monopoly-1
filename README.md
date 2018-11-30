@@ -95,6 +95,8 @@ The payload is of the form:
 (tradeResponse,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
 where tradeResponse is a boolean value showing whether the trade was accepted by the other agent or not.
 
+>>NOTE: Please note that this does not include the case where the agent who proposes the trade gives an invalid trade offer (eg, He requested a property from the opponent that has a house on it). If that happens, the opponent is not consulted for a tradeResponse. Thus there would be no receiveState call in that case. This is to be expected as the sole reason this scenario occurred was because the agent who proposed the trade gave an erroneous input. Also, since the input was erroneous, this particular BSTM of the agent would end with this trade request.
+
 3. State History:
 The state history is passed as part of the state always. A state is added to the state history whenever the state is handed to the agent as part of a function call from the adjudicator.(i.e., every instance of the state that the agent has seen would be recorded.)
 
