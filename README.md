@@ -70,27 +70,22 @@ The program accepts an Adjudicator and 2 Agents as arguments and checks whether 
 1. Timeout:
 If an agent takes more than 3 seconds to respond to any call from the adjudicator, that agent loses. This is treated separately from the erroneous input situation where the agent passes in an incorrect value to a function call from the adjudicator. (For eg, passing in a string value/negative number to an auction, we default to a bid of 0).
 
-2. We make receiveState calls in the following scenarios:
-
+2. We make receiveState calls in the following scenarios:<br>
 a) When a Chance or Community Chest card id drawn, it is called from both Agents.
 Phase Number will be 7 for Chance cards and 8 for Community.
-Phase payload will contain card id.
-
+Phase payload will contain card id.<br>
 b) Dice Roll
 Phase Number = 2
 Contains the die value for each dice and whether the player is eligible for another try in his current turn(effect of double. This is to account for cases where the player might not get another chance even if he rolls doubles in certain cases).
-Called for both Agents.
-
+Called for both Agents.<br>
 c) Jail
 Phase Number = 6
 If an agent was in Jail at the start of his turn, this call informs both Agents whether he is still in Jail after his Jail decision was carried out by the adjudicator.
 Phase payload consists of a boolean with True meaning the agent is out of Jail.
-Called for both Agents.
-
+Called for both Agents.<br>
 d) Auction
 Phase Number = 4
-Called after an auction is completed to let both Agents know who won the auction. Payload consists of (Auctioned Property ID, winning agent id).
-
+Called after an auction is completed to let both Agents know who won the auction. Payload consists of (Auctioned Property ID, winning agent id).<br>
 e) TradeResponse  
 Phase Number = 1 (Trade offer)
 If Agent 1 started a trade, and Agent 2 made a decision on it, this call informs Agent 1 regarding that decision.
@@ -105,8 +100,7 @@ The state history is passed as part of the state always. A state is added to the
 The way we have implemented BSTM invocation in our Adjudicator is to call it at 3 different points within a turn.
 a) Before the Dice Roll (Preturn BSTM)
 b) After the Dice Roll. (This would include current position info such as any possible debt or property id in case of unowned property.)
-c) Post Agent decisions (Post turn BSTM).
-
+c) Post Agent decisions (Post turn BSTM).<br>
 Thus, there is a scenario of BSTM not being invoked again for auctions. i.e., in the case where an agent falls on an unowned property, the BSTM call would be made while giving the player this information after moving him to this location. Thus, the current player has to make a decision to either buy or auction the property and make necessary BSTM operations to generate money here. This also puts the opponent at a disadvantage because if the player starts an auction, he wouldn't get a chance to make a BSTM to secure the money needed for the auction. He would instead, have to rely on his cash in hand at that time.
 
 We had implemented it this way as we felt it might lead to more strategy involving auctions. Please let us know if you feel another BSTM is needed before the auction.
