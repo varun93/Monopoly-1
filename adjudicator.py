@@ -1468,7 +1468,7 @@ class Adjudicator:
 		
 		#Storing the state_history to log file
 		f = open("state_history.log", "w")
-		for history in constants.state_history:
+		for history in self.stateHistory:
 			f.write(str(history)+",\n")
 		
 		"""Determine the winner"""
