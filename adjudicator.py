@@ -1524,7 +1524,7 @@ class Adjudicator:
 		if receiveState:
 			action = player.receiveState(stateToBeSent)
 		elif current_phase == self.BSTM:
-			action = player.getBMSTDecision(stateToBeSent)
+			action = player.getBSMTDecision(stateToBeSent)
 		elif current_phase == self.TRADE_OFFER:
 			action = player.respondTrade(stateToBeSent)
 		elif current_phase == self.BUYING:
