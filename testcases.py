@@ -61,8 +61,8 @@ def compare_states(state,expected_output):
 def testcase_auction(adjudicator):
 	print("Test Case: Description:")
 	print("AgentTwo will fall on Vermont Avenue(Position 8) and will decide to auction it.")
-	print("AgentTwo will bid $170 and AgentOne $160")
-	print("The auction would be won by AgentTwo")
+	print("AgentTwo will bid $175.5 and AgentOne $160")
+	print("The auction would be won by AgentTwo who will only pay 175")
 	
 	class AgentOne:
 		def __init__(self, id):
@@ -91,7 +91,7 @@ def testcase_auction(adjudicator):
 			return False
 	
 		def auctionProperty(self, state):
-			return 170
+			return 175.5
 		
 		def receiveState(self, state):
 			pass
@@ -103,7 +103,7 @@ def testcase_auction(adjudicator):
 	final_state = adjudicator.state
 	
 	expected_output = {
-		"cash": [1500,1500-170],
+		"cash": [1500,1500-175],
 		"position":[8,0],
 		"properties":[(8,-1)]
 	}
@@ -343,7 +343,7 @@ def testcase_trade(adjudicator):
 			virginia = state[PROPERTY_STATUS_INDEX][14]	
 			
 			if (virginia == 1) and (self.trade_status==None):
-				return ("T",50,[19],0,[14])
+				return ("T",50.5,[19],0,[14])
 			
 			return None
 			
