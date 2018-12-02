@@ -142,6 +142,43 @@ class Adjudicator:
 			return 0
 		return cash
 	
+	"""
+	Checks if a particular action given by the agent to BSMT is valid.
+	Return True if the action was correctly parsed. False otherwise
+	"""
+	def bsmt_input_validator(self,type,action):
+		if not isinstance(action,tuple):
+			return False
+		if not isinstance(action[0], str):
+			return False
+		
+		if (type=="B") or (type=="S"):
+			if len(action)<2:
+				return False
+			if not isinstance(action[1], list) or not isinstance(action[1], tuple):
+				return False
+			else:
+				for prop in action[1]:
+					if not isinstance(action[1], list) or not isinstance(action[1], tuple):
+						return False
+					else:
+						pass
+		elif type == "T":
+			if len(action)<2:
+				return False
+			if not isinstance(action[1], list) or not isinstance(action[1], tuple):
+				return False
+		elif type == "M":
+			if len(action)<5:
+				return False
+			action[1] = check_valid_cash(action[1])
+			if not isinstance(action[2], list) or not isinstance(action[2], tuple):
+				return False
+			action[3] = check_valid_cash(action[1])
+			if not isinstance(action[4], list) or not isinstance(action[4], tuple):
+				return False
+		return True
+	
 	def getOtherPlayer(self,currentPlayer):
 		if currentPlayer == self.AGENTONE:
 			return self.AGENTTWO
@@ -1424,11 +1461,13 @@ class Adjudicator:
 						"""State now contain info about the position the player landed on"""
 						"""Performing the actual effect of the current position"""
 						result = self.turn_effect(self.state,currentPlayer,opponent)
+						#AgentOne wasn't able to make payment
 						if not result[0]:
-							winner = opponent.id
+							winner = self.agentTwo.id
 							break
+						#AgentTwo wasn't able to make payment
 						elif not result[1]:
-							winner = currentPlayer.id
+							winner = self.agentOne.id
 							break
 						if True in self.timeoutTracker:
 							if self.timeoutTracker[currentPlayer]:
