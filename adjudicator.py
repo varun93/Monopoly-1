@@ -146,37 +146,48 @@ class Adjudicator:
 	Checks if a particular action given by the agent to BSMT is valid.
 	Return True if the action was correctly parsed. False otherwise
 	"""
-	def bsmt_input_validator(self,type,action):
-		if not isinstance(action,tuple):
-			return False
-		if not isinstance(action[0], str):
-			return False
-		
+	def bsmt_input_validator(self,action):
+		type = action[0]
 		if (type=="B") or (type=="S"):
 			if len(action)<2:
 				return False
-			if not isinstance(action[1], list) or not isinstance(action[1], tuple):
+			if not isinstance(action[1], list) and not isinstance(action[1], tuple):
 				return False
 			else:
 				for prop in action[1]:
-					if not isinstance(action[1], list) or not isinstance(action[1], tuple):
+					if not isinstance(prop, list) and not isinstance(prop, tuple):
 						return False
 					else:
-						pass
-		elif type == "T":
+						if len(prop)<2:
+							return False
+						if self.typecast(prop[0],int,-1) == -1:
+							return False
+						if self.typecast(prop[1],int,-1) == -1:
+							return False
+		elif type == "M":
 			if len(action)<2:
 				return False
-			if not isinstance(action[1], list) or not isinstance(action[1], tuple):
+			if not isinstance(action[1], list) and not isinstance(action[1], tuple):
 				return False
-		elif type == "M":
+			else:
+				for prop in action[1]:
+					if self.typecast(prop,int,-1) == -1:
+							return False
+		elif type == "T":
 			if len(action)<5:
 				return False
-			action[1] = check_valid_cash(action[1])
-			if not isinstance(action[2], list) or not isinstance(action[2], tuple):
+			if not isinstance(action[2], list) and not isinstance(action[2], tuple):
 				return False
-			action[3] = check_valid_cash(action[1])
-			if not isinstance(action[4], list) or not isinstance(action[4], tuple):
+			else:
+				for prop in action[2]:
+					if self.typecast(prop,int,-1) == -1:
+							return False
+			if not isinstance(action[4], list) and not isinstance(action[4], tuple):
 				return False
+			else:
+				for prop in action[4]:
+					if self.typecast(prop,int,-1) == -1:
+							return False
 		return True
 	
 	def getOtherPlayer(self,currentPlayer):
@@ -553,6 +564,9 @@ class Adjudicator:
 			nonlocal agentTwoTradeDone
 			
 			intent = action[0]
+			
+			if not self.bsmt_input_validator(action):
+				return False
 			
 			if intent == "B":
 				return handleBuy(agent,action[1])
