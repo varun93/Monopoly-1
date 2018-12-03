@@ -19,7 +19,7 @@ class Dice:
 			log("dice","Choosing the debug dice")
 			roll = dice
 		else:
-			roll = [random.randint(1, 7), random.randint(1, 7)]
+			roll = [random.randint(1, 6), random.randint(1, 6)]
 		
 		self.die_1 = roll[0]
 		self.die_2 = roll[1]
