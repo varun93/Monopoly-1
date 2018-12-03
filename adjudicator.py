@@ -1042,7 +1042,7 @@ class Adjudicator:
 		if propertyValue == 0:
 			#Unowned
 			output['phase'] = self.BUYING
-			output['phase_properties'] = [playerPosition]
+			output['phase_properties'] = playerPosition
 			output['debt'] = (0,constants.board[playerPosition]['price'])
 		else:
 			#Check if owned by opponent
@@ -1233,7 +1233,7 @@ class Adjudicator:
 				phaseNumber = self.BUYING
 				debt[2*currentPlayer] = 0
 				debt[2*currentPlayer+1] = constants.board[playerPosition]['price']
-				phasePayload.append(playerPosition)
+				phasePayload = playerPosition
 			else:
 				#Check if owned by opponent
 				if currentPlayer == 0:

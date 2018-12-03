@@ -1,5 +1,4 @@
 from config import log
-import numpy as np
 import config
 
 class Dice:

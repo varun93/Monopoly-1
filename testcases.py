@@ -926,7 +926,7 @@ def testcase_buying_max_houses(adjudicator):
 				return None
 	
 		def buyProperty(self, state):
-			propertyId = state[PHASE_PAYLOAD_INDEX][0]
+			propertyId = state[PHASE_PAYLOAD_INDEX]
 			if propertyId == 39:
 				return False
 			return True
@@ -1083,7 +1083,7 @@ def testcase_selling_hotel_aftermax(adjudicator):
 				return None
 	
 		def buyProperty(self, state):
-			propertyId = state[PHASE_PAYLOAD_INDEX][0]
+			propertyId = state[PHASE_PAYLOAD_INDEX]
 			if propertyId == 39:
 				return False
 			return True
@@ -1477,6 +1477,7 @@ def testcase_railroad_chance_card_owned(adjudicator):
 	
 	return result
 
+"""
 print("Testcase flow Description:")
 print("Turn 0:")
 print("AgentOne falls on Oriental Avenue and buys it.")
@@ -1498,7 +1499,7 @@ print("Turn 6:")
 print("AgentOne falls on Virginia Avenue and buys it.")
 print("During the post turn BSTM, AgentTwo proposes a trade of $50 and New York Avenue for Virginia Avenue.")
 print("AgentOne accepts.\n")
-
+"""
 print("This testcase validates the following:")
 
 """
