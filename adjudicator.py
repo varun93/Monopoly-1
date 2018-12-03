@@ -565,8 +565,8 @@ class Adjudicator:
 			
 			intent = action[0]
 			
-			if not self.bsmt_input_validator(action):
-				return False
+			#if not self.bsmt_input_validator(action):
+			#	return False
 			
 			if intent == "B":
 				return handleBuy(agent,action[1])
