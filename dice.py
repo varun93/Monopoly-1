@@ -1,5 +1,6 @@
 from config import log
 import config
+import random
 
 class Dice:
 
