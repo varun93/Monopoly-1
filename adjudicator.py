@@ -51,8 +51,6 @@ class Adjudicator:
 		
 		self.MAX_HOUSES = 32
 		self.MAX_HOTELS = 12
-		self.remaining_houses = 32
-		self.remaining_hotels = 12
 		
 		"""
 		Phases
@@ -1395,6 +1393,9 @@ class Adjudicator:
 			[0,0,0,0], #Debt 6
 			[]
 		]
+		
+		self.remaining_houses = 32
+		self.remaining_hotels = 12
 		
 		#Setting an initial state. Used during testing.
 		#if isinstance(state,list) and len(state)==6:
