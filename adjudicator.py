@@ -470,6 +470,8 @@ class Adjudicator:
 			self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer-1,playerCash)
 
 		def handleTrade(agent,otherAgent,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
+			previousPayload = state[self.PHASE_PAYLOAD_INDEX]
+			
 			currentPlayer = agent.id
 			
 			cashRequest = self.check_valid_cash(cashRequest)
@@ -555,7 +557,7 @@ class Adjudicator:
 			self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,phasePayload)
 			
 			self.runPlayerOnStateWithTimeout(agent,state,receiveState=True)
-			self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,[])
+			self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,previousPayload)
 			return True
 		
 		previousPhaseNumber = state[self.PHASE_NUMBER_INDEX]
@@ -1609,8 +1611,5 @@ class Adjudicator:
 
 
 # for testing purposes only
-#import agent
-#agentOne = agent.Agent(1)
-#agentTwo = agent.Agent(2)
 #adjudicator = Adjudicator()
 #adjudicator.runGame(agentOne, agentTwo)
