@@ -10,7 +10,7 @@ class App extends Component {
     this.state = {
       gameState: [],
       gameHistory: [],
-      endpoint: "http://35.237.33.254:3000",
+      endpoint: "http://127.0.0.1:3000",
       currentStepNumber: 0,
       turn: 0,
       turnNumbers: [],
