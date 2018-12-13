@@ -710,7 +710,14 @@ class Adjudicator:
 		if self.agentJailCounter[currentPlayer]==3:
 			playerCash = state[self.PLAYER_CASH_INDEX][currentPlayer]
 			#This could cause Bankruptcy. Would cause playerCash to go below 0.
-			self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer,playerCash-50)
+			#If the player doesnt have enough money,add it as debt
+			if playerCash<50:
+				debt = state[self.DEBT_INDEX]
+				debt[2*currentPlayer] = 0
+				debt[2*currentPlayer+1] = 50
+				self.updateState(state,self.DEBT_INDEX,None,debt)
+			else:
+				self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer,playerCash-50)
 			self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
 			self.agentJailCounter[currentPlayer]=0
 			log("jail","Agent "+str(currentPlayer+1)+" has been in jail for 3 turns. Forcing him to pay $50 to get out.")
@@ -1407,6 +1414,14 @@ class Adjudicator:
 		self.initialize_debug_state(diceThrows,chanceCards,communityCards)
 		
 		winner = None
+		"""
+		The reason for victory:
+		0 = Greater assets at the end of 100 turns.
+		1 = Timed Out (Could also pass while doing which action did the timeout occur)
+		2 = Bankruptcy from Debt to Opponent or Bank
+		3 = Jail related Bankruptcy
+		"""
+		reason = "Greater Assets"
 			
 		while (self.state[self.PLAYER_TURN_INDEX] < self.TOTAL_NO_OF_TURNS) and ( (self.diceThrows is None) or (len(self.diceThrows)>0) ):
 			
@@ -1428,6 +1443,7 @@ class Adjudicator:
 			"""BSTM"""
 			self.conductBSTM(self.state)
 			if True in self.timeoutTracker:
+				reason = "Timeout"
 				if self.timeoutTracker[currentPlayer.id]:
 					winner = opponent.id
 				else:
@@ -1443,10 +1459,12 @@ class Adjudicator:
 			while ( (self.diceThrows is None) or (len(self.diceThrows)>0) ):
 				
 				[outOfJail,diceThrown] = self.jail_handler(self.state,currentPlayer)
-				if self.state[self.PLAYER_CASH_INDEX][currentPlayer.id-1]<0:
+				if self.state[self.DEBT_INDEX][2*currentPlayer.id-1]>0:
+					reason = "Jail related Bankruptcy"
 					winner = opponent.id
 					break
 				if True in self.timeoutTracker:
+					reason = "Timeout"
 					if self.timeoutTracker[currentPlayer]:
 						winner = opponent.id
 					else:
@@ -1457,6 +1475,7 @@ class Adjudicator:
 					"""rolls dice, moves the player and determines what happens on the space he has fallen on."""
 					notInJail = self.dice_roll(self.state,currentPlayer,diceThrown)
 					if True in self.timeoutTracker:
+						reason = "Timeout"
 						if self.timeoutTracker[currentPlayer]:
 							winner = opponent.id
 						else:
@@ -1466,6 +1485,7 @@ class Adjudicator:
 					if notInJail:
 						self.determine_position_effect(self.state)
 						if True in self.timeoutTracker:
+							reason = "Timeout"
 							if self.timeoutTracker[currentPlayer]:
 								winner = opponent.id
 							else:
@@ -1480,6 +1500,7 @@ class Adjudicator:
 						"""BSTM"""
 						self.conductBSTM(self.state)
 						if True in self.timeoutTracker:
+							reason = "Timeout"
 							if self.timeoutTracker[currentPlayer]:
 								winner = opponent.id
 							else:
@@ -1491,13 +1512,16 @@ class Adjudicator:
 						result = self.turn_effect(self.state,currentPlayer,opponent)
 						#AgentOne wasn't able to make payment
 						if not result[0]:
+							reason = "Bankruptcy"
 							winner = self.agentTwo.id
 							break
 						#AgentTwo wasn't able to make payment
 						elif not result[1]:
+							reason = "Bankruptcy"
 							winner = self.agentOne.id
 							break
 						if True in self.timeoutTracker:
+							reason = "Timeout"
 							if self.timeoutTracker[currentPlayer]:
 								winner = opponent.id
 							else:
@@ -1507,6 +1531,7 @@ class Adjudicator:
 				"""BSTM"""
 				self.conductBSTM(self.state)
 				if True in self.timeoutTracker:
+					reason = "Timeout"
 					if self.timeoutTracker[currentPlayer]:
 						winner = opponent.id
 					else:
@@ -1539,6 +1564,7 @@ class Adjudicator:
 		
 		"""Determine the winner"""
 		if winner==None:
+			reason = "Greater Assets"
 			winner = self.final_winning_condition(self.state)
 		
 		if winner == 1:
@@ -1553,6 +1579,7 @@ class Adjudicator:
 		self.updateState(self.state,self.PHASE_PAYLOAD_INDEX,None,[])
 		finalState = list(self.state)
 		finalState.pop(7)
+		finalState.append(reason)
 		finalState = self.transformState(finalState)
 		log("win","Final State:")
 		log("win",finalState)
