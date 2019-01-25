@@ -6,6 +6,7 @@ import copy
 import timeout_decorator
 import json
 import numpy as np
+from state import State
 
 class NumpyEncoder(json.JSONEncoder):
 	""" Special json encoder for numpy types """
@@ -30,18 +31,20 @@ class Adjudicator:
 		
 		num_properties = len(constants.space_to_property_map) + 2
 		self.socket = socket
-	
-		self.TOTAL_NO_OF_TURNS = 100
+		
 		self.DiceClass = dice.Dice
-
+		
+		"""
+		PROPERTY INDICES OF THE STATE VARIABLE
+		"""
 		self.PLAYER_TURN_INDEX = 0
 		self.PROPERTY_STATUS_INDEX = 1
 		self.PLAYER_POSITION_INDEX = 2
 		self.PLAYER_CASH_INDEX = 3
-		self.PHASE_NUMBER_INDEX = 4
-		self.PHASE_PAYLOAD_INDEX = 5
-		self.DEBT_INDEX = 6
-		self.STATE_HISTORY_INDEX = 7
+		self.PLAYER_BANKRUPTCY_STATUS_INDEX = 4
+		self.PHASE_NUMBER_INDEX = 5
+		self.PHASE_PAYLOAD_INDEX = 6
+		self.DEBT_INDEX = 7
 		
 		self.CHANCE_GET_OUT_OF_JAIL_FREE = 40
 		self.COMMUNITY_GET_OUT_OF_JAIL_FREE = 41
@@ -52,20 +55,10 @@ class Adjudicator:
 		self.MAX_HOUSES = 32
 		self.MAX_HOTELS = 12
 		
+		self.JUST_VISTING = 10
+		
 		"""
 		Phases
-		Initial Idea:
-		self.INITIAL_BSTM = 0
-		self.TRADE_OFFER = 1
-		self.PRETURN_BSTM = 2
-		self.DICE_ROLL = 3
-		self.BUYING = 4
-		self.AUCTION = 5
-		self.PAYMENT = 6
-		self.JAIL = 7
-		self.CHANCE_CARD = 8
-		self.COMMUNITY_CHEST_CARD = 9 
-		self.POSTTURN_BSTM = 10
 		"""
 		self.BSTM = 0
 		self.TRADE_OFFER = 1
@@ -77,35 +70,44 @@ class Adjudicator:
 		self.CHANCE_CARD = 7
 		self.COMMUNITY_CHEST_CARD = 8
 		
-		self.AGENTONE = 1
-		self.AGENTTWO = 2
-		
-		self.JUST_VISTING = 10
-		"""
-		Phase Payload Description:
-		Buying Phase:
-		{'property': 6, 'cash': 100, 'source': 'bank'}
-		BSTM:
-		{'source': 'opponent', 'cash': 4}
-		
-		"""
-		
-		self.agentOne = None
-		self.agentTwo = None
 		self.dice = None
+		
+		"""
+		CONFIGURATION SETTINGS
+		"""
+		self.TOTAL_NO_OF_TURNS = 100
+		self.INITIAL_CASH = 1500
 		
 	def notifyUI(self):
 		if self.socket is not None:
 			# print(self.stateHistory)
 			send = json.dumps(self.stateHistory, cls=NumpyEncoder)
 			self.socket.emit('game_state_updated', {'state': json.loads(send)} )
+	
+	"""
+	STATE PROPERTIES
+	"""
+	def getCurrentPlayerIndex(self):
+		return self.state[self.PLAYER_TURN_INDEX] % self.TOTAL_NO_OF_PLAYERS
+	
+	def getPlayerIndex(self,playerId):
+		for i in range(self.TOTAL_NO_OF_PLAYERS):
+			if self.PLAY_ORDER[i]==playerId:
+				return i
+		
+		return -1
+	
+	def getPlayer(self,playerIndex):
+		return self.agents[playerIndex]
+	
+	def getPlayerBankruptcyStatus(self,playerIndex):
+		return self.state[self.PLAYER_BANKRUPTCY_STATUS_INDEX][playerIndex]
 		
 	def updateState(self, state, dimensionOneIndex, dimensionTwoIndex, valueToUpdate):
 		if dimensionTwoIndex is None:
 			state[dimensionOneIndex] = valueToUpdate
 		else:
 			state[dimensionOneIndex][dimensionTwoIndex] = valueToUpdate
-		
 	
 	def transformState(self,state):
 
@@ -212,19 +214,14 @@ class Adjudicator:
 			mappingId = constants.space_to_property_map[propertyId]
 			self.updateState(state,self.PROPERTY_STATUS_INDEX,mappingId,propertyStatus)
 	
-		def getPlayerCash(state,player):
-			return state[self.PLAYER_CASH_INDEX][player-1]
+		def getPlayerCash(playerIndex):
+			return state[self.PLAYER_CASH_INDEX][playerIndex]
 	
-		def rightOwner(propertyStatus, player):
-			if player == self.AGENTONE and propertyStatus <= 0:
-				return False
-			if player == self.AGENTTWO and propertyStatus  >= 0:
-				return False
-
-			return True
+		def rightOwner(propertyStatus, playerIndex):
+			return propertyStatus - playerIndex*7 in range(1,8)
 
 		def hasBuyingCapability(currentPlayer, properties):
-			playerCash = getPlayerCash(state, currentPlayer)
+			playerCash = getPlayerCash( currentPlayer)
 			for propertyObject in properties:
 				(propertyId,constructions) = propertyObject
 				space = constants.board[propertyId]
@@ -356,7 +353,7 @@ class Adjudicator:
 			if not monopolyCheck(state,properties,1):
 				return False
 			
-			playerCash = getPlayerCash(state, currentPlayer)
+			playerCash = getPlayerCash(currentPlayer)
 			propertyStatusList = [ prop for prop in state[self.PROPERTY_STATUS_INDEX] ]
 			
 			# ordering of this tuple becomes important  
@@ -384,14 +381,14 @@ class Adjudicator:
 			return True
 
 		def handleSell(agent,properties):
-			currentPlayer = agent.id
+			playerIndex = self.getPlayerIndex(agent.id)
 			
 			#Checking if there are properties where houses can't be built
 			invalidProperties = [x for x in properties if constants.board[x[0]]['class']!='Street' ]
 			if len(invalidProperties) > 0:
 				return False
 			
-			if not validBuyingSequence(currentPlayer,properties,-1):
+			if not validBuyingSequence(playerIndex,properties,-1):
 				return False
 			
 			[remaining_houses,remaining_hotels] = maxHousesHotelsCheck(state,properties,-1)
@@ -405,7 +402,7 @@ class Adjudicator:
 			for (propertyId,constructions) in properties:
 
 				space = constants.board[propertyId]
-				playerCash = getPlayerCash(state, currentPlayer)
+				playerCash = getPlayerCash( playerIndex)
 				propertyStatus = getPropertyStatus(state,propertyId)
 
 				houseCount = abs(propertyStatus) - 1
@@ -415,11 +412,11 @@ class Adjudicator:
 
 				propertyStatus = houseCount + 1
 
-				if currentPlayer == self.AGENTTWO:
+				if playerIndex == self.AGENTTWO:
 					propertyStatus *= -1
 
 				updatePropertyStatus(state,propertyId,propertyStatus)
-				self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer-1,playerCash)
+				self.updateState(state,self.PLAYER_CASH_INDEX,playerIndex-1,playerCash)
 			return True
 
 		# agent mortages a particular property
@@ -427,23 +424,22 @@ class Adjudicator:
 		# If the user tries to unmortgage something and he doesn't have the money entire operation fails
 		# If user tries to mortgage an invalid property, entire operation fails
 		def handleMortgage(agent,properties):
-			currentPlayer = agent.id
-			playerCash = getPlayerCash(state, currentPlayer)
+			playerIndex = self.getPlayerIndex(agent.id)
+			playerCash = getPlayerCash(playerIndex)
 			propertyStatusList = [ prop for prop in state[self.PROPERTY_STATUS_INDEX] ]
 			
 			for propertyId in properties:
 				space = constants.board[propertyId]
-				propertyPrice = space['price']
-				mortagePrice = propertyPrice/2
+				mortagePrice = space['price']/2
 				propertyStatus = propertyStatusList[propertyId]
 				
-				if (propertyStatus>1 and propertyStatus<7) or (propertyStatus<-1 and propertyStatus>-7):
+				if propertyStatus%7!=0 and (propertyStatus+1)%7!=0:
 					return False
 				
-				if not rightOwner(propertyStatus,currentPlayer):
+				if not rightOwner(propertyStatus,playerIndex):
 					return False
 
-				if propertyStatus in [-7,7]:
+				if propertyStatus%7!=0:
 					
 					unmortgagePrice = mortagePrice	
 
@@ -457,17 +453,15 @@ class Adjudicator:
 					else:
 						return False
 					
-					propertyStatus = 1
+					propertyStatus = (playerIndex*7)+1
 				else:
 					playerCash += mortagePrice
-					propertyStatus = 7
+					propertyStatus = (playerIndex+1)*7
 
-				if currentPlayer == self.AGENTTWO:
-						propertyStatus *= -1
 				propertyStatusList[propertyId] = propertyStatus
 			
 			self.updateState(state,self.PROPERTY_STATUS_INDEX,None,propertyStatusList)
-			self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer-1,playerCash)
+			self.updateState(state,self.PLAYER_CASH_INDEX,playerIndex,playerCash)
 
 		def handleTrade(agent,otherAgent,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 			previousPayload = state[self.PHASE_PAYLOAD_INDEX]
@@ -479,8 +473,8 @@ class Adjudicator:
 			
 			otherPlayer = self.getOtherPlayer(currentPlayer)
 			
-			currentPlayerCash = getPlayerCash(state,currentPlayer)
-			otherPlayerCash = getPlayerCash(state,otherPlayer)
+			currentPlayerCash = getPlayerCash(currentPlayer)
+			otherPlayerCash = getPlayerCash(otherPlayer)
 
 			if cashOffer > currentPlayerCash:
 				return False
@@ -529,12 +523,12 @@ class Adjudicator:
 						if getPropertyStatus(state, mortgagedProperty) == -7:
 							agentInQuestion = 1
 																																						
-						agentsCash = getPlayerCash(state,agentInQuestion)
+						agentsCash = getPlayerCash(agentInQuestion)
 						agentsCash -= mortgagedPrice*0.1
 						self.updateState(state,self.PLAYER_CASH_INDEX,agentInQuestion-1,agentsCash)
 
-				currentPlayerCash = getPlayerCash(state,currentPlayer)
-				otherPlayerCash = getPlayerCash(state,otherPlayer)
+				currentPlayerCash = getPlayerCash(currentPlayer)
+				otherPlayerCash = getPlayerCash(otherPlayer)
 	
 				currentPlayerCash += (cashRequest - cashOffer)
 				otherPlayerCash += (cashOffer - cashRequest)
@@ -593,12 +587,47 @@ class Adjudicator:
 					agentTwoTradeDone = True
 					return handleTrade(agent,otherAgent,action[1],action[2],action[3],action[4])
 				return False #An agent shouldn't make more than one Trade request per BSTM
-				
-		# TODO:merging of states; and hiding the bmst decison of first agent to the second
 		
-		while True:
+		"""
+		BSMT will be carried out as decision rounds where each player is asked for his BSMT action during that round.
+		The flag array 'doneWithBSMT' stores whether each player wants to perform a BSMT action in the current round or not.
+		If all the player's don't want to take BSMT actions in a given round, then the BSMT phase ends.
+		If a player decides he doesn't want to take any BSMT actions in a given decision round, he can still make BSMT actions in later decision rounds.
+		This is done so that he can react to the BSMT decisions made by other players.
+		TODO:
+		Find a way to ensure that BSMT doesn't go on forever.
+		"""
+		doneWithBSMT = [False]*(self.TOTAL_NO_OF_PLAYERS)
+		
+		while False in doneWithBSMT:
 			
-			self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.BSTM)
+			#self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.BSTM)
+			
+			currentPlayerIndex = self.getCurrentPlayerIndex()
+			actions = []
+			
+			while True:
+				
+				"""Getting the actions for BSMT from all the players"""
+				for i in range(self.TOTAL_NO_OF_PLAYERS):
+					if not self.getPlayerBankruptcyStatus(i):
+						action = self.runPlayerOnStateWithTimeout(self.getPlayer(i),state)
+						actions.append(action)
+					else:
+						actions.append(None)
+				
+				"""
+				We will evaluate in the following order:
+				Mortgage/Unmortgage and Sell first.
+				Buying next
+				Finally Trade.
+				There is a possibility that one of the properties in a proposed trade might have had houses built on it or been mortgaged.
+				So, after we apply the mortgage and 
+				We will 
+				"""
+				
+				
+				
 			
 			bstmActionAgentOne = self.runPlayerOnStateWithTimeout(self.agentOne,state)
 
@@ -641,89 +670,6 @@ class Adjudicator:
 		self.updateState(state,self.PLAYER_TURN_INDEX,None,currentTurn + 1)
 
 	""" ACTION METHODS """
-	
-	"""Scenario where current player is in jail at the start of the turn.
-	Processes the response to the agent.jailDecision function."""
-	"""
-	Incoming action format:
-	("R",) : represents rolling to get out
-    ("P",) : represents paying $50 to get out (BSMT should follow)
-    ("C", propertyNumber) : represents using a get out of jail card, 
-    but in case someone has both, needs to specify which one they are using. 
-    In general, should always specify the number (either 28 or 29)
-	Return values:
-	List of 2 boolean values:
-	1. Whether the player is out of jail.
-	2. Whether there was a dice throw while handling jail state.
-	"""
-	def handle_in_jail_state(self,state,action):
-		currentPlayer = state[self.PLAYER_TURN_INDEX] % 2
-		
-		if (isinstance(action, tuple) or isinstance(action, list)) and len(action)>0:
-			if action[0] == 'P':
-				"""
-				Should there be a BSTM here?
-				Assuming player has the money
-				"""
-				playerCash = state[self.PLAYER_CASH_INDEX][currentPlayer]
-				#This could cause Bankruptcy. Would cause playerCash to go below 0.
-				self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer,playerCash-50)
-				self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
-				self.agentJailCounter[currentPlayer]=0
-				return [True,False]
-			
-			elif action[0] == 'C':
-				#Check if the player has the mentioned property card.
-				if (len(action)>1) & (action[1] in [self.CHANCE_GET_OUT_OF_JAIL_FREE,self.COMMUNITY_GET_OUT_OF_JAIL_FREE]):
-					propertyStatus = state[self.PROPERTY_STATUS_INDEX][ action[1] ]
-					
-					if currentPlayer == 0:
-						owned = (propertyStatus < 0)
-					else:
-						owned = (propertyStatus > 0)
-					
-					if owned:
-						if action[1] == self.COMMUNITY_GET_OUT_OF_JAIL_FREE:
-							self.chest.deck.append(constants.communityChestCards[4])
-						elif action[1] == self.CHANCE_GET_OUT_OF_JAIL_FREE:
-							self.chance.deck.append(constants.chanceCards[7])
-						
-						self.updateState(state,self.PROPERTY_STATUS_INDEX,action[1],0)
-						self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
-						self.agentJailCounter[currentPlayer]=0
-						return [True,False]
-		
-		"""If both the above method fail for some reason, we default to dice roll."""
-		diceThrow = None
-		if (self.diceThrows is not None) and len(self.diceThrows)>0:
-			diceThrow = self.diceThrows.pop(0)
-		self.dice.roll(dice=diceThrow)
-		if self.dice.double:
-			#Player can go out
-			#Need to ensure that there is no second turn for the player in this turn.
-			self.dice.double = False
-			self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
-			self.agentJailCounter[currentPlayer]=0
-			return [True,True]
-		
-		self.agentJailCounter[currentPlayer]+=1
-		if self.agentJailCounter[currentPlayer]==3:
-			playerCash = state[self.PLAYER_CASH_INDEX][currentPlayer]
-			#This could cause Bankruptcy. Would cause playerCash to go below 0.
-			#If the player doesnt have enough money,add it as debt
-			if playerCash<50:
-				debt = state[self.DEBT_INDEX]
-				debt[2*currentPlayer] = 0
-				debt[2*currentPlayer+1] = 50
-				self.updateState(state,self.DEBT_INDEX,None,debt)
-			else:
-				self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer,playerCash-50)
-			self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
-			self.agentJailCounter[currentPlayer]=0
-			log("jail","Agent "+str(currentPlayer+1)+" has been in jail for 3 turns. Forcing him to pay $50 to get out.")
-			return [True,True]
-		return [False,True]
-
 
 	"""To reset dice for a new turn"""
 	def pass_dice(self):
@@ -898,14 +844,99 @@ class Adjudicator:
 	If currently in Jail, 3 ways to get out.
 	"""
 	
+	"""Scenario where current player is in jail at the start of the turn.
+	Processes the response to the agent.jailDecision function."""
+	"""
+	Incoming action format:
+	("R",) : represents rolling to get out
+    ("P",) : represents paying $50 to get out (BSMT should follow)
+    ("C", propertyNumber) : represents using a get out of jail card, 
+    but in case someone has both, needs to specify which one they are using. 
+    In general, should always specify the number (either 28 or 29)
+	Return values:
+	List of 2 boolean values:
+	1. Whether the player is out of jail.
+	2. Whether there was a dice throw while handling jail state.
+	"""
+	def handle_in_jail_state(self,state,action):
+		currentPlayerIndex = self.getCurrentPlayerIndex()
+		
+		if action=="R" or action=="P":
+			action = (action,)
+		
+		if (isinstance(action, tuple) or isinstance(action, list)) and len(action)>0:
+			if action[0] == 'P':
+				"""
+				Should there be a BSMT here?
+				Assuming player has the money
+				"""
+				playerCash = state[self.PLAYER_CASH_INDEX][currentPlayerIndex]
+				#This could cause Bankruptcy. Would cause playerCash to go below 0.
+				self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayerIndex,playerCash-50)
+				self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayerIndex,self.JUST_VISTING)
+				self.agentJailCounter[currentPlayer]=0
+				return [True,False]
+			
+			elif action[0] == 'C':
+				#Check if the player has the mentioned property card.
+				if (len(action)>1) & (action[1] in [self.CHANCE_GET_OUT_OF_JAIL_FREE,self.COMMUNITY_GET_OUT_OF_JAIL_FREE]):
+					propertyStatus = state[self.PROPERTY_STATUS_INDEX][ action[1] ]
+					
+					if currentPlayer == 0:
+						owned = (propertyStatus < 0)
+					else:
+						owned = (propertyStatus > 0)
+					
+					if owned:
+						if action[1] == self.COMMUNITY_GET_OUT_OF_JAIL_FREE:
+							self.chest.deck.append(constants.communityChestCards[4])
+						elif action[1] == self.CHANCE_GET_OUT_OF_JAIL_FREE:
+							self.chance.deck.append(constants.chanceCards[7])
+						
+						self.updateState(state,self.PROPERTY_STATUS_INDEX,action[1],0)
+						self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
+						self.agentJailCounter[currentPlayer]=0
+						return [True,False]
+		
+		"""If both the above method fail for some reason, we default to dice roll."""
+		diceThrow = None
+		if (self.diceThrows is not None) and len(self.diceThrows)>0:
+			diceThrow = self.diceThrows.pop(0)
+		self.dice.roll(dice=diceThrow)
+		if self.dice.double:
+			#Player can go out
+			#Need to ensure that there is no second turn for the player in this turn.
+			self.dice.double = False
+			self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayerIndex,self.JUST_VISTING)
+			self.agentJailCounter[currentPlayerIndex]=0
+			return [True,True]
+		
+		self.agentJailCounter[currentPlayer]+=1
+		if self.agentJailCounter[currentPlayer]==3:
+			playerCash = state[self.PLAYER_CASH_INDEX][currentPlayerIndex]
+			#This could cause Bankruptcy. Would cause playerCash to go below 0.
+			#If the player doesnt have enough money,add it as debt
+			if playerCash<50:
+				debt = state[self.DEBT_INDEX]
+				debt[2*currentPlayer] = 0
+				debt[2*currentPlayer+1] = 50
+				self.updateState(state,self.DEBT_INDEX,None,debt)
+			else:
+				self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer,playerCash-50)
+			self.updateState(state,self.PLAYER_POSITION_INDEX,currentPlayer,self.JUST_VISTING)
+			self.agentJailCounter[currentPlayer]=0
+			log("jail","Agent "+str(currentPlayer+1)+" has been in jail for 3 turns. Forcing him to pay $50 to get out.")
+			return [True,True]
+		return [False,True]
+	
 	"""
 	Returns 2 booleans 
 	First is True if not in jail or no longer in jail
 	Second is True if dice has already been thrown for the current turn during jail processing
 	"""
-	def jail_handler(self,state,player):
-		currentPlayer = state[self.PLAYER_TURN_INDEX] % 2
-		playerPosition = state[self.PLAYER_POSITION_INDEX][currentPlayer]
+	def handle_jail(self,state,player):
+		currentPlayerIndex = self.getCurrentPlayerIndex()
+		playerPosition = state[self.PLAYER_POSITION_INDEX][currentPlayerIndex]
 		if playerPosition != -1:
 			return [True,False]
 		
@@ -1376,35 +1407,49 @@ class Adjudicator:
 	def broadcastState(self,state):
 		self.runPlayerOnStateWithTimeout(self.agentOne,state,receiveState=True)
 		self.runPlayerOnStateWithTimeout(self.agentTwo,state,receiveState=True)
+		
+	"""Function returns True if the given player was timed out in this turn."""
+	def manageTimeoutBasedFailure(self,state):
+		for key in self.timeoutTracker.keys():
+			if self.timeoutTracker[key]:
+				playerIndex = self.getPlayerIndex(key)
+				if playerIndex != -1:
+					self.updateState(state, self.PLAYER_BANKRUPTCY_STATUS_INDEX, playerIndex, True)
+					return True
+		
+		return False
 	
 	"""
 	Function to be called to start the game.
-	First turn or Turn 0 goes to AgentOne.
+	Expects agents to be in the order of play.
 	"""
-	def runGame(self,agentOne,agentTwo,diceThrows=None,chanceCards=None,communityCards=None):
+	def runGame(self,agents,diceThrows=None,chanceCards=None,communityCards=None):
 		
 		self.stateHistory = []
 
 		self.chest = Cards(constants.communityChestCards)
 		self.chance = Cards(constants.chanceCards)
-		self.agentJailCounter = [0,0]
-		self.timeoutTracker = [False,False]
 		
-		self.agentOne = agentOne
-		self.agentTwo = agentTwo
-		self.state =  [
-			0, #player turn; 0
-			[0]*42, #player properties; 1
-			[0,0],#player's position; 2
-			[1500,1500], #player's cash; 3
-			0, #phase number; 4
-			(), #phase payload; 5,
-			[0,0,0,0], #Debt 6
-			[]
-		]
+		#Stores the list of agents which are competing in the current game in the order of play.
+		self.agents = agents
+		self.PLAY_ORDER = [ agent.id for agent in self.agents] #Stores the id's of all the players in the order of play
+		self.TOTAL_NO_OF_PLAYERS = len(self.agents)
 		
-		self.remaining_houses = 32
-		self.remaining_hotels = 12
+		self.agentJailCounter = [0]*self.TOTAL_NO_OF_PLAYERS
+		self.timeoutTracker = {}
+		for agent in self.agents:
+			self.timeoutTracker[agent.id] = False
+		
+		self.PLAYER_TURN_INDEX = 0
+		self.PROPERTY_STATUS_INDEX = 1
+		self.PLAYER_POSITION_INDEX = 2
+		self.PLAYER_CASH_INDEX = 3
+		self.PLAYER_BANKRUPTCY_STATUS_INDEX = 4
+		self.PHASE_NUMBER_INDEX = 5
+		self.PHASE_PAYLOAD_INDEX = 6
+		self.DEBT_INDEX = 7
+		
+		self.state =  State(self.TOTAL_NO_OF_PLAYERS)
 		
 		#Setting an initial state. Used during testing.
 		#if isinstance(state,list) and len(state)==6:
@@ -1416,10 +1461,10 @@ class Adjudicator:
 		winner = None
 		"""
 		The reason for victory:
-		0 = Greater assets at the end of 100 turns.
+		0 = Greater assets at the end of specified number of turns.
 		1 = Timed Out (Could also pass while doing which action did the timeout occur)
 		2 = Bankruptcy from Debt to Opponent or Bank
-		3 = Jail related Bankruptcy
+		3 = Bankruptcy from being unable to pay the fine for Jail on the thrid turn in Jail.
 		"""
 		reason = "Greater Assets"
 			
@@ -1427,38 +1472,36 @@ class Adjudicator:
 			
 			log("turn","Turn "+str(self.state[self.PLAYER_TURN_INDEX])+" start")
 			
+			if self.state[self.PLAYER_BANKRUPTCY_STATUS_INDEX][self.getCurrentPlayerIndex()]:
+				"""Player is bankrupt already."""
+				"""Update the turn counter"""
+				self.update_turn(self.state)
+				continue
+			
 			#Temporary measure to clear phase payload
 			self.updateState(self.state,self.PHASE_PAYLOAD_INDEX,None,[])
 			
 			"""Determining whose turn it is"""
-			currentPlayer = self.agentOne
-			opponent = self.agentTwo
-			if (self.state[self.PLAYER_TURN_INDEX] % 2) == 1:
-				currentPlayer = self.agentTwo
-				opponent = self.agentOne
+			currentPlayer = self.getPlayer( self.getCurrentPlayerIndex() )
 		
 			"""Resets dice roll before each turn"""
 			self.pass_dice()
 			
 			"""BSTM"""
 			self.conductBSTM(self.state)
-			if True in self.timeoutTracker:
+			if self.manageTimeoutBasedFailure(self.state):
+				#TODO: Keep track of reason for failure and the turn in which failure occurred.
 				reason = "Timeout"
-				if self.timeoutTracker[currentPlayer.id]:
-					winner = opponent.id
-				else:
-					winner = currentPlayer.id
-				break
+				"""Update the turn counter"""
+				self.update_turn(self.state)
+				continue
 			
-			log("state","Turn "+str(self.state[self.PLAYER_TURN_INDEX]))
 			log("state","State at the start of the turn:")
-			stateForLog = list(self.state)
-			stateForLog.pop(7)
-			log("state",stateForLog)
+			log("state",self.state)
 			
 			while ( (self.diceThrows is None) or (len(self.diceThrows)>0) ):
 				
-				[outOfJail,diceThrown] = self.jail_handler(self.state,currentPlayer)
+				[outOfJail,diceThrown] = self.handle_jail(self.state,currentPlayer)
 				if self.state[self.DEBT_INDEX][2*currentPlayer.id-1]>0:
 					reason = "Jail related Bankruptcy"
 					winner = opponent.id
