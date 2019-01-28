@@ -5,7 +5,9 @@ import random
 class Dice:
 
 	def __init__(self):
-
+		self.reset()
+		
+	def reset(self):
 		self.die_1 = None
 		self.die_2 = None
 		self.double = False

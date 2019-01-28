@@ -8,31 +8,154 @@ MAX_HOUSES = 32
 MAX_HOTELS = 12
 TOTAL_NO_OF_PLAYERS = 4
 
+class Property:
+	def __init__(self,houses,mortgaged,playerId):
+		self.houses = houses
+		self.mortgaged = mortgaged
+		self.playerId = playerId #0 means owned by the bank
 
 class State:
 
-	def __init__(self, numberOfPlayers):
-		TOTAL_NO_OF_PLAYERS = numberOfPlayers
+	def __init__(self, playerIds):
+		TOTAL_NO_OF_PLAYERS = len(playerIds)
+		
+		#List of id's of all the agents in the order in which the game will take place.
+		self.players = playerIds
 		
 		self.turn = 0
-		self.properties = [0]*42
+		self.properties = [Property(0,False,0)]*42
 		self.positions = [0]*TOTAL_NO_OF_PLAYERS
-		self.money = [INITIAL_CASH]*TOTAL_NO_OF_PLAYERS
+		self.cash = [INITIAL_CASH]*TOTAL_NO_OF_PLAYERS
 		self.bankrupt = [False]*TOTAL_NO_OF_PLAYERS
 		self.phase = Phase.BSMT
-		self.phaseData = None
-		self.debt = [0]*(2*TOTAL_NO_OF_PLAYERS)
+		self.phasePayload = None
+		individualDebtArray = [0]*(TOTAL_NO_OF_PLAYERS+1)
+		self.debt = [ individualDebtArray ]*TOTAL_NO_OF_PLAYERS
+		
+		self.jailCounter = [0]*TOTAL_NO_OF_PLAYERS
+		self.timeoutTracker = [False]*TOTAL_NO_OF_PLAYERS
+		
+		#Keeping track of reason for loss and in which turn the player lost.
+		"""
+		The reason for victory:
+		0 = Greater assets at the end of specified number of turns.
+		1 = Timed Out (Could also pass while doing which action did the timeout occur)
+		2 = Bankruptcy from Debt to Opponent or Bank
+		3 = Bankruptcy from being unable to pay the fine for Jail on the third turn in Jail.
+		"""
+		self.reason = [None]*TOTAL_NO_OF_PLAYERS
+		self.turn_of_loss = [-1]*TOTAL_NO_OF_PLAYERS
+	
+	def getCurrentPlayerIndex(self):
+		return self.turn % TOTAL_NO_OF_PLAYERS
+	
+	def getCurrentPlayerId(self):
+		return self.players[self.getCurrentPlayerIndex()]
+	
+	def updateTurn(self):
+		self.turn+=1
+	
+	"""POSITION"""
+	def getPosition(self,playerIndex):
+		self.positions[playerIndex]
+	
+	def setPosition(self,playerIndex,position):
+		self.positions[playerIndex] = position
+	
+	"""CASH"""
+	def getCash(self,playerIndex):
+		self.cash[playerIndex]
+		
+	def setCash(self,playerIndex,cash):
+		self.cash[playerIndex] = cash
+	
+	"""BANKRUPT"""
+	def hasPlayerLost(self,playerIndex):
+		return self.bankrupt[playerIndex]
+	
+	def markPlayerLost(self,playerIndex,reason):
+		self.bankrupt[playerIndex] = True
+		self.reason[playerIndex] = reason
+		self.turn_of_loss[playerIndex] = self.turn
+	
+	"""PHASE"""
+	def getPhase(self,playerIndex):
+		self.phase[playerIndex]
+		
+	def setPhase(self,playerIndex,phase):
+		self.phase[playerIndex] = phase
+	
+	"""PHASE PAYLOAD"""
+	def getPhasePayload(self,playerIndex):
+		self.phase[playerIndex]
+		
+	def setPhasePayload(self,playerIndex,phasePayload):
+		self.phasePayload[playerIndex] = phasePayload
+	
+	"""DEBT"""
+	def getTotalDebt(self,playerIndex):
+		#How should we pass the debt here?
+		totalDebt = 0
+		for amount in self.debt[playerIndex]:
+			totalDebt+=amount
+		return totalDebt
+	
+	def setDebtToPlayer(self,playerIndex,otherPlayer,amount):
+		self.debt[playerIndex][otherPlayer+1] = amount
+	
+	def addDebtToBank(self,playerIndex,debt):
+		self.debt[playerIndex][0]+= debt
+	
+	def clearDebt(self,playerIndex):
+		for i in range(TOTAL_NO_OF_PLAYERS+1):
+			self.debt[playerIndex][i] = 0
+		
+	"""JAIL COUNTER"""
+	def getJailCounter(self,playerIndex):
+		return self.jailCounter[playerIndex]
+	
+	def incrementJailCounter(self,playerIndex):
+		self.jailCounter[playerIndex]+=1
+	
+	def resetJailCounter(self,playerIndex):
+		self.jailCounter[playerIndex]=0
+	
+	"""PROPERTIES"""
+	def getPropertyOwner(self,propertyId):
+		return self.properties[propertyId].playerId
+	
+	def setPropertyOwner(self,playerIndex,propertyId):
+		self.properties[propertyId].playerId = playerIndex
+		self.properties[propertyId].houses = 0 #If a property changes ownership, it shuld always have no houses on it.
+	
+	def isPropertyMortgaged(self,propertyId):
+		return self.properties[propertyId].mortgaged
+	
+	def setPropertyMortgaged(self,propertyId,mortgaged):
+		self.properties[propertyId].mortgaged = mortgaged
+	
+	def getNumberOfHouses(self,propertyId):
+		return self.properties[propertyId].houses
+	
+	def setNumberOfHouses(self,propertyId,count):
+		self.properties[propertyId].houses = count
+	
+	def getOwnedProperties(self, playerIndex):
+		return [prop for prop in self.properties if prop.playerId==playerIndex]
 
+	def getOwnedBuildableProperties(self, player):
+		pass
+	
 	def getHousesRemaining(self):
 		houses = MAX_HOUSES
 		for prop in self.properties:
-			if (prop%TOTAL_NO_OF_PLAYERS > 1) and (prop%TOTAL_NO_OF_PLAYERS <6): houses -= (prop-1)
+			if (prop.houses>0) and (prop.houses<5): houses -= prop.houses
 		return houses
 
 	def getHotelsRemaining(self):
 		hotels = MAX_HOTELS
 		for prop in self.properties:
-			if (prop%TOTAL_NO_OF_PLAYERS == 6): hotels -= 1
+			if (prop.houses==5): hotels -= 1
 		return hotels
 
 	def toTuple(self):
@@ -41,3 +164,19 @@ class State:
 
 	def __str__(self):
 		return str(self.toTuple())
+	
+class Phase:
+	BSTM = 0
+	TRADE_OFFER = 1
+	DICE_ROLL = 2
+	BUYING = 3
+	AUCTION = 4
+	PAYMENT = 5
+	JAIL = 6
+	CHANCE_CARD = 7
+	COMMUNITY_CHEST_CARD = 8
+	
+class Reason:
+	ASSETS = "Greater Assets"
+	TIMEOUT = "Timeout"
+	BANKRUPT = "Bankruptcy"
