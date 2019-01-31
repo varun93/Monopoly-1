@@ -1,5 +1,6 @@
 import random
 from collections import namedtuple
+from constants import board
 
 StateTuple = namedtuple("StateTuple", "turn properties positions money bankrupt phase phaseData debt")
 
@@ -7,6 +8,7 @@ INITIAL_CASH = 1500
 MAX_HOUSES = 32
 MAX_HOTELS = 12
 TOTAL_NO_OF_PLAYERS = 4
+NUMBER_OF_PROPERTIES = 42
 
 class Property:
 	def __init__(self,houses,mortgaged,playerId):
@@ -23,7 +25,7 @@ class State:
 		self.players = playerIds
 		
 		self.turn = 0
-		self.properties = [Property(0,False,0)]*42
+		self.properties = [Property(0,False,0)]*NUMBER_OF_PROPERTIES
 		self.positions = [0]*TOTAL_NO_OF_PLAYERS
 		self.cash = [INITIAL_CASH]*TOTAL_NO_OF_PLAYERS
 		self.bankrupt = [False]*TOTAL_NO_OF_PLAYERS
@@ -141,10 +143,43 @@ class State:
 		self.properties[propertyId].houses = count
 	
 	def getOwnedProperties(self, playerIndex):
-		return [prop for prop in self.properties if prop.playerId==playerIndex]
-
-	def getOwnedBuildableProperties(self, player):
-		pass
+		return [propertyId for propertyId in range(NUMBER_OF_PROPERTIES)
+			if self.properties[propertyId].playerId==playerIndex]
+	
+	"""
+	This function checks the following:
+	Checks if the properties are streets
+	That the player owns all the properties in the monopoly and that they are all unmortgaged.
+	That the end result of the buying operation results in houses being built evenly.
+	If even one fault is found, the entire operation is invalidated,
+	"""
+	def isBuyingSequenceValid(self, playerIndex,buyingSequence):
+		propertiesCopy = list(self.properties)
+		for (propertyId,housesCount) in buyingSequence:
+			if board[propertyId]['class']!="Street":
+				return False
+			
+			if (propertiesCopy[propertyId].playerId!=playerIndex) or (propertiesCopy[propertyId].mortgaged):
+				return False
+			
+			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
+				if (propertiesCopy[monopolyPropertyId].playerId!=playerIndex) or (propertiesCopy[monopolyPropertyId].mortgaged):
+					return False
+			
+			if propertiesCopy[propertyId].houses+housesCount>5:
+				return False
+			
+			propertiesCopy[propertyId].houses+=housesCount
+		
+		for (propertyId,_) in buyingSequence:
+			houses = propertiesCopy[propertyId].houses
+			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
+				monopolyHouses = propertiesCopy[monopolyPropertyId].houses
+				if abs(monopolyHouses-houses)>1:
+					return False
+		
+		return True
+			
 	
 	def getHousesRemaining(self):
 		houses = MAX_HOUSES
