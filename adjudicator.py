@@ -138,160 +138,49 @@ class Adjudicator:
 	def conductBSTM(self,state=[]):
 
 		state = state or self.state
-		mortgagedDuringTrade = []
 		
-	"""Returns the type of action. Also checks if the action is valid."""
-	def checkActionType(action):
-		if not ( isinstance(action, list) or isinstance(action, tuple) ):
-			return "N"
-		
-		type = action[0]
-		if (type=="B") or (type=="S"):
-			if len(action)<2:
+		"""Returns the type of action. Also checks if the action is valid."""
+		def checkActionType(action):
+			if not ( isinstance(action, list) or isinstance(action, tuple) ):
 				return "N"
-			if not isinstance(action[1], list) and not isinstance(action[1], tuple):
-				return "N"
-			else:
-				for prop in action[1]:
-					if not isinstance(prop, list) and not isinstance(prop, tuple):
-						return "N"
-					else:
-						if len(prop)<2:
+			
+			type = action[0]
+			if (type=="B") or (type=="S"):
+				if len(action)<2:
+					return "N"
+				if not isinstance(action[1], list) and not isinstance(action[1], tuple):
+					return "N"
+				else:
+					for prop in action[1]:
+						if not isinstance(prop, list) and not isinstance(prop, tuple):
 							return "N"
-						if self.typecast(prop[0],int,-1) == -1:
+						else:
+							if len(prop)<2:
+								return "N"
+							if self.typecast(prop[0],int,-1) == -1:
+								return "N"
+							if self.typecast(prop[1],int,-1) == -1:
+								return "N"
+			elif type == "M":
+				if len(action)<2:
+					return "N"
+				if not isinstance(action[1], list) and not isinstance(action[1], tuple):
+					return "N"
+				else:
+					for prop in action[1]:
+						if self.typecast(prop,int,-1) == -1:
 							return "N"
-						if self.typecast(prop[1],int,-1) == -1:
-							return "N"
-		elif type == "M":
-			if len(action)<2:
-				return "N"
-			if not isinstance(action[1], list) and not isinstance(action[1], tuple):
-				return "N"
-			else:
-				for prop in action[1]:
-					if self.typecast(prop,int,-1) == -1:
-						return "N"
-		return type
-		
-		# might move these as class methods at a later point
-		def getPropertyStatus(state,propertyId):
-			mappingId = constants.space_to_property_map[propertyId]
-			return state[self.PROPERTY_STATUS_INDEX][mappingId]
-		
-		def updatePropertyStatus(state,propertyId,propertyStatus):
-			mappingId = constants.space_to_property_map[propertyId]
-			self.updateState(state,self.PROPERTY_STATUS_INDEX,mappingId,propertyStatus)
-	
-		def getPlayerCash(playerIndex):
-			return state[self.PLAYER_CASH_INDEX][playerIndex]
-	
-		def rightOwner(propertyStatus, playerIndex):
-			return propertyStatus - playerIndex*7 in range(1,8)
-
-		def hasBuyingCapability(currentPlayer, properties):
-			playerCash = getPlayerCash( currentPlayer)
+			return type
+			
+		def hasBuyingCapability(playerIndex,properties):
+			playerCash = self.state.getPlayerCash( playerIndex)
 			for propertyObject in properties:
 				(propertyId,constructions) = propertyObject
 				space = constants.board[propertyId]
 				playerCash -= space['build_cost']*constructions
 				if playerCash < 0:
 					break
-
 			return playerCash >= 0
-				
-		def validBuyingSequence(currentPlayer, properties,sign):
-			
-			for propertyObject in properties:
-
-				(propertyId,constructions) = propertyObject
-				propertyStatus = getPropertyStatus(state, propertyId)
-
-				if propertyStatus in [7,-7,0]:
-					return False
-
-				if not rightOwner(propertyStatus, currentPlayer):
-					return False
-				
-				if constructions<1 or constructions>5:
-					return False
-
-				currentConstructionsOnProperty = abs(propertyStatus) - 1 
-
-				if ((currentConstructionsOnProperty + sign*constructions) > 5) or ((currentConstructionsOnProperty + sign*constructions) < 0):
-					return False
-
-			return True
-		
-		#Checks if the max number of houses and hotels in the game have been exceeded
-		#Returns the number of houses left
-		def maxHousesHotelsCheck(state,properties,sign):
-			newNumberOfHotels=0
-			newNumberOfHouses=0
-			
-			for (propertyId,constructions) in properties:
-				propertyStatus = abs(getPropertyStatus(state,propertyId))-1
-				newPropertyStatus = propertyStatus + sign*constructions
-				
-				#Selling a hotel and possibly some houses
-				if propertyStatus==5 and newPropertyStatus<5:
-					newNumberOfHotels-=1
-					newNumberOfHouses+=newPropertyStatus
-				#Buying a hotel
-				elif newPropertyStatus==5 and propertyStatus<5:
-					newNumberOfHotels+=1
-					newNumberOfHouses-=propertyStatus
-				else:
-					#There are no hotel constructions
-					newNumberOfHouses+= (newPropertyStatus-propertyStatus)
-			
-			house_count = (self.remaining_houses - newNumberOfHouses)
-			if house_count>self.MAX_HOUSES or house_count<0:
-				house_count = -1
-			else:
-				self.remaining_houses-=newNumberOfHouses
-				house_count = self.remaining_houses
-			
-			hotel_count = (self.remaining_hotels - newNumberOfHotels)
-			if hotel_count>self.MAX_HOTELS or hotel_count<0:
-				hotel_count = -1
-			else:
-				self.remaining_hotels-=newNumberOfHotels
-				hotel_count = self.remaining_hotels
-			
-			return [house_count,hotel_count]
-		
-		#Checks consistency of the group elements for current buy/sell house operation
-		def monopolyCheck(state,properties,sign):
-			propertyStatus = [ prop for prop in state[self.PROPERTY_STATUS_INDEX] ]
-			for (propertyId,constructions) in properties:
-				space = constants.board[propertyId]
-				groupElements = space['monopoly_group_elements']
-				for groupElement in groupElements:
-					groupElementPropertyStatus = propertyStatus[groupElement]
-					#GroupElement's Property Status should be same sign as current property and should be > 0
-					if groupElementPropertyStatus*propertyStatus[propertyId] < 1:
-						return False
-					#House and Hotel related transactions can't take place when there are mortgaged properties in the current monopoly
-					if groupElementPropertyStatus in [7,-7]:
-						return False
-			
-			for (propertyId,constructions) in properties:
-				propertyStatus[propertyId] = abs(propertyStatus[propertyId]) + sign*constructions
-				
-			for (propertyId,constructions) in properties:
-				propertyStat = propertyStatus[propertyId]
-				space = constants.board[propertyId]
-				groupElements = space['monopoly_group_elements']
-				for groupElement in groupElements:
-					#Checking if houses are being built or sold evenly
-					groupElementPropertyStatus = abs(propertyStatus[groupElement])
-					if groupElementPropertyStatus<(propertyStat-1) or groupElementPropertyStatus>(propertyStat+1):
-						return False
-					#Think its ok to have more than one hotel in a monopoly. Uncomment if otherwise
-					#if (groupElementPropertyStatus == 6) and (propertyStat == 6):
-					#	return False
-			
-			return True
 						
 		# house can be built only if you own a monopoly of colours 
 		# double house can be built only if I have built one house in each colour 
@@ -387,10 +276,9 @@ class Adjudicator:
 				self.updateState(state,self.PLAYER_CASH_INDEX,playerIndex-1,playerCash)
 			return True
 
-		# agent mortages a particular property
-		# agent gets 50% of original money of the property
-		# If the user tries to unmortgage something and he doesn't have the money entire operation fails
-		# If user tries to mortgage an invalid property, entire operation fails
+		# If property is mortgaged, player gets back 50% of the price.
+		# If the player tries to unmortgage something and he doesn't have the money, the entire operation fails.
+		# If the player tries to mortgage an invalid property, entire operation fails.
 		def handleMortgage(playerIndex,properties):
 			playerCash = self.state.getPlayerCash(playerIndex)
 			mortgageRequests = []
@@ -461,26 +349,46 @@ class Adjudicator:
 				"""Getting the actions for BSMT from all the players"""
 				for i in range(self.TOTAL_NO_OF_PLAYERS):
 					if not self.state.hasPlayerLost(i):
-						action = self.runPlayerOnStateWithTimeout(self.getPlayer(i),state)
+						action = self.runPlayerOnStateWithTimeout(self.getPlayer(i),self.state)
 						actionType = checkActionType(action)
 						if actionType=="M":
 							mortgageRequests[i]=action
 						elif actionType=="B":
-							buyingRequests[i]=action
+							if self.state.isBuyingSequenceValid(i,action[1]) and hasBuyingCapability(i,action[1]):
+								buyingRequests[i]=action[1]
 						elif actionType=="S":
-							sellingRequests[i]=action
+							if self.state.isSellingSequenceValid(i,action[1]):
+								sellingRequests[i]=action[1]
 				
 				for playerIndex in mortgageRequests.keys():
 					handleMortgage(playerIndex,mortgageRequests[playerIndex])
 				
+				"""
+				Two types of selling requests:
+				selling houses, selling hotels.
+				"""
+				for playerIndex in sellingRequests.keys():
+					pass
+				
+				for playerIndex in buyingRequests.keys():
+					pass
+				
+				for playerIndex in sellingRequests.keys():
+					pass
+			"""
 			if agentOneDone and agentTwoDone:
 				#Counter against case where we fall on an idle position and do BSTM.
 				#The previous phase would be dice roll. But it doesn't make sense to set that back.
 				if previousPhaseNumber > self.DICE_ROLL:
 					self.updateState(state,self.PHASE_NUMBER_INDEX,None,previousPhaseNumber)
 				break
-
+			"""
+	
 	""" ACTION METHODS """
+	"""
+	TODO: 
+	@Varun: Temporarily moved trade here.
+	"""
 	def handleTrade(agent,otherAgent,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 		previousPayload = state[self.PHASE_PAYLOAD_INDEX]
 		
@@ -1280,6 +1188,7 @@ class Adjudicator:
 	def runGame(self,agents,diceThrows=None,chanceCards=None,communityCards=None):
 		
 		self.stateHistory = []
+		self.mortgagedDuringTrade = []
 
 		self.chest = Cards(constants.communityChestCards)
 		self.chance = Cards(constants.chanceCards)

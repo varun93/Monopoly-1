@@ -153,9 +153,9 @@ class State:
 	That the end result of the buying operation results in houses being built evenly.
 	If even one fault is found, the entire operation is invalidated,
 	"""
-	def isBuyingSequenceValid(self, playerIndex,buyingSequence):
+	def isSequenceValid(self, playerIndex,propertySequence,sign):
 		propertiesCopy = list(self.properties)
-		for (propertyId,housesCount) in buyingSequence:
+		for (propertyId,housesCount) in propertySequence:
 			if board[propertyId]['class']!="Street":
 				return False
 			
@@ -166,12 +166,13 @@ class State:
 				if (propertiesCopy[monopolyPropertyId].playerId!=playerIndex) or (propertiesCopy[monopolyPropertyId].mortgaged):
 					return False
 			
-			if propertiesCopy[propertyId].houses+housesCount>5:
+			newHousesCount = propertiesCopy[propertyId].houses+(sign*housesCount)
+			if (newHousesCount>5) or (newHousesCount<0):
 				return False
 			
-			propertiesCopy[propertyId].houses+=housesCount
+			propertiesCopy[propertyId].houses+=(sign*housesCount)
 		
-		for (propertyId,_) in buyingSequence:
+		for (propertyId,_) in propertySequence:
 			houses = propertiesCopy[propertyId].houses
 			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
 				monopolyHouses = propertiesCopy[monopolyPropertyId].houses
@@ -179,7 +180,12 @@ class State:
 					return False
 		
 		return True
-			
+	
+	def isBuyingSequenceValid(self,playerIndex,propertySequence):
+		return self.isSequenceValid(playerIndex, propertySequence, 1)
+		
+	def isSellingSequenceValid(self,playerIndex,propertySequence):
+		return self.isSequenceValid(playerIndex, propertySequence, -1)
 	
 	def getHousesRemaining(self):
 		houses = MAX_HOUSES
