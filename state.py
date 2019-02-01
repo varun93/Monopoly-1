@@ -78,6 +78,8 @@ class State:
 	def markPlayerLost(self,playerIndex,reason):
 		self.bankrupt[playerIndex] = True
 		self.reason[playerIndex] = reason
+		if reason==Reason.TIMEOUT:
+			self.timeoutTracker[playerIndex]=True
 		self.turn_of_loss[playerIndex] = self.turn
 	
 	"""PHASE"""
@@ -95,12 +97,15 @@ class State:
 		self.phasePayload[playerIndex] = phasePayload
 	
 	"""DEBT"""
-	def getTotalDebt(self,playerIndex):
+	def getDebtToPlayers(self,playerIndex):
 		#How should we pass the debt here?
 		totalDebt = 0
-		for amount in self.debt[playerIndex]:
-			totalDebt+=amount
+		for i in range(1,1+TOTAL_NO_OF_PLAYERS):
+			totalDebt+=self.debt[playerIndex][i]
 		return totalDebt
+	
+	def getDebtToBank(self,playerIndex):
+		return self.debt[playerIndex][0]
 	
 	def setDebtToPlayer(self,playerIndex,otherPlayer,amount):
 		self.debt[playerIndex][otherPlayer+1] = amount
@@ -109,8 +114,25 @@ class State:
 		self.debt[playerIndex][0]+= debt
 	
 	def clearDebt(self,playerIndex):
-		for i in range(TOTAL_NO_OF_PLAYERS+1):
-			self.debt[playerIndex][i] = 0
+		playerCash = self.getCash(playerIndex)
+		for i in range(1,TOTAL_NO_OF_PLAYERS+1):
+			debt = self.debt[playerIndex][i]
+			if playerCash>= debt:
+				playerCash-=debt
+				self.setCash(i, self.getCash(i)+self.debt[playerIndex][i])
+				self.debt[playerIndex][i] = 0
+			else:
+				#Unpaid debt to another player, on rare occasion, there could be debts to multiple players.
+				self.markPlayerLost(playerIndex, Reason.BANKRUPT)
+				pass
+		debtToBank = self.debt[playerIndex][0]
+		if playerCash>=debtToBank:
+			playerCash-=debtToBank
+			self.debt[playerIndex][0] = 0
+		else:
+			#Unpaid debt to the bank
+			self.markPlayerLost(playerIndex, Reason.BANKRUPT)
+			pass
 		
 	"""JAIL COUNTER"""
 	def getJailCounter(self,playerIndex):

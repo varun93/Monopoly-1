@@ -347,7 +347,7 @@ class Adjudicator:
 				"""Getting the actions for BSMT from all the players"""
 				for i in range(self.TOTAL_NO_OF_PLAYERS):
 					if not self.state.hasPlayerLost(i):
-						action = self.runPlayerOnStateWithTimeout(self.getPlayer(i),self.state)
+						action = self.runPlayerOnStateWithTimeout(i)
 						actionType = checkActionType(action)
 						if actionType=="M":
 							mortgageRequests[i]=action
@@ -362,18 +362,24 @@ class Adjudicator:
 					handleMortgage(playerIndex,mortgageRequests[playerIndex])
 				
 				"""Requests where players are selling houses."""
+				indices = sellingRequests.keys()
 				i=0
 				sellingRequestsSize = len(sellingRequests)
 				while i<sellingRequestsSize:
-					if self.state.doesNoOfHousesIncreaseBySelling(sellingRequests[i]):
-						handleSell(i, sellingRequests[i])
-						del sellingRequests[i]
+					if self.state.doesNoOfHousesIncreaseBySelling(sellingRequests[indices[i]]):
+						handleSell(indices[i], sellingRequests[indices[i]])
+						del sellingRequests[indices[i]]
 						sellingRequestsSize-=1
 					else:
 						i+=1
 				
 				"""Rest of the requests could cause contention for houses and hotels"""
+				totalHousesNeeded = 0
+				totalHotelsNeeded = 0
 				for playerIndex in buyingRequests.keys():
+					for (_,houses) in buyingRequests[playerIndex]:
+						totalHousesNeeded+=houses
+				if (totalHousesNeeded<=self.state.getHousesRemaining()):
 					pass
 				
 				"""Requests where players are selling hotels."""
@@ -576,80 +582,6 @@ class Adjudicator:
 		return [True,True]
 	
 	"""
-	Handle the action response from the Agent for buying an unowned property
-	Only called for the currentPlayer during his turn.
-	"""	
-	def handle_buy_property(self,state):
-		currentPlayer = self.state.getCurrentPlayerIndex()
-		playerPosition = self.state.getPosition(currentPlayer)
-		playerCash = self.state.getCash(currentPlayer)
-		propertyMapping = constants.space_to_property_map[playerPosition]
-		
-		if self.handle_payment(state)[currentPlayer]:
-
-			propertyStatus = -1
-
-			if currentPlayer == 0:
-				propertyStatus = 1
-
-			self.updateState(state,self.PROPERTY_STATUS_INDEX,propertyMapping,propertyStatus)
-			log('buy',"Agent "+str(currentPlayer+1)+" has bought "+constants.board[playerPosition]['name'])
-			
-			#Clearing the payload as the buying has been completed
-			self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,[])
-			return True
-		
-		#This would indicate going to Auction
-		return False
-	
-	def handle_payment_for_agent(self,state,receiver,cash,debt,currentPlayerIndex,otherPlayerIndex,otherPlayerCash):
-		if debt == 0:
-			#No payment to be made
-			return True
-		
-		if cash >= debt:
-			self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayerIndex-1,cash-debt)
-		else:
-			return False
-		
-		if receiver == 0:
-			receiverString = "bank"
-		elif receiver == otherPlayerIndex:
-			receiverString = "Agent "+str(otherPlayerIndex)
-			self.updateState(state,self.PLAYER_CASH_INDEX,otherPlayerIndex-1,otherPlayerCash + debt)
-		
-		log('pay',"Player "+str(currentPlayerIndex)+" has to pay $"+str(debt)+" to the "+receiverString)
-		
-		return True
-	
-	"""
-	Handling payments the player has to make to the bank/opponent
-	Could be invoked for either player during any given turn.
-	Returns 2 boolean list - True if the player was able to pay off his debt
-	"""
-	def handle_payment(self,state):
-		
-		(agentOneReceiver,agentOneDebt,agentTwoReceiver,agentTwoDebt) = state[self.DEBT_INDEX]
-		
-		agentOneCash = state[self.PLAYER_CASH_INDEX][0]
-		agentTwoCash = state[self.PLAYER_CASH_INDEX][1]
-		
-		#If on the most unlikely scenario both players have debt on the same turn, the current player would lose first.
-		agentOneResult = self.handle_payment_for_agent(state,agentOneReceiver,agentOneCash,agentOneDebt,1,2,agentTwoCash)
-		if agentOneResult:
-			agentOneReceiver = 0
-			agentOneDebt = 0
-		
-		agentTwoResult = self.handle_payment_for_agent(state,agentTwoReceiver,agentTwoCash,agentTwoDebt,2,1,agentOneCash)
-		if agentTwoResult:
-			agentTwoReceiver = 0
-			agentTwoDebt = 0
-		
-		#All the debt has been paid
-		self.updateState(state,self.DEBT_INDEX,None,[agentOneReceiver,agentOneDebt,agentTwoReceiver,agentTwoDebt])
-		return [agentOneResult,agentTwoResult]
-	
-	"""
 	(Q: Will there need to be a BSTM if the player receives money?)
 	Phase Properties:
 	Is the property owned?
@@ -838,6 +770,13 @@ class Adjudicator:
 				self.state.setPhasePayload(output['phase_properties'])
 			if 'debt' in output:
 				self.state.setDebtToPlayer(currentPlayer,output['debt'][0],output['debt'][1])
+			
+			if output['phase']==Phase.BUYING:
+				action = self.runPlayerOnStateWithTimeout(currentPlayer)
+				action = self.typecast(action, bool, False)
+				if not action:
+					self.state.setPhase(Phase.AUCTION)
+			
 		elif constants.board[playerPosition]['class'] == 'Chance':
 			#Chance
 			card = self.chance.draw_card()
@@ -969,12 +908,12 @@ class Adjudicator:
 			if card['money']<0:
 				debtAmount = abs(card['money'])
 				for i in range(self.TOTAL_NO_OF_PLAYERS):
-					if i!=currentPlayer:
+					if i!=currentPlayer and not self.state.hasPlayerLost(i):
 						self.state.setDebtToPlayer(currentPlayer,i,debtAmount)
 			else:
 				debtAmount = abs(card['money'])
 				for i in range(self.TOTAL_NO_OF_PLAYERS):
-					if i!=currentPlayer:
+					if i!=currentPlayer and not self.state.hasPlayerLost(i):
 						self.state.setDebtToPlayer(i,currentPlayer,debtAmount)
 			
 		elif card['type'] == 3:
@@ -1076,33 +1015,64 @@ class Adjudicator:
 		self.state.setCash(currentPlayer,playerCash)
 		self.state.setPhase(phaseNumber)
 		self.state.setPhasePayload(phasePayload)
+		
+		if phaseNumber==Phase.BUYING:
+				action = self.runPlayerOnStateWithTimeout(currentPlayer)
+				action = self.typecast(action, bool, False)
+				if not action:
+					self.state.setPhase(Phase.AUCTION)
+		
 		# make further calls
 		if updateState:
 			self.determine_position_effect()
+	
+	"""
+	Handle the action response from the Agent for buying an unowned property
+	Only called for the currentPlayer during his turn.
+	"""	
+	def handle_buy_property(self,state):
+		currentPlayer = self.state.getCurrentPlayerIndex()
+		playerPosition = self.state.getPosition(currentPlayer)
+		playerCash = self.state.getCash(currentPlayer)
+		
+		if playerCash>=constants.board[playerPosition]['price']:
+			self.state.setPropertyOwner(currentPlayer,playerPosition)
+			log('buy',"Agent "+str(currentPlayer+1)+" has bought "+constants.board[playerPosition]['name'])
+			#Clearing the payload as the buying has been completed
+			self.state.setPhasePayload(None)
+			return True
+		
+		#This would indicate going to Auction
+		return False
+	
+	"""
+	Handling payments the player has to make to the bank/opponent
+	Could be invoked for either player during any given turn.
+	Returns 2 boolean list - True if the player was able to pay off his debt
+	"""
+	def handle_payment(self):
+		for playerIndex in range(self.TOTAL_NO_OF_PLAYERS):
+			if not self.state.hasPlayerLost(playerIndex):
+				self.state.clearDebt(playerIndex)
 	
 	"""Function calls the relevant method of the Agent"""
 	def turn_effect(self):
 		currentPlayer = self.state.getCurrentPlayerIndex()
 		phase = self.state.getPhase(currentPlayer)
 		if phase == Phase.BUYING:
-			action = self.runPlayerOnStateWithTimeout(currentPlayer,state)
-			action = self.typecast(action, bool, False)
-			if action:
-				if self.handle_buy_property():
-					return [True,True]
-			
+			self.handle_buy_property()
+		elif phase == Phase.AUCTION:
 			#Auction
+			#@Varun: TODO
 			self.start_auction(state)
 			actionOpponent = self.runPlayerOnStateWithTimeout(opponent,state)
 			actionCurrentPlayer = self.runPlayerOnStateWithTimeout(currentPlayer,state)
 			return self.handle_auction(state,actionOpponent,actionCurrentPlayer)
-			
-		if phase == self.PAYMENT:
-			return self.handle_payment(state)
-		
-		return [True,True]
+		elif phase == self.PAYMENT:
+			self.handle_payment()
 	
 	"""
+	TODO:
 	On final winner calculation, following are considered:
 	Player's cash,
 	Property value as on the title card,
@@ -1164,20 +1134,9 @@ class Adjudicator:
 		if isinstance(communityCards, list) and len(communityCards)>0:
 			self.chest.reinit(constants.communityChestCards,communityCards)
 			
-	def broadcastState(self,state):
-		self.runPlayerOnStateWithTimeout(self.agentOne,state,receiveState=True)
-		self.runPlayerOnStateWithTimeout(self.agentTwo,state,receiveState=True)
-		
-	"""Function returns True if the given player was timed out in this turn."""
-	def manageTimeoutBasedFailure(self,state):
-		for key in self.timeoutTracker.keys():
-			if self.timeoutTracker[key]:
-				playerIndex = self.getPlayerIndex(key)
-				if playerIndex != -1:
-					self.updateState(state, self.PLAYER_BANKRUPTCY_STATUS_INDEX, playerIndex, True)
-					return True
-		
-		return False
+	def broadcastState(self):
+		for playerIndex in range(self.TOTAL_NO_OF_PLAYERS):
+			self.runPlayerOnStateWithTimeout(playerIndex,receiveState=True)
 	
 	"""
 	Function to be called to start the game.
@@ -1254,23 +1213,9 @@ class Adjudicator:
 						"""State now contain info about the position the player landed on"""
 						"""Performing the actual effect of the current position"""
 						result = self.turn_effect()
-						#AgentOne wasn't able to make payment
-						if not result[0]:
-							reason = "Bankruptcy"
-							winner = self.agentTwo.id
-							break
-						#AgentTwo wasn't able to make payment
-						elif not result[1]:
-							reason = "Bankruptcy"
-							winner = self.agentOne.id
-							break
-						if True in self.timeoutTracker:
-							reason = "Timeout"
-							if self.timeoutTracker[currentPlayer]:
-								winner = opponent.id
-							else:
-								winner = currentPlayer.id
-							break
+						if self.state.hasPlayerLost(playerId):
+							self.state.updateTurn()
+							continue
 				
 				log("state","State at the end of the turn:")
 				log("state",self.state)
@@ -1323,43 +1268,37 @@ class Adjudicator:
 	All threading and signal based logic must go in here
 	"""
 	@timeout_decorator.timeout(3, timeout_exception=TimeoutError)
-	def runPlayerOnStateWithTimeout(self, player,state,receiveState=False):
+	def runPlayerOnStateWithTimeout(self, playerIndex,receiveState=False):
 		try:
-			return self.runPlayerOnState(player,state,receiveState)
+			return self.runPlayerOnState(playerIndex,receiveState)
 		except TimeoutError:
 			print("Agent Timed Out")
 			"""Change the return value here to ensure agent loose"""
-			self.timeoutTracker[player.id] = True
+			self.state.markPlayerLost(playerIndex,Reason.TIMEOUT)
 			return None
 
-	def runPlayerOnState(self,player,state,receiveState=False):
-		
+	def runPlayerOnState(self,playerIndex,receiveState=False):
+		player = self.getPlayer(playerIndex)
 		action = None
-		current_phase = state[self.PHASE_NUMBER_INDEX]
-		stateToBeSent = self.transformState(state)
-		#Need to avoid self reference
-		historyState = list(stateToBeSent)
-		historyState.pop(7)
-		self.stateHistory.append((player.id, historyState))
-		self.updateState(state, self.STATE_HISTORY_INDEX, None, self.stateHistory)
+		current_phase = self.state.getPhase(playerIndex)
+		stateToBeSent = self.state
 
 		if receiveState:
 			action = player.receiveState(stateToBeSent)
-		elif current_phase == self.BSTM:
+		elif current_phase == Phase.BSTM:
 			action = player.getBSMTDecision(stateToBeSent)
-		elif current_phase == self.TRADE_OFFER:
+		elif current_phase == Phase.TRADE_OFFER:
 			action = player.respondTrade(stateToBeSent)
-		elif current_phase == self.BUYING:
+		elif current_phase == Phase.BUYING:
 			action = player.buyProperty(stateToBeSent)
-		elif current_phase == self.AUCTION:
+		elif current_phase == Phase.AUCTION:
 			action = player.auctionProperty(stateToBeSent)
-		elif current_phase == self.PAYMENT:
+		elif current_phase == Phase.PAYMENT:
 			pass
-		elif current_phase == self.JAIL:
+		elif current_phase == Phase.JAIL:
 			action = player.jailDecision(stateToBeSent)
 		
 		return action
-
 
 # for testing purposes only
 #adjudicator = Adjudicator()
