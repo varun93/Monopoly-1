@@ -178,7 +178,6 @@ class State:
 				monopolyHouses = propertiesCopy[monopolyPropertyId].houses
 				if abs(monopolyHouses-houses)>1:
 					return False
-		
 		return True
 	
 	def isBuyingSequenceValid(self,playerIndex,propertySequence):
@@ -186,6 +185,29 @@ class State:
 		
 	def isSellingSequenceValid(self,playerIndex,propertySequence):
 		return self.isSequenceValid(playerIndex, propertySequence, -1)
+	
+	def doesNoOfHousesIncreaseBySelling(self,sellingSequence):
+		totalCurrentHouses = 0
+		totalNewHouses = 0
+		
+		for (propertyId,houses) in sellingSequence:
+			currentHouses = self.properties[propertyId].houses
+			if currentHouses<5:
+				actualCurrentHouses = currentHouses
+			else:
+				actualCurrentHouses = 0
+			totalCurrentHouses+=actualCurrentHouses
+			
+			updatedNewHouses = currentHouses-newHouses
+			if updatedNewHouses<5:
+				actualNewHouses = updatedNewHouses
+			else:
+				actualNewHouses = 0
+			totalNewHouses+=actualNewHouses
+		
+		if totalNewHouses>=totalCurrentHouses:
+			return True
+		return False
 	
 	def getHousesRemaining(self):
 		houses = MAX_HOUSES

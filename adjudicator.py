@@ -135,10 +135,8 @@ class Adjudicator:
 		else:
 			return self.AGENTONE
 
-	def conductBSTM(self,state=[]):
+	def conductBSM(self):
 
-		state = state or self.state
-		
 		"""Returns the type of action. Also checks if the action is valid."""
 		def checkActionType(action):
 			if not ( isinstance(action, list) or isinstance(action, tuple) ):
@@ -363,16 +361,22 @@ class Adjudicator:
 				for playerIndex in mortgageRequests.keys():
 					handleMortgage(playerIndex,mortgageRequests[playerIndex])
 				
-				"""
-				Two types of selling requests:
-				selling houses, selling hotels.
-				"""
-				for playerIndex in sellingRequests.keys():
-					pass
+				"""Requests where players are selling houses."""
+				i=0
+				sellingRequestsSize = len(sellingRequests)
+				while i<sellingRequestsSize:
+					if self.state.doesNoOfHousesIncreaseBySelling(sellingRequests[i]):
+						handleSell(i, sellingRequests[i])
+						del sellingRequests[i]
+						sellingRequestsSize-=1
+					else:
+						i+=1
 				
+				"""Rest of the requests could cause contention for houses and hotels"""
 				for playerIndex in buyingRequests.keys():
 					pass
 				
+				"""Requests where players are selling hotels."""
 				for playerIndex in sellingRequests.keys():
 					pass
 			"""
@@ -576,8 +580,9 @@ class Adjudicator:
 	Only called for the currentPlayer during his turn.
 	"""	
 	def handle_buy_property(self,state):
-		currentPlayer = state[self.PLAYER_TURN_INDEX] % 2
-		playerPosition = state[self.PLAYER_POSITION_INDEX][currentPlayer]
+		currentPlayer = self.state.getCurrentPlayerIndex()
+		playerPosition = self.state.getPosition(currentPlayer)
+		playerCash = self.state.getCash(currentPlayer)
 		propertyMapping = constants.space_to_property_map[playerPosition]
 		
 		if self.handle_payment(state)[currentPlayer]:
@@ -654,9 +659,7 @@ class Adjudicator:
 	If Go To Jail, send to jail. Immediately end the turn.
 	If currently in Jail, 3 ways to get out.
 	"""
-	
-	"""Scenario where current player is in jail at the start of the turn.
-	Processes the response to the agent.jailDecision function."""
+
 	"""
 	Incoming action format:
 	("R",) : represents rolling to get out
@@ -664,8 +667,7 @@ class Adjudicator:
     ("C", propertyNumber) : represents using a get out of jail card, 
     but in case someone has both, needs to specify which one they are using. 
     In general, should always specify the number (either 28 or 29)
-	Return values:
-	List of 2 boolean values:
+	Return values are 2 boolean values:
 	1. Whether the player is out of jail.
 	2. Whether there was a dice throw while handling jail state.
 	"""
@@ -894,10 +896,9 @@ class Adjudicator:
 			#Unowned
 			output['phase'] = Phase.BUYING
 			output['phase_properties'] = playerPosition
-		
 		elif owner!=currentPlayer:
-			monopolies = constants.board[playerPosition]['monopoly_group_elements']
 			
+			monopolies = constants.board[playerPosition]['monopoly_group_elements']
 			counter = 1
 			for monopoly in monopolies:
 				monopolyPropOwner = self.state.getPropertyOwner(playerPosition)
@@ -938,17 +939,13 @@ class Adjudicator:
 			output['phase'] = Phase.PAYMENT
 			output['phase_properties'] = playerPosition
 			output['debt'] = (owner,rent)
-			
 		else:
 			#When the property is owned by us
 			pass
 		
 		return output
-				
-	
-	"""
-	Method handles various events for Chance and Community cards
-	"""
+
+	"""Method handles various events for Chance and Community cards"""
 	def handle_cards_pre_turn(self,state,card,deck):
 		currentPlayer = self.state.getCurrentPlayerIndex()
 		playerPosition = self.state.getPosition(currentPlayer)
@@ -1084,13 +1081,14 @@ class Adjudicator:
 			self.determine_position_effect()
 	
 	"""Function calls the relevant method of the Agent"""
-	def turn_effect(self,state,currentPlayer,opponent):
-		phase = state[self.PHASE_NUMBER_INDEX]
-		if phase == self.BUYING:
+	def turn_effect(self):
+		currentPlayer = self.state.getCurrentPlayerIndex()
+		phase = self.state.getPhase(currentPlayer)
+		if phase == Phase.BUYING:
 			action = self.runPlayerOnStateWithTimeout(currentPlayer,state)
 			action = self.typecast(action, bool, False)
 			if action:
-				if self.handle_buy_property(state):
+				if self.handle_buy_property():
 					return [True,True]
 			
 			#Auction
@@ -1248,14 +1246,14 @@ class Adjudicator:
 						log("state",self.state)
 						
 						"""BSTM"""
-						self.conductBSTM(self.state)
+						self.conductBSTM()
 						if self.state.hasPlayerLost(playerId):
 							self.state.updateTurn()
 							continue
 						
 						"""State now contain info about the position the player landed on"""
 						"""Performing the actual effect of the current position"""
-						result = self.turn_effect(self.state,currentPlayer,opponent)
+						result = self.turn_effect()
 						#AgentOne wasn't able to make payment
 						if not result[0]:
 							reason = "Bankruptcy"
@@ -1274,26 +1272,13 @@ class Adjudicator:
 								winner = currentPlayer.id
 							break
 				
-				"""BSTM"""
-				self.conductBSTM(self.state)
-				if True in self.timeoutTracker:
-					reason = "Timeout"
-					if self.timeoutTracker[currentPlayer]:
-						winner = opponent.id
-					else:
-						winner = currentPlayer.id
-					break
-				
 				log("state","State at the end of the turn:")
-				stateForLog = list(self.state)
-				stateForLog.pop(7)
-				log("state",stateForLog)
+				log("state",self.state)
 				
 				if (not self.dice.double):
 					break
 				else:
 					log("dice","Rolled Doubles. Play again.")
-			
 			
 			log("turn","Turn "+str(self.state.turn)+" end")
 			
@@ -1322,7 +1307,7 @@ class Adjudicator:
 
 		#add to the state history
 		#Clearing the payload as it might contain some internal info used by the adjudicator
-		self.updateState(self.state,self.PHASE_PAYLOAD_INDEX,None,[])
+		self.state.setPhasePayload(None)
 		finalState = list(self.state)
 		finalState.pop(7)
 		finalState.append(reason)
@@ -1330,20 +1315,13 @@ class Adjudicator:
 		log("win","Final State:")
 		log("win",finalState)
 		self.notifyUI()
-		
 		return [winner,finalState]
 	
 	"""
 	This function is called whenever adjudicator needs to communicate with the agent
 	The function to called on the agent is determined by reading the state.
 	All threading and signal based logic must go in here
-	self.INITIAL_BSTM = 0
-	self.TRADE_OFFER = 1
-	self.PRETURN_BSTM = 2
-	self.PAYMENT = 6
-	self.POSTTURN_BSTM = 10
 	"""
-
 	@timeout_decorator.timeout(3, timeout_exception=TimeoutError)
 	def runPlayerOnStateWithTimeout(self, player,state,receiveState=False):
 		try:
