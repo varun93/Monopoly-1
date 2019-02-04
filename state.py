@@ -96,6 +96,7 @@ class State:
 	def setPhasePayload(self,playerIndex,phasePayload):
 		self.phasePayload[playerIndex] = phasePayload
 	
+
 	"""DEBT"""
 	def getDebtToPlayers(self,playerIndex):
 		#How should we pass the debt here?
@@ -247,8 +248,24 @@ class State:
 		# TODO
 		return 0
 
-	def setPropertyStatus(self,propertyId,playerId,numberOfConstructions):
-		#
+	def getPropertyStatus(state,propertyId):
+		return self.state[self.PROPERTY_STATUS_INDEX][propertyId]
+
+	def setPropertyStatus(self, propertyId, propertyStatus):
+		return 0
+	
+	""" Bunch of utilities """
+	# logic to be changed
+	def rightOwner(self,propertyStatus,player):
+		if player == self.AGENTONE and propertyStatus <= 0:
+			return False
+		if player == self.AGENTTWO and propertyStatus  >= 0:
+			return False
+
+		return True
+
+	def getLivePlayers(self):
+		# TODO
 		return 0
 
 	def toTuple(self):

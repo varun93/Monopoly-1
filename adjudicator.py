@@ -400,17 +400,20 @@ class Adjudicator:
 	@Varun: Temporarily moved trade here.
 	"""
 	def handleTrade(agent,otherAgent,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
-		previousPayload = state[self.PHASE_PAYLOAD_INDEX]
-		
+
 		currentPlayer = agent.id
+		previousPayload = self.getPhasePayload(currentPlayer)
 		
 		cashRequest = self.check_valid_cash(cashRequest)
 		cashOffer = self.check_valid_cash(cashOffer)
 		
 		otherPlayer = self.getOtherPlayer(currentPlayer)
 		
-		currentPlayerCash = getPlayerCash(currentPlayer)
-		otherPlayerCash = getPlayerCash(otherPlayer)
+		s = self.state
+		rightOwner, setPropertyStatus, getPropertyStatus, getCash = s.rightOwner, s.setPropertyStatus, s.getPropertyStatus, s.getCash
+
+		currentPlayerCash = getCash(currentPlayer)
+		otherPlayerCash = getCash(otherPlayer)
 
 		if cashOffer > currentPlayerCash:
 			return False
@@ -418,9 +421,8 @@ class Adjudicator:
 		if cashRequest > otherPlayerCash:
 			return False
 
-
 		for propertyOffer in propertiesOffer:
-			propertyStatus = getPropertyStatus(state,propertyOffer)
+			propertyStatus = getPropertyStatus(propertyOffer)
 			if not rightOwner(propertyStatus,currentPlayer):
 				return False
 			if abs(propertyStatus) > 1 and abs(propertyStatus) < 7:
@@ -474,11 +476,11 @@ class Adjudicator:
 
 			for propertyOffer in propertiesOffer:
 				propertyStatus = getPropertyStatus(state,propertyOffer) 
-				updatePropertyStatus(state,propertyOffer,propertyStatus*-1)
+				setPropertyStatus(propertyOffer,propertyStatus*-1)
 
 			for propertyRequest in propertiesRequest:
 				propertyStatus = getPropertyStatus(state,propertyRequest)
-				updatePropertyStatus(state,propertyRequest,propertyStatus*-1)
+				setPropertyStatus(propertyRequest,propertyStatus*-1)
 		
 		#Receive State
 		#Making the phase number BSTM so that tradeResponse isnt called again
@@ -490,11 +492,11 @@ class Adjudicator:
 		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,previousPayload)
 		return True
 	
-	previousPhaseNumber = state[self.PHASE_NUMBER_INDEX]
-	agentOneDone = False
-	agentTwoDone = False
-	agentOneTradeDone = False
-	agentTwoTradeDone = False
+	# previousPhaseNumber = state[self.PHASE_NUMBER_INDEX]
+	# agentOneDone = False
+	# agentTwoDone = False
+	# agentOneTradeDone = False
+	# agentTwoTradeDone = False
 
 	# mortgageDuringTrade 
 	# buy 
@@ -507,12 +509,12 @@ class Adjudicator:
 	Any lower bid/ failure to bid in time would result in the property going to the other player. 
 	NOTE: This function only accepts UNOWNED PROPERTIES. ENSURE THIS IN THE CALLING FUNCTION.
 	"""
-	def start_auction(self):
+	def start_auction(self,auctionedProperty):
 		highestBid = 1
 		currentParticipant = self.state.getCurrentPlayerId()
 		auctionWinner = currentParticipant
 		# actually this should be number of live players 
-		numberOfPartiesInterested = self.state.TOTAL_NO_OF_PLAYERS
+		numberOfPartiesInterested = self.state.getLivePlayers()
 		
 		while numberOfPartiesInterested > 1:
 			
@@ -579,17 +581,18 @@ class Adjudicator:
 			while participantsCount > 1:
 				
 				currentBid = None
+				propertyId = None
 
 				if self.getCurrentPlayerCash(currentParticipant) > highestBid:
 					# Assuming a auction decison API
 					(currentBid,propertyId) = self.state.agents[currentParticipant].auctionDecision(highestBid)
 			
-					if currentBid and currentBid > highestBid:
-						highestBid = currentBid
-						propertySite = propertyId
-						auctionWinner = currentParticipant
-					else:
-						participantsCount -= 1
+				if currentBid and currentBid > highestBid:
+					highestBid = currentBid
+					propertySite = propertyId
+					auctionWinner = currentParticipant
+				else:
+					participantsCount -= 1
 
 				currentParticipant = (currentParticipant + 1) % N
 
