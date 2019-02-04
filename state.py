@@ -243,6 +243,14 @@ class State:
 			if (prop.houses==5): hotels -= 1
 		return hotels
 
+	def getConstructionValue(self,propertyId):
+		# TODO
+		return 0
+
+	def setPropertyStatus(self,propertyId,playerId,numberOfConstructions):
+		#
+		return 0
+
 	def toTuple(self):
 		return StateTuple(self.turn, tuple(self.properties), tuple(self.positions),
 						  tuple(self.money), self.phase, self.phaseData, tuple(self.debt))

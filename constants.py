@@ -717,7 +717,7 @@ communityChestCards = [
   },
   {
     "id": 5,
-    "content": "Go to jail, go directly to jail – Do not pass Go, do not collect $200",
+    "content": "Go to jail, go directly to jail - Do not pass Go, do not collect $200",
     "type": 3,
     "position": -1,
     "money": 0,
@@ -789,7 +789,7 @@ communityChestCards = [
   },
   {
     "id": 14,
-    "content": "You have won second prize in a beauty contest– collect $10",
+    "content": "You have won second prize in a beauty contest - collect $10",
     "type": 1,
     "position": 0,
     "money": 10,

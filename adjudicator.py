@@ -496,90 +496,110 @@ class Adjudicator:
 	agentOneTradeDone = False
 	agentTwoTradeDone = False
 
+	# mortgageDuringTrade 
+	# buy 
+	# while there is no response from the one of the players keep querying
+	# 
+
 	"""
 	Method starts a blind auction.
 	First turn in the auction goes to the player who didn't start it. Bidding starts at 1. 
 	Any lower bid/ failure to bid in time would result in the property going to the other player. 
 	NOTE: This function only accepts UNOWNED PROPERTIES. ENSURE THIS IN THE CALLING FUNCTION.
 	"""
-	def start_auction(self,state):
-		currentPlayer = state[self.PLAYER_TURN_INDEX] % 2
+	def start_auction(self):
+		highestBid = 1
+		currentParticipant = self.state.getCurrentPlayerId()
+		auctionWinner = currentParticipant
+		# actually this should be number of live players 
+		numberOfPartiesInterested = self.state.TOTAL_NO_OF_PLAYERS
 		
-		log("auction","Agent "+str(currentPlayer+1)+" is starting an Auction")
-		
-		opponent = abs(currentPlayer - 1)
-		playerPosition = state[self.PLAYER_POSITION_INDEX][currentPlayer]
-		
-		#Unowned
-		#Below mentioned property needed if the auction is not blind
-		#state[self.PHASE_PAYLOAD_INDEX]['subphase'] = "start"
-		#0 represents bidding phase of the auction
-		phasePayload = [playerPosition,0]
-	
-		self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.AUCTION)
-		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,phasePayload)
-		
-	"""
-	Accepts the actions of the blind auction from both players and performs it.
-	NOTE: The expected type of action is int. If the input is float, it will be typecast.
-	If the action is in some other type, following rules will be applied:
-		If opponent got the type of action wrong, current player wins.
-		else Opponent wins. i.e., opponent would win even if his action has incorrect type
-		as long as the current player also made a mistake in the type of his action
-	"""	
-	def handle_auction(self,state,actionOpponent,actionCurrentPlayer):
-		currentPlayer = state[self.PLAYER_TURN_INDEX] % 2
-		opponent = abs(currentPlayer - 1)
-		auctionedProperty = state[self.PHASE_PAYLOAD_INDEX][0]
-		propertyMapping = constants.space_to_property_map[auctionedProperty]
-		
-		winner = None
-		
-		actionCurrentPlayer = self.check_valid_cash(actionCurrentPlayer)
-		actionOpponent = self.check_valid_cash(actionOpponent)
-		
-		log("auction","Bids from the players: Current Player: "+str(actionCurrentPlayer)+",Opponent: "+str(actionOpponent))	
-		
-		if actionCurrentPlayer > actionOpponent:
-			#Current Player wins the auction
-			winner = currentPlayer
-			winningBid = actionCurrentPlayer
-		else:
-			#Opponent wins
-			winner = opponent
-			winningBid = actionOpponent
-		
-		log("auction","Player "+str(winner+1)+" won the Auction")
-		
-		playerCash = state[self.PLAYER_CASH_INDEX][winner]
-		if playerCash>=winningBid:
-			playerCash -= winningBid
-		else:
-			#Player placed a bid greater than the amount of money he/she has. His loss.
-			result = [True,True]
-			result[winner] = False
-			return result
+		while numberOfPartiesInterested > 1:
+			
+			currentParticipant = (currentParticipant + 1) % N
+			currentBid = None
 
-		self.updateState(state,self.PLAYER_CASH_INDEX,winner,playerCash)
+			if self.state.getCash(currentParticipant) > highestBid:
+				currentBid = self.agents[currentParticipant].auctionDecision(highestBid)
+			
+			if currentBid and currentBid > highestBid:
+				highestBid = currentBid
+				auctionWinner = currentParticipant
+			else:
+				auctionParticipants[currentParticipant] = False
+				numberOfPartiesInterested -= 1 			
 
-		propertyStatus = -1
+		
+		auctionWinnerCurrentCash = self.getCurrentPlayerCash(auctionWinner)
+		self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
+		self.state.setPropertyOwner(auctionWinner,auctionedProperty)
 
-		if winner == 0:
-			propertyStatus = 1
+		# what is player position?
+		# phasePayload = [playerPosition,0]
+		# what are these?
+		phasePayload = []
+		
+		self.state.setPhase(auctionWinner,self.PHASE_NUMBER_INDEX)
+		self.state.setPhasePayload(auctionWinner,phasePayload)
 
-		self.updateState(state,self.PROPERTY_STATUS_INDEX,propertyMapping,propertyStatus)	
-		
-		#Receive State
-		phasePayload = [auctionedProperty,winner+1]
-		
-		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,phasePayload)
-		
-		self.broadcastState(state)
-		
-		#Clearing the payload as the auction has been completed
-		self.updateState(state,self.DEBT_INDEX,None,[0,0,0,0])
-		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,[])
 		return [True,True]
+		
+
+	def updateBuyingDecisions(self,buyingDecisions,auctionWinner,propertySite):
+
+		def mapper(triple):
+		 	
+			(playerId,propertyId,constructions) = triple
+			
+			if playerId == auctionWinner and propertyId == propertySite:
+				return (playerId,propertyId,constructions - 1)
+						
+			return (playerId,propertyId,constructions)
+
+		buyingDecisions = list(map(mapper, buyingDecisions))
+		return list(filter(lambda triple :  triple[2] > 0,buyingDecisions)) 
+
+
+	# [(1,4,2),(2,6,1),(3,8,1),(4,9,1)]
+	# Triple of playerId, propertyId, numberOfConstructions
+	def auctionInBSM(self, buyingDecisions):
+
+		maxHouses = self.state.getHousesRemaining() 
+
+		while maxHouses:
+
+			highestBid = min(list(map(lambda triple: self.state.getConstructionValue(triple[1]),buyingDecisions))) 
+			interestedParticipants = set(map(lambda triple : triple[0], buyingDecisions))
+			participantsCount = len(interestedParticipants) 
+			#initializing
+			currentParticipant = interestedParticipants[0]
+			auctionWinner = currentParticipant
+			propertySite = buyingDecisions[0][1]
+			
+			while participantsCount > 1:
+				
+				currentBid = None
+
+				if self.getCurrentPlayerCash(currentParticipant) > highestBid:
+					# Assuming a auction decison API
+					(currentBid,propertyId) = self.state.agents[currentParticipant].auctionDecision(highestBid)
+			
+					if currentBid and currentBid > highestBid:
+						highestBid = currentBid
+						propertySite = propertyId
+						auctionWinner = currentParticipant
+					else:
+						participantsCount -= 1
+
+				currentParticipant = (currentParticipant + 1) % N
+
+			buyingDecisions = self.updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite)
+			maxHouses -= 1
+			# update the buyingDecisions  
+			auctionWinnerCurrentCash = self.getCurrentPlayerCash(auctionWinner)
+			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
+			self.state.setPropertyStatus(auctionedProperty,auctionWinner,1)
+
 	
 	"""
 	(Q: Will there need to be a BSTM if the player receives money?)
