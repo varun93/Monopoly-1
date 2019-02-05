@@ -401,19 +401,26 @@ class Adjudicator:
 	"""
 	def handleTrade(agent,otherAgent,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 
+
+		def validPropertyToTrade(playerId, propertyId):
+			if not  self.state.rightOwner(propertyId, playerId):
+				return False
+			if self.state.getNumberOfHouses(propertyId) > 0:
+				return False
+
+			return True
+
+
 		currentPlayer = agent.id
-		previousPayload = self.getPhasePayload(currentPlayer)
+		previousPayload = self.state.getPhasePayload()
 		
 		cashRequest = self.check_valid_cash(cashRequest)
 		cashOffer = self.check_valid_cash(cashOffer)
 		
-		otherPlayer = self.getOtherPlayer(currentPlayer)
+		otherPlayer = otherAgent.id
 		
-		s = self.state
-		rightOwner, setPropertyStatus, getPropertyStatus, getCash = s.rightOwner, s.setPropertyStatus, s.getPropertyStatus, s.getCash
-
-		currentPlayerCash = getCash(currentPlayer)
-		otherPlayerCash = getCash(otherPlayer)
+		currentPlayerCash = self.state.getCash(currentPlayer)
+		otherPlayerCash = self.state.getCash(otherPlayer)
 
 		if cashOffer > currentPlayerCash:
 			return False
@@ -422,25 +429,20 @@ class Adjudicator:
 			return False
 
 		for propertyOffer in propertiesOffer:
-			propertyStatus = getPropertyStatus(propertyOffer)
-			if not rightOwner(propertyStatus,currentPlayer):
+			if not validPropertyToTrade(currentPlayer, propertyOffer):
 				return False
-			if abs(propertyStatus) > 1 and abs(propertyStatus) < 7:
-				return False
+				
 
-		# check if the other agent actually cash and properties to offer
 		for propertyRequest in propertiesRequest:
-			propertyStatus = getPropertyStatus(state,propertyRequest)
-			if not rightOwner(propertyStatus,otherPlayer):
-				return False
-			if abs(propertyStatus) > 1 and abs(propertyStatus) < 7:
+			if not validPropertyToTrade(otherPlayer, propertyRequest):
 				return False
 			
 		
 		phasePayload = [cashOffer,propertiesOffer,cashRequest,propertiesRequest]
 
-		self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.TRADE_OFFER)
-		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,phasePayload)
+		# set phase payload and index
+		self.state.setPhase(self.TRADE_OFFER)
+		self.state.setPhasePayload(phasePayload)
 
 		tradeResponse = self.runPlayerOnStateWithTimeout(otherAgent,state)
 		tradeResponse = self.typecast(tradeResponse, bool, False)
@@ -448,7 +450,7 @@ class Adjudicator:
 		# if the trade was successful update the cash and property status
 		if tradeResponse:
 			# update the values in the payload index 
-			mortgagedProperties = list(filter(lambda propertyId : getPropertyStatus(state,propertyId) in [-7,7], propertiesOffer + propertiesRequest))
+			mortgagedProperties = list(filter(lambda propertyId : self.state.isPropertyMortgaged(propertyId), propertiesOffer + propertiesRequest))
 
 			for mortgagedProperty in mortgagedProperties:
 				if mortgagedProperty not in mortgagedDuringTrade:
@@ -461,35 +463,33 @@ class Adjudicator:
 					if getPropertyStatus(state, mortgagedProperty) == -7:
 						agentInQuestion = 1
 																																					
-					agentsCash = getPlayerCash(agentInQuestion)
+					agentsCash = self.state.getCash(agentInQuestion)
 					agentsCash -= mortgagedPrice*0.1
-					self.updateState(state,self.PLAYER_CASH_INDEX,agentInQuestion-1,agentsCash)
+					self.state.setCash(agentInQuestion-1,agentsCash)
 
-			currentPlayerCash = getPlayerCash(currentPlayer)
-			otherPlayerCash = getPlayerCash(otherPlayer)
+			currentPlayerCash =  self.state.getCash(currentPlayer)
+			otherPlayerCash = self.state.getCash(otherPlayer)
 
 			currentPlayerCash += (cashRequest - cashOffer)
 			otherPlayerCash += (cashOffer - cashRequest)
 			
-			self.updateState(state, self.PLAYER_CASH_INDEX,currentPlayer - 1,currentPlayerCash)
-			self.updateState(state, self.PLAYER_CASH_INDEX,otherPlayer - 1,otherPlayerCash)
+			self.state.setCash(currentPlayer - 1,currentPlayerCash)
+			self.state.setCash(otherPlayer - 1,otherPlayerCash)
 
 			for propertyOffer in propertiesOffer:
-				propertyStatus = getPropertyStatus(state,propertyOffer) 
-				setPropertyStatus(propertyOffer,propertyStatus*-1)
+				self.state.setPropertyOwner(otherPlayer)
 
 			for propertyRequest in propertiesRequest:
-				propertyStatus = getPropertyStatus(state,propertyRequest)
-				setPropertyStatus(propertyRequest,propertyStatus*-1)
+				self.state.setPropertyOwner(currentPlayer)
 		
 		#Receive State
 		#Making the phase number BSTM so that tradeResponse isnt called again
-		self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.BSTM)
+		self.state.setPhase(self.BSTM)
 		phasePayload.insert(0,tradeResponse)
-		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,phasePayload)
+		self.state.setPhasePayload(phasePayload)
 		
 		self.runPlayerOnStateWithTimeout(agent,state,receiveState=True)
-		self.updateState(state,self.PHASE_PAYLOAD_INDEX,None,previousPayload)
+		self.setPhasePayload(previousPayload)
 		return True
 	
 	# previousPhaseNumber = state[self.PHASE_NUMBER_INDEX]
@@ -513,6 +513,7 @@ class Adjudicator:
 		highestBid = 1
 		currentParticipant = self.state.getCurrentPlayerId()
 		auctionWinner = currentParticipant
+
 		# actually this should be number of live players 
 		numberOfPartiesInterested = self.state.getLivePlayers()
 		
@@ -522,7 +523,12 @@ class Adjudicator:
 			currentBid = None
 
 			if self.state.getCash(currentParticipant) > highestBid:
-				currentBid = self.agents[currentParticipant].auctionDecision(highestBid)
+				phasePayload = [auctionedProperty,auctionWinner]
+				# the phase might have to be changed
+				self.state.setPhase(self.PHASE_NUMBER_INDEX)
+				# this too maybe 
+				self.state.setPhasePayload(phasePayload)
+				currentBid = self.runPlayerOnStateWithTimeout(currentParticipant)
 			
 			if currentBid and currentBid > highestBid:
 				highestBid = currentBid
@@ -536,15 +542,7 @@ class Adjudicator:
 		self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
 		self.state.setPropertyOwner(auctionWinner,auctionedProperty)
 
-		# what is player position?
-		# phasePayload = [playerPosition,0]
-		# what are these?
-		phasePayload = []
-		
-		self.state.setPhase(auctionWinner,self.PHASE_NUMBER_INDEX)
-		self.state.setPhasePayload(auctionWinner,phasePayload)
-
-		return [True,True]
+		# return [True, True]
 		
 
 	def updateBuyingDecisions(self,buyingDecisions,auctionWinner,propertySite):
@@ -585,7 +583,9 @@ class Adjudicator:
 
 				if self.getCurrentPlayerCash(currentParticipant) > highestBid:
 					# Assuming a auction decison API
-					(currentBid,propertyId) = self.state.agents[currentParticipant].auctionDecision(highestBid)
+					# set something and call some predefined state
+					# set phase index and payload
+					(currentBid,propertyId) = self.runPlayerOnState(currentParticipant)
 			
 				if currentBid and currentBid > highestBid:
 					highestBid = currentBid
@@ -601,7 +601,8 @@ class Adjudicator:
 			# update the buyingDecisions  
 			auctionWinnerCurrentCash = self.getCurrentPlayerCash(auctionWinner)
 			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
-			self.state.setPropertyStatus(auctionedProperty,auctionWinner,1)
+			currentNumberOfHouses = self.state.setNumberOfHouses(auctionedProperty)
+			self.state.setNumberOfHouses(auctionedProperty, currentNumberOfHouses + 1)
 
 	
 	"""
