@@ -83,18 +83,18 @@ class State:
 		self.turn_of_loss[playerIndex] = self.turn
 	
 	"""PHASE"""
-	def getPhase(self,playerIndex):
-		self.phase[playerIndex]
+	def getPhase(self):
+		return self.phase
 		
-	def setPhase(self,playerIndex,phase):
-		self.phase[playerIndex] = phase
+	def setPhase(self,phase):
+		self.phase = phase
 	
 	"""PHASE PAYLOAD"""
-	def getPhasePayload(self,playerIndex):
-		self.phase[playerIndex]
+	def getPhasePayload(self):
+		return self.phasePayload
 		
-	def setPhasePayload(self,playerIndex,phasePayload):
-		self.phasePayload[playerIndex] = phasePayload
+	def setPhasePayload(self,phasePayload):
+		self.phasePayload = phasePayload
 	
 
 	"""DEBT"""
@@ -245,24 +245,12 @@ class State:
 		return hotels
 
 	def getConstructionValue(self,propertyId):
-		# TODO
-		return 0
+		return constants.board[propertyId]["build_cost"]
 
-	def getPropertyStatus(state,propertyId):
-		return self.state[self.PROPERTY_STATUS_INDEX][propertyId]
-
-	def setPropertyStatus(self, propertyId, propertyStatus):
-		return 0
-	
 	""" Bunch of utilities """
 	# logic to be changed
-	def rightOwner(self,propertyStatus,player):
-		if player == self.AGENTONE and propertyStatus <= 0:
-			return False
-		if player == self.AGENTTWO and propertyStatus  >= 0:
-			return False
-
-		return True
+	def rightOwner(self,playerId,propertyId):
+		return self.getPropertyOwner(propertyId).playerId == playerId
 
 	def getLivePlayers(self):
 		# TODO
