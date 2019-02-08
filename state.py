@@ -213,7 +213,7 @@ class State:
 		totalCurrentHouses = 0
 		totalNewHouses = 0
 		
-		for (propertyId,houses) in sellingSequence:
+		for (propertyId,newHouses) in sellingSequence:
 			currentHouses = self.properties[propertyId].houses
 			if currentHouses<5:
 				actualCurrentHouses = currentHouses
@@ -228,7 +228,7 @@ class State:
 				actualNewHouses = 0
 			totalNewHouses+=actualNewHouses
 		
-		if totalNewHouses>=totalCurrentHouses:
+		if totalNewHouses>totalCurrentHouses:
 			return True
 		return False
 	

@@ -171,7 +171,7 @@ class Adjudicator:
 			return type
 			
 		def hasBuyingCapability(playerIndex,properties):
-			playerCash = self.state.getPlayerCash( playerIndex)
+			playerCash = self.state.getCash(playerIndex)
 			for propertyObject in properties:
 				(propertyId,constructions) = propertyObject
 				space = constants.board[propertyId]
@@ -183,102 +183,35 @@ class Adjudicator:
 		# house can be built only if you own a monopoly of colours 
 		# double house can be built only if I have built one house in each colour 
 		# order of the tuples to be taken into account
-		def handleBuy(agent,properties):
-			currentPlayer = agent.id
-			
-			#Checking if there are properties where houses can't be built
-			#Or has invalid number of houses to be built
-			invalidProperties = [x for x in properties if (x[1]<0) or (x[1]>5 or constants.board[x[0]]['class']!='Street' )]
-			if len(invalidProperties) > 0:
-				return False
-
-			if not validBuyingSequence(currentPlayer,properties,1):
-				return False
-
-			# determine if the agent actually has the cash to buy all this?
-			# only then proceed; important for a future sceanrio
-			if not hasBuyingCapability(currentPlayer, properties):
-				return False
-			
-			[remaining_houses,remaining_hotels] = maxHousesHotelsCheck(state,properties,1)
-			if remaining_houses==-1 or remaining_hotels==-1:
-				log("bstm","Can't buy a house/hotel on "+str(properties)+". Max House limit reached.")
-				return False
-			
-			if not monopolyCheck(state,properties,1):
-				return False
-			
-			playerCash = getPlayerCash(currentPlayer)
-			propertyStatusList = [ prop for prop in state[self.PROPERTY_STATUS_INDEX] ]
-			
-			# ordering of this tuple becomes important  
-			for propertyObject in properties:
-				(propertyId,constructions) = propertyObject
+		def handleBuy(playerIndex,properties):
+			playerCash = self.state.getCash(playerIndex)
+			for (propertyId,constructions) in properties:
 				space = constants.board[propertyId]
-				propertyStatus = propertyStatusList[propertyId]
-				currentConstructionsOnProperty = abs(propertyStatus) - 1 
-
-				if constructions and constructions > 0:
-					playerCash -= space['build_cost']*constructions
-					
-					if playerCash >= 0:
-						propertyStatus = constructions + currentConstructionsOnProperty + 1
-						
-						if currentPlayer == self.AGENTTWO:
-							propertyStatus *= -1
-						
-						propertyStatusList[propertyId] = propertyStatus
-					else:
-						#Should never occur
-						return False
-			self.updateState(state,self.PROPERTY_STATUS_INDEX,None,propertyStatusList)
-			self.updateState(state,self.PLAYER_CASH_INDEX,currentPlayer-1,playerCash)
+				houseCount = self.state.getNumberOfHouses(propertyId)
+				houseCount += constructions
+				playerCash -= (space['build_cost']*constructions)
+				self.state.setNumberOfHouses(propertyId,houseCount)
+			self.state.setCash(playerIndex,playerCash)
 			return True
 
-		def handleSell(agent,properties):
-			playerIndex = self.getPlayerIndex(agent.id)
-			
-			#Checking if there are properties where houses can't be built
-			invalidProperties = [x for x in properties if constants.board[x[0]]['class']!='Street' ]
-			if len(invalidProperties) > 0:
-				return False
-			
-			if not validBuyingSequence(playerIndex,properties,-1):
-				return False
-			
-			[remaining_houses,remaining_hotels] = maxHousesHotelsCheck(state,properties,-1)
-			if remaining_houses==-1 or remaining_hotels==-1:
-				log("bstm","Can't sell a house/hotel on "+str(properties)+". Max House limit reached.")
-				return False
-			
-			if not monopolyCheck(state,properties,-1):
-				return False
+		def handleSell(playerIndex,properties):
+			playerCash = self.state.getCash(playerIndex)
 			
 			for (propertyId,constructions) in properties:
-
 				space = constants.board[propertyId]
-				playerCash = getPlayerCash( playerIndex)
-				propertyStatus = getPropertyStatus(state,propertyId)
-
-				houseCount = abs(propertyStatus) - 1
-				
-				houseCount -= constructions 
+				houseCount = self.state.getNumberOfHouses(propertyId)
+				houseCount -= constructions
 				playerCash += (space['build_cost']*0.5*constructions)
-
-				propertyStatus = houseCount + 1
-
-				if playerIndex == self.AGENTTWO:
-					propertyStatus *= -1
-
-				updatePropertyStatus(state,propertyId,propertyStatus)
-				self.updateState(state,self.PLAYER_CASH_INDEX,playerIndex-1,playerCash)
+				self.state.setNumberOfHouses(propertyId,houseCount)
+			
+			self.state.setCash(playerIndex,playerCash)
 			return True
 
 		# If property is mortgaged, player gets back 50% of the price.
 		# If the player tries to unmortgage something and he doesn't have the money, the entire operation fails.
 		# If the player tries to mortgage an invalid property, entire operation fails.
 		def handleMortgage(playerIndex,properties):
-			playerCash = self.state.getPlayerCash(playerIndex)
+			playerCash = self.state.getCash(playerIndex)
 			mortgageRequests = []
 			unmortgageRequests = []
 			
@@ -324,16 +257,16 @@ class Adjudicator:
 		
 		"""
 		BSMT will be carried out as decision rounds where each player is asked for his BSMT action during that round.
-		The flag array 'doneWithBSMT' stores whether each player wants to perform a BSMT action in the current round or not.
+		The flag array 'doneWithBSM' stores whether each player wants to perform a BSMT action in the current round or not.
 		If all the player's don't want to take BSMT actions in a given round, then the BSMT phase ends.
 		If a player decides he doesn't want to take any BSMT actions in a given decision round, he can still make BSMT actions in later decision rounds.
 		This is done so that he can react to the BSMT decisions made by other players.
 		TODO:
 		Find a way to ensure that BSMT doesn't go on forever.
 		"""
-		doneWithBSMT = [False]*(self.TOTAL_NO_OF_PLAYERS)
+		doneWithBSM = [False]*(self.TOTAL_NO_OF_PLAYERS)
 		
-		while False in doneWithBSMT:
+		while False in doneWithBSM:
 			
 			#self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.BSTM)
 			
@@ -344,13 +277,13 @@ class Adjudicator:
 			
 			while True:
 				
-				"""Getting the actions for BSMT from all the players"""
+				"""Getting the actions for BSM from all the players"""
 				for i in range(self.TOTAL_NO_OF_PLAYERS):
 					if not self.state.hasPlayerLost(i):
 						action = self.runPlayerOnStateWithTimeout(i)
 						actionType = checkActionType(action)
 						if actionType=="M":
-							mortgageRequests[i]=action
+							mortgageRequests[i]=action[1]
 						elif actionType=="B":
 							if self.state.isBuyingSequenceValid(i,action[1]) and hasBuyingCapability(i,action[1]):
 								buyingRequests[i]=action[1]
@@ -366,7 +299,7 @@ class Adjudicator:
 				i=0
 				sellingRequestsSize = len(sellingRequests)
 				while i<sellingRequestsSize:
-					if self.state.doesNoOfHousesIncreaseBySelling(sellingRequests[indices[i]]):
+					if not self.state.doesNoOfHousesIncreaseBySelling(sellingRequests[indices[i]]):
 						handleSell(indices[i], sellingRequests[indices[i]])
 						del sellingRequests[indices[i]]
 						sellingRequestsSize-=1
