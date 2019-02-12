@@ -115,41 +115,52 @@ class Adjudicator:
 
 		"""Returns the type of action. Also checks if the action is valid."""
 		def checkActionType(action):
-			if not ( isinstance(action, list) or isinstance(action, tuple) ):
+			if not ( isinstance(action, list) or isinstance(action, tuple) ) or len(action)<2:
 				return "N"
 			
 			type = action[0]
-			if (type=="B") or (type=="S"):
-				if len(action)<2:
-					return "N"
-				if not isinstance(action[1], list) and not isinstance(action[1], tuple):
+			if type=="BHS":
+				if not ( isinstance(action[1], list) or isinstance(action[1], tuple) ):
 					return "N"
 				else:
 					for prop in action[1]:
-						if not isinstance(prop, list) and not isinstance(prop, tuple):
+						if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<2:
 							return "N"
-						else:
-							if len(prop)<2:
+						else:							
+							firstElem = self.typecast(prop[0],int,-1)
+							secondElem = self.typecast(prop[1],int,-1)
+							if firstElem<0 or firstElem>self.BOARD_SIZE-1:
 								return "N"
-							if self.typecast(prop[0],int,-1) == -1:
+							if secondElem<0 or secondElem>4:
 								return "N"
-							if self.typecast(prop[1],int,-1) == -1:
-								return "N"
-			elif type == "M":
-				if len(action)<2:
+			elif type=="S":
+				if not ( isinstance(action[1], list) or isinstance(action[1], tuple) ):
 					return "N"
+				else:
+					for prop in action[1]:
+						if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<3:
+							return "N"
+						else:							
+							firstElem = self.typecast(prop[0],int,-1)
+							secondElem = self.typecast(prop[1],int,-1)
+							thirdElem = self.typecast(prop[2], bool, False)
+							if firstElem<0 or firstElem>self.BOARD_SIZE-1:
+								return "N"
+							if secondElem<0 or secondElem>4:
+								return "N"
+			elif type == "M" or type=="BHT":
 				if not isinstance(action[1], list) and not isinstance(action[1], tuple):
 					return "N"
 				else:
 					for prop in action[1]:
-						if self.typecast(prop,int,-1) == -1:
+						firstElem = self.typecast(prop,int,-1)
+						if firstElem<0 or firstElem>self.BOARD_SIZE-1:
 							return "N"
 			return type
 			
-		def hasBuyingCapability(playerIndex,properties):
-			playerCash = self.state.getCash(playerIndex)
-			for propertyObject in properties:
-				(propertyId,constructions) = propertyObject
+		def hasBuyingCapability(playerId,properties):
+			playerCash = self.state.getCash(playerId)
+			for propertyId,constructions in properties:
 				space = constants.board[propertyId]
 				playerCash -= space['build_cost']*constructions
 				if playerCash < 0:
@@ -159,19 +170,19 @@ class Adjudicator:
 		# house can be built only if you own a monopoly of colours 
 		# double house can be built only if I have built one house in each colour 
 		# order of the tuples to be taken into account
-		def handleBuy(playerIndex,properties):
-			playerCash = self.state.getCash(playerIndex)
-			for (propertyId,constructions) in properties:
+		def handleBuy(playerId,properties):
+			playerCash = self.state.getCash(playerId)
+			for propertyId,constructions in properties:
 				space = constants.board[propertyId]
 				houseCount = self.state.getNumberOfHouses(propertyId)
 				houseCount += constructions
 				playerCash -= (space['build_cost']*constructions)
 				self.state.setNumberOfHouses(propertyId,houseCount)
-			self.state.setCash(playerIndex,playerCash)
+			self.state.setCash(playerId,playerCash)
 			return True
 
-		def handleSell(playerIndex,properties):
-			playerCash = self.state.getCash(playerIndex)
+		def handleSell(playerId,properties):
+			playerCash = self.state.getCash(playerId)
 			
 			for (propertyId,constructions) in properties:
 				space = constants.board[propertyId]
@@ -180,19 +191,19 @@ class Adjudicator:
 				playerCash += (space['build_cost']*0.5*constructions)
 				self.state.setNumberOfHouses(propertyId,houseCount)
 			
-			self.state.setCash(playerIndex,playerCash)
+			self.state.setCash(playerId,playerCash)
 			return True
 
 		# If property is mortgaged, player gets back 50% of the price.
 		# If the player tries to unmortgage something and he doesn't have the money, the entire operation fails.
 		# If the player tries to mortgage an invalid property, entire operation fails.
-		def handleMortgage(playerIndex,properties):
-			playerCash = self.state.getCash(playerIndex)
+		def handleMortgage(playerId,properties):
+			playerCash = self.state.getCash(playerId)
 			mortgageRequests = []
 			unmortgageRequests = []
 			
 			for propertyId in properties:
-				if self.state.getPropertyOwner(propertyId)!=playerIndex:
+				if self.state.getPropertyOwner(propertyId)!=playerId:
 					return False
 				
 				#It could be that the player is getting money to unmortgage a property 
@@ -229,7 +240,7 @@ class Adjudicator:
 			
 			for propertyId in properties:
 				self.state.setPropertyMortgaged(propertyId,not self.state.isPropertyMortgaged(propertyId))
-			self.state.setCash(playerIndex,playerCash)
+			self.state.setCash(playerId,playerCash)
 		
 		"""
 		BSMT will be carried out as decision rounds where each player is asked for his BSMT action during that round.
@@ -248,32 +259,40 @@ class Adjudicator:
 			
 			currentPlayerIndex = self.state.getCurrentPlayerIndex()
 			mortgageRequests = []
-			buyingRequests = []
+			buyingHousesRequests = []
+			buyingHotelsRequests = []
 			sellingRequests = []
 			
 			while True:
 				
 				"""Getting the actions for BSM from all the players"""
 				for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
-					if not self.state.hasPlayerLost(i):
-						action = self.runPlayerOnStateWithTimeout(i)
+					playerId = self.PLAY_ORDER[i]
+					if not self.state.hasPlayerLost(playerId):
+						action = self.runPlayerOnStateWithTimeout(playerId)
 						actionType = checkActionType(action)
 						if actionType=="M":
-							mortgageRequests.append((i,action[1]))
-						elif actionType=="B":
-							if self.state.isBuyingSequenceValid(i,action[1]) and hasBuyingCapability(i,action[1]):
-								buyingRequests.append((i,action[1]))
+							mortgageRequests.append((playerId,action[1]))
+						elif actionType=="BHS":
+							if self.state.isBuyingHousesSequenceValid(playerId,action[1]) and hasBuyingCapability(playerId,action[1]):
+								buyingHousesRequests.append((playerId,action[1]))
+						elif actionType=="BHT":
+							if self.state.isBuyingHotelSequenceValid(playerId,action[1]):
+								buyingHotelsRequests.append((playerId,action[1]))
 						elif actionType=="S":
-							if self.state.isSellingSequenceValid(i,action[1]):
-								sellingRequests.append((i,action[1]))
-				
-				housesRemaining = self.state.getHousesRemaining()
-				for _,request in buyingRequests:
-					housesRemaining -= self.state.evaluateBuyingSequence(request)[0]
+							if self.state.isSellingSequenceValid(playerId,action[1]):
+								sellingRequests.append((playerId,action[1]))
 				
 				"""Selling Requests"""
+				finishedSellingRequests = []
+				housesRemaining = self.state.getHousesRemaining()
+				for _,request in buyingHousesRequests:
+					housesRemaining -= self.state.evaluateBuyingHousesSequence(request)
+				
+				#TODO: Also consider buying hotel requests here
+				
 				for playerIndex,request in sellingRequests:
-					extraHouses = self.state.evaluateSellingSequence(request)
+					extraHouses = len(request)*4
 					if extraHouses<=0 or extraHouses<=housesRemaining:
 						handleSell(playerIndex, request)
 						housesRemaining-=extraHouses
@@ -419,13 +438,14 @@ class Adjudicator:
 	Any lower bid/ failure to bid in time would result in the property going to the other player. 
 	NOTE: This function only accepts UNOWNED PROPERTIES. ENSURE THIS IN THE CALLING FUNCTION.
 	"""
-	def start_auction(self,auctionedProperty):
+	def start_auction(self):
+		auctionedProperty = self.state.getPhasePayload()
 		highestBid = 1
 		currentParticipant = self.state.getCurrentPlayerId()
 		auctionWinner = currentParticipant
 
 		# actually this should be number of live players 
-		numberOfPartiesInterested = self.state.getLivePlayers()
+		numberOfPartiesInterested = len(self.state.getLivePlayers())
 		
 		while numberOfPartiesInterested > 1:
 			
@@ -560,13 +580,13 @@ class Adjudicator:
 				#Check if the player has the mentioned property card.
 				if (len(action)>1) & (action[1] in [self.CHANCE_GET_OUT_OF_JAIL_FREE,self.COMMUNITY_GET_OUT_OF_JAIL_FREE]):
 					
-					if self.state.isPropertyOwned() and self.state.getPropertyOwner(action[1])==currentPlayerId:
+					if self.state.isPropertyOwned() and self.state.rightOwner(currentPlayerId,action[1]):
 						if action[1] == self.COMMUNITY_GET_OUT_OF_JAIL_FREE:
 							self.chest.deck.append(constants.communityChestCards[4])
 						elif action[1] == self.CHANCE_GET_OUT_OF_JAIL_FREE:
 							self.chance.deck.append(constants.chanceCards[7])
 						
-						self.state.setPropertyOwner(action[1],0)
+						self.state.setPropertyUnowned(action[1])
 						self.state.setPosition(currentPlayerId,self.JUST_VISTING)
 						self.state.resetJailCounter(currentPlayerId)
 						return [True,False]
@@ -667,16 +687,17 @@ class Adjudicator:
 			return True
 	
 	def isProperty(self,position):
-		return (constants.board[position]['class'] == 'Street') or (constants.board[position]['class'] == 'Railroad') or (constants.board[position]['class'] == 'Utility')
+		propertyClass = constants.board[position]['class']
+		return (propertyClass == 'Street') or (propertyClass == 'Railroad') or (propertyClass == 'Utility')
 	
 	"""
 	Performed after dice is rolled and the player is moved to a new position.
 	Determines the effect of the position and action required from the player.
 	"""		
 	def determine_position_effect(self):
-		currentPlayer = self.state.getCurrentPlayerId()
-		playerPosition = self.state.getPosition(currentPlayer)
-		playerCash = self.state.getCash(currentPlayer)
+		currentPlayerId = self.state.getCurrentPlayerId()
+		playerPosition = self.state.getPosition(currentPlayerId)
+		playerCash = self.state.getCash(currentPlayerId)
 		
 		isProperty = self.isProperty(playerPosition)
 		
@@ -687,10 +708,10 @@ class Adjudicator:
 			if 'phase_properties' in output:
 				self.state.setPhasePayload(output['phase_properties'])
 			if 'debt' in output:
-				self.state.setDebtToPlayer(currentPlayer,output['debt'][0],output['debt'][1])
+				self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1])
 			
 			if output['phase']==Phase.BUYING:
-				action = self.runPlayerOnStateWithTimeout(currentPlayer)
+				action = self.runPlayerOnStateWithTimeout(currentPlayerId)
 				action = self.typecast(action, bool, False)
 				if not action:
 					self.state.setPhase(Phase.AUCTION)
@@ -707,7 +728,7 @@ class Adjudicator:
 			self.state.setPhasePayload(phasePayload)
 			
 			self.broadcastState()
-			self.handle_cards_pre_turn(state,card,'Chance')
+			self.handle_cards_pre_turn(card,'Chance')
 			
 		elif constants.board[playerPosition]['class'] == 'Chest':
 			#Community
@@ -721,14 +742,14 @@ class Adjudicator:
 			self.state.setPhasePayload(phasePayload)
 
 			self.broadcastState()
-			self.handle_cards_pre_turn(state,card,'Chest')
+			self.handle_cards_pre_turn(card,'Chest')
 		   
 		elif constants.board[playerPosition]['class'] == 'Tax':
 			#Tax
 			cash = constants.board[playerPosition]['tax']
 			self.state.setPhase(Phase.PAYMENT)
 			self.state.setPhasePayload(None)
-			self.state.addDebtToBank(currentPlayer,cash)
+			self.state.addDebtToBank(currentPlayerId,cash)
 		
 		elif constants.board[playerPosition]['class'] == 'GoToJail':
 			self.send_player_to_jail()
@@ -743,23 +764,23 @@ class Adjudicator:
 	Hence only returns a 2 size tuple for debt.
 	"""
 	def handle_property(self):
-		currentPlayer = self.state.getCurrentPlayerId()
-		playerPosition = self.state.getPosition(currentPlayer)
-		playerCash = self.state.getCash(currentPlayer)
+		currentPlayerId = self.state.getCurrentPlayerId()
+		playerPosition = self.state.getPosition(currentPlayerId)
+		playerCash = self.state.getCash(currentPlayerId)
+		isPropertyOwned = self.state.isPropertyOwned(propertyId)
+		ownerId = self.state.getPropertyOwner(playerPosition)
 		
-		owner = self.state.getPropertyOwner(playerPosition)
 		output = {}
-		if owner == self.OWNED_BY_BANK:
+		if isPropertyOwned:
 			#Unowned
 			output['phase'] = Phase.BUYING
 			output['phase_properties'] = playerPosition
-		elif owner!=currentPlayer:
-			
+		elif ownerId!=currentPlayerId:
 			monopolies = constants.board[playerPosition]['monopoly_group_elements']
 			counter = 1
 			for monopoly in monopolies:
 				monopolyPropOwner = self.state.getPropertyOwner(playerPosition)
-				if monopolyPropOwner==owner:
+				if monopolyPropOwner==ownerId:
 					counter += 1
 			
 			if (constants.board[playerPosition]['class'] == 'Street'):
@@ -768,7 +789,7 @@ class Adjudicator:
 					rent = rent * 2
 				
 				houseCount = self.state.getNumberOfHouses(propertyId)
-				
+				hasHotel = self.state.getHotel(propertyId)
 				if houseCount==1:
 					rent = constants.board[playerPosition]['rent_house_1']
 				elif houseCount==2:
@@ -777,7 +798,7 @@ class Adjudicator:
 					rent = constants.board[playerPosition]['rent_house_3']
 				elif houseCount==4:
 					rent = constants.board[playerPosition]['rent_house_4']
-				elif houseCount==5:
+				elif hasHotel:
 					rent = constants.board[playerPosition]['rent_hotel']	
 				
 			elif (constants.board[playerPosition]['class'] == 'Railroad'):
@@ -795,7 +816,7 @@ class Adjudicator:
 			
 			output['phase'] = Phase.PAYMENT
 			output['phase_properties'] = playerPosition
-			output['debt'] = (owner,rent)
+			output['debt'] = (ownerId,rent)
 		else:
 			#When the property is owned by us
 			pass
@@ -803,7 +824,7 @@ class Adjudicator:
 		return output
 
 	"""Method handles various events for Chance and Community cards"""
-	def handle_cards_pre_turn(self,state,card,deck):
+	def handle_cards_pre_turn(self,card,deck):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
@@ -825,14 +846,14 @@ class Adjudicator:
 			phaseNumber = self.PAYMENT
 			if card['money']<0:
 				debtAmount = abs(card['money'])
-				for i in range(self.TOTAL_NO_OF_PLAYERS):
-					if i!=currentPlayerId and not self.state.hasPlayerLost(i):
-						self.state.setDebtToPlayer(currentPlayerId,i,debtAmount)
+				for playerId in self.PLAY_ORDER:
+					if playerId!=currentPlayerId and not self.state.hasPlayerLost(playerId):
+						self.state.setDebtToPlayer(currentPlayerId,playerId,debtAmount)
 			else:
 				debtAmount = abs(card['money'])
-				for i in range(self.TOTAL_NO_OF_PLAYERS):
-					if i!=currentPlayerId and not self.state.hasPlayerLost(i):
-						self.state.setDebtToPlayer(i,currentPlayerId,debtAmount)
+				for playerId in self.PLAY_ORDER:
+					if playerId!=currentPlayerId and not self.state.hasPlayerLost(playerId):
+						self.state.setDebtToPlayer(playerId,currentPlayerId,debtAmount)
 			
 		elif card['type'] == 3:
 			if card['position'] == -1:
@@ -859,12 +880,11 @@ class Adjudicator:
 			n_houses = 0
 			n_hotels = 0
 			for propertyId in range(self.BOARD_SIZE):
-				if (self.state.getPropertyOwner(propertyId)==currentPlayerId):
-					houseCount = self.state.getNumberOfHouses(propertyId)
-					if houseCount<5:
-						n_houses+=houseCount
-					elif houseCount==5:
+				if self.state.rightOwner(currentPlayerId,propertyId):
+					if self.state.getHotel(propertyId):
 						n_hotels+=1
+					else:
+						n_houses+=self.state.getNumberOfHouses(propertyId)
 
 			debtAmount = abs(card['money'])*n_houses + abs(card['money2'])*n_hotels
 			if debtAmount > 0:
@@ -873,7 +893,6 @@ class Adjudicator:
 		
 		elif card['type'] == 6:
 			#Advance to nearest railroad. Pay 2x amount if owned
-			railroads = [i for i in range(self.BOARD_SIZE) if constants.board[i]['class']=='Railroad']
 			if (playerPosition < 5) or (playerPosition>=35):
 				if (playerPosition>=35):
 					#Passes Go
@@ -895,10 +914,15 @@ class Adjudicator:
 			if 'debt' in output:
 				#We need to double rent if the player landed on opponent's property.
 				self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1]*2)
+			
+			if output['phase']==Phase.BUYING:
+				action = self.runPlayerOnStateWithTimeout(currentPlayerId)
+				action = self.typecast(action, bool, False)
+				if not action:
+					self.state.setPhase(Phase.AUCTION)
 		
 		elif card['type'] == 7:
 			#Advance to nearest utility. Pay 10x dice roll if owned
-			utilities = [i for i in range(self.BOARD_SIZE) if constants.board[i]['class']=='Utility']
 			if (playerPosition < 12) or (playerPosition>=28):
 				if (playerPosition>=28):
 					#Passes Go
@@ -907,12 +931,12 @@ class Adjudicator:
 			elif (playerPosition < 28) and (playerPosition>=12):
 				playerPosition = 28
 			
-			owner = self.state.getPropertyOwner(playerPosition)
-			if owner == self.OWNED_BY_BANK:
+			ownerId = self.state.getPropertyOwner(playerPosition)
+			if self.state.isPropertyOwned(propertyId):
 				#Unowned
 				phaseNumber = Phase.BUYING
 				phasePayload = playerPosition
-			elif owner!=currentPlayerId:
+			elif ownerId!=currentPlayerId:
 				#Check if owned by opponent
 				diceThrow = None
 				if (self.diceThrows is not None) and len(self.diceThrows)>0:
@@ -920,7 +944,7 @@ class Adjudicator:
 				self.dice.roll(ignore=True,dice=diceThrow)
 				
 				phaseNumber = Phase.PAYMENT
-				self.state.setDebtToPlayer(currentPlayerId,owner,10 * (self.dice.die_1 + self.dice.die_2))
+				self.state.setDebtToPlayer(currentPlayerId,ownerId,10 * (self.dice.die_1 + self.dice.die_2))
 		
 		elif card['type'] == 8:
 			#Go back 3 spaces
@@ -952,9 +976,11 @@ class Adjudicator:
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
+		price = constants.board[playerPosition]['price']
 		
-		if playerCash>=constants.board[playerPosition]['price']:
+		if playerCash>=price:
 			self.state.setPropertyOwner(playerPosition,currentPlayerId)
+			self.state.setCash(currentPlayerId,playerCash-price)
 			log('buy',"Agent "+str(currentPlayerId)+" has bought "+constants.board[playerPosition]['name'])
 			#Clearing the payload as the buying has been completed
 			self.state.setPhasePayload(None)
@@ -969,9 +995,9 @@ class Adjudicator:
 	Returns 2 boolean list - True if the player was able to pay off his debt
 	"""
 	def handle_payment(self):
-		for playerIndex in range(self.TOTAL_NO_OF_PLAYERS):
-			if not self.state.hasPlayerLost(playerIndex):
-				self.state.clearDebt(playerIndex)
+		for playerId in self.PLAY_ORDER:
+			if not self.state.hasPlayerLost(playerId):
+				self.state.clearDebt(playerId)
 	
 	"""Function calls the relevant method of the Agent"""
 	def turn_effect(self):
@@ -1168,10 +1194,7 @@ class Adjudicator:
 		#add to the state history
 		#Clearing the payload as it might contain some internal info used by the adjudicator
 		self.state.setPhasePayload(None)
-		finalState = list(self.state)
-		finalState.pop(7)
-		finalState.append(reason)
-		finalState = self.transformState(finalState)
+		finalState = self.state.toTuple()
 		log("win","Final State:")
 		log("win",finalState)
 		self.notifyUI()
