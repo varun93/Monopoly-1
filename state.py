@@ -12,12 +12,13 @@ TOTAL_NO_OF_PLAYERS = 4
 NUMBER_OF_PROPERTIES = 42
 
 class Property(dict):
-	def __init__(self,houses,hotel,mortgaged,playerId):
+	def __init__(self,houses,hotel,mortgaged,owned,ownerId):
 		self.houses = houses #value in range 0-4
 		self.hotel = hotel #boolean
 		self.mortgaged = mortgaged #boolean
-		self.ownerId = playerId #0 means owned by the bank
-		dict.__init__(self, houses=houses,hotel=hotel,mortgaged=mortgaged,playerId=playerId) #for json parsing
+		self.owned = owned #boolean
+		self.ownerId = ownerId
+		dict.__init__(self, houses=houses,hotel=hotel,mortgaged=mortgaged,owned=owned,ownerId=ownerId) #for json parsing
 
 class Debt(dict):
 	def __init__(self,bank,otherPlayers):
@@ -32,7 +33,7 @@ class State:
 		TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
 		self.turn = 0
-		self.properties = [Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
+		self.properties = [Property(0,False,False,False,0)]*NUMBER_OF_PROPERTIES
 		self.positions = {}
 		self.cash = {}
 		self.bankrupt = {}
@@ -169,16 +170,26 @@ class State:
 	"""PROPERTIES"""
 	
 	"""OWNERSHIP FUNCTIONS"""
+	def isPropertyOwned(self,propertyId):
+		return self.properties[propertyId].owned
+	
+	def setPropertyUnowned(self,propertyId):
+		self.properties[propertyId].owned = False
+		self.properties[propertyId].houses = 0
+		self.properties[propertyId].hotel = False
+		self.properties[propertyId].mortgaged = False
+		
 	def getPropertyOwner(self,propertyId):
 		return self.properties[propertyId].ownerId
 	
 	def setPropertyOwner(self,propertyId,playerId):
+		self.properties[propertyId].owned = True
 		self.properties[propertyId].ownerId = playerId
 		self.properties[propertyId].houses = 0 #If a property changes ownership, it should always have no houses on it.
 	
 	# logic to be changed
 	def rightOwner(self,playerId,propertyId):
-		return self.getPropertyOwner(propertyId) == playerId
+		return self.properties[propertyId].owned and self.getPropertyOwner(propertyId) == playerId
 	
 	"""MORTGAGE FUNCTIONS"""
 	def isPropertyMortgaged(self,propertyId):

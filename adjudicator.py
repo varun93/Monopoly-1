@@ -1002,11 +1002,12 @@ class Adjudicator:
 		agentCash = [0]*self.TOTAL_NO_OF_PLAYERS
 		agentPropertyWorth = [0]*self.TOTAL_NO_OF_PLAYERS
 		
-		for i in range(40):
+		for propertyId in range(40):
 			#In 0 to 39 board position range
-			ownerIndex = self.state.getPropertyOwner(i)
-			houses = self.state.getNumberOfHouses(i)
-			mortgaged = self.state.isPropertyMortgaged(i)
+			ownerIndex = self.state.getPropertyOwner(propertyId)
+			houses = self.state.getNumberOfHouses(propertyId)
+			hotel = self.state.getHotel(propertyId)
+			mortgaged = self.state.isPropertyMortgaged(propertyId)
 			
 			if ownerIndex!=0: #Not owned by the bank
 				
