@@ -433,47 +433,89 @@ class Adjudicator:
 	# 
 
 	"""
-	Method starts a blind auction.
-	First turn in the auction goes to the player who didn't start it. Bidding starts at 1. 
-	Any lower bid/ failure to bid in time would result in the property going to the other player. 
-	NOTE: This function only accepts UNOWNED PROPERTIES. ENSURE THIS IN THE CALLING FUNCTION.
+	Note : this is simulating real auction; commented for the time being 
 	"""
-	def start_auction(self):
-		auctionedProperty = self.state.getPhasePayload()
-		highestBid = 1
-		currentParticipant = self.state.getCurrentPlayerId()
-		auctionWinner = currentParticipant
-
-		# actually this should be number of live players 
-		numberOfPartiesInterested = len(self.state.getLivePlayers())
+	# def start_auction(self):
+	# 	auctionedProperty = self.state.getPhasePayload()
+	# 	highestBid = 10
+	# 	currentParticipant = self.state.getCurrentPlayerId()
+	# 	auctionWinner = currentParticipant
+	# 	livePlayers = self.state.getLivePlayers()
 		
-		while numberOfPartiesInterested > 1:
-			
-			currentParticipant = (currentParticipant + 1) % N
-			currentBid = None
+	# 	while len(livePlayers) > 1:
 
-			if self.state.getCash(currentParticipant) > highestBid:
-				phasePayload = [auctionedProperty,auctionWinner]
-				# the phase might have to be changed
-				self.state.setPhase(self.PHASE_NUMBER_INDEX)
-				# this too maybe 
-				self.state.setPhasePayload(phasePayload)
-				currentBid = self.runPlayerOnStateWithTimeout(currentParticipant)
-			
-			if currentBid and currentBid > highestBid:
-				highestBid = currentBid
-				auctionWinner = currentParticipant
-			else:
-				auctionParticipants[currentParticipant] = False
-				numberOfPartiesInterested -= 1 			
+	# 		currentParticipantIndex = livePlayers.index(currentParticipant) 
+	# 		currentParticipant = livePlayers[(currentParticipantIndex + 1) % len(livePlayers)]
+	# 		currentBid = None
 
+	# 		if self.state.getCash(currentParticipant) > highestBid:
+	# 			phasePayload = [auctionedProperty,auctionWinner]
+	# 			## NOTE: !!set additional payload if needed
+	# 			self.state.setPhase(self.PHASE_NUMBER_INDEX)
+	# 			self.state.setPhasePayload(phasePayload)
+	# 			currentBid = self.runPlayerOnStateWithTimeout(currentParticipant)
+			
+	# 		if currentBid and currentBid > highestBid:
+	# 			highestBid = currentBid
+	# 			auctionWinner = currentParticipant
+	# 		else:
+	# 			# remove the current player
+	# 			# yes you could use livePlayers.remove(currentParticipant) trying to avoid mutation 
+	# 			livePlayers = list(filter(lambda playerId : playerId != currentParticipant, livePlayers))
 		
-		auctionWinnerCurrentCash = self.getCurrentPlayerCash(auctionWinner)
-		self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
-		self.state.setPropertyOwner(auctionedProperty,auctionWinner)
+	# 	auctionWinnerCurrentCash = self.state.getCash(auctionWinner)
+	# 	self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
+	# 	self.state.setPropertyOwner(auctionedProperty,auctionWinner)
 
 		# return [True, True]
+	
+	"""
+	Accepts the actions of the blind auction from both players and performs it.
+	NOTE: The expected type of action is int. If the input is float, it will be typecast.
+	If the action is in some other type, following rules will be applied:
+		If opponent got the type of action wrong, current player wins.
+		else Opponent wins. i.e., opponent would win even if his action has incorrect type
+		as long as the current player also made a mistake in the type of his action
+	"""	
+	def handle_auction(self,auctionedProperty):
+
+		livePlayers = self.state.getLivePlayers()
+		winner = None
+		winningBid = 0
+
+		for participant in livePlayers:
+			# asking for each participant for the bid
+			auctionBid = self.runPlayerOnStateWithTimeout(participant)
 		
+			if auctionBid and auctionBid > winningBid:
+				winningBid = auctionBid
+				winner = participant
+
+		# What if no one is interested? Just return? is this correct? 
+		if winner is None:
+			return
+			
+		log("auction","Player "+str(winner)+" won the Auction")
+		
+		playerCash = self.state.getCash(winner)
+
+		if playerCash >= winningBid:
+			playerCash -= winningBid
+		else:
+			#Player placed a bid greater than the amount of money he/she has. His loss.
+			result = [True,True]
+			result[winner] = False
+			return result
+
+		self.state.setCash(winner,playerCash)
+		self.state.setPropertyOwner (auctionedProperty,winner)	
+		
+		#Receive State
+		phasePayload = [auctionedProperty,winner+1]
+		self.state.setPhasePayload(phasePayload)
+	
+		# not sure what to do with this 
+		return [True,True]
 
 	def updateBuyingDecisions(self,buyingDecisions,auctionWinner,propertySite):
 
@@ -511,7 +553,7 @@ class Adjudicator:
 				currentBid = None
 				propertyId = None
 
-				if self.getCurrentPlayerCash(currentParticipant) > highestBid:
+				if self.state.getCash(currentParticipant) > highestBid:
 					# Assuming a auction decison API
 					# set something and call some predefined state
 					# set phase index and payload
@@ -524,12 +566,14 @@ class Adjudicator:
 				else:
 					participantsCount -= 1
 
-				currentParticipant = (currentParticipant + 1) % N
+				# code repitition; to be changed
+				currentParticipantIndex = interestedParticipants.index(currentParticipant) 
+				currentParticipant = interestedParticipants[(currentParticipantIndex + 1) % len(interestedParticipants)]
 
 			buyingDecisions = self.updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite)
 			maxHouses -= 1
 			# update the buyingDecisions  
-			auctionWinnerCurrentCash = self.getCurrentPlayerCash(auctionWinner)
+			auctionWinnerCurrentCash = self.state.getCash(auctionWinner)
 			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
 			currentNumberOfHouses = self.state.setNumberOfHouses(auctionedProperty)
 			self.state.setNumberOfHouses(auctionedProperty, currentNumberOfHouses + 1)
@@ -1003,15 +1047,18 @@ class Adjudicator:
 	def turn_effect(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		phase = self.state.getPhase(currentPlayerId)
+		phasePayload = self.state.getPhasePayload()
 		if phase == Phase.BUYING:
 			self.handle_buy_property()
 		elif phase == Phase.AUCTION:
 			#Auction
 			#@Varun: TODO
-			self.start_auction(state)
-			actionOpponent = self.runPlayerOnStateWithTimeout(opponent,state)
-			actionCurrentPlayer = self.runPlayerOnStateWithTimeout(currentPlayer,state)
-			return self.handle_auction(state,actionOpponent,actionCurrentPlayer)
+			# what is the start auction for?
+			# self.start_auction(state)
+			# correct?
+			# is this correct? I can't figure out where this is set
+			auctionedProperty = phasePayload[0]
+			return self.handle_auction(state,auctionedProperty)
 		elif phase == self.PAYMENT:
 			self.handle_payment()
 	
