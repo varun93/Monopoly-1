@@ -1,6 +1,8 @@
 import random
 from collections import namedtuple
 from constants import board
+from builtins import isinstance
+import json
 
 StateTuple = namedtuple("StateTuple", "turn properties positions money bankrupt phase phaseData debt")
 
@@ -10,11 +12,13 @@ MAX_HOTELS = 12
 TOTAL_NO_OF_PLAYERS = 4
 NUMBER_OF_PROPERTIES = 42
 
-class Property:
-	def __init__(self,houses,mortgaged,playerId):
+class Property(dict):
+	def __init__(self,houses,hotel,mortgaged,playerId):
 		self.houses = houses
+		self.hotel = hotel #boolean
 		self.mortgaged = mortgaged
-		self.playerId = playerId #0 means owned by the bank
+		self.ownerId = playerId #0 means owned by the bank
+		dict.__init__(self, houses=houses,hotel=hotel,mortgaged=mortgaged,playerId=playerId)
 
 class State:
 
@@ -26,33 +30,47 @@ class State:
 		
 		self.turn = 0
 		self.properties = [Property(0,False,0)]*NUMBER_OF_PROPERTIES
-		self.positions = [0]*TOTAL_NO_OF_PLAYERS
-		self.cash = [INITIAL_CASH]*TOTAL_NO_OF_PLAYERS
-		self.bankrupt = [False]*TOTAL_NO_OF_PLAYERS
+		self.positions = {}
+		self.cash = {}
+		self.bankrupt = {}
 		self.phase = Phase.BSMT
 		self.phasePayload = None
-		individualDebtArray = [0]*(TOTAL_NO_OF_PLAYERS+1)
-		self.debt = [ individualDebtArray ]*TOTAL_NO_OF_PLAYERS
+		self.debt = {}
 		
-		self.jailCounter = [0]*TOTAL_NO_OF_PLAYERS
-		self.timeoutTracker = [False]*TOTAL_NO_OF_PLAYERS
-		
-		#Keeping track of reason for loss and in which turn the player lost.
-		"""
-		The reason for victory:
-		0 = Greater assets at the end of specified number of turns.
-		1 = Timed Out (Could also pass while doing which action did the timeout occur)
-		2 = Bankruptcy from Debt to Opponent or Bank
-		3 = Bankruptcy from being unable to pay the fine for Jail on the third turn in Jail.
-		"""
-		self.reason = [None]*TOTAL_NO_OF_PLAYERS
-		self.turn_of_loss = [-1]*TOTAL_NO_OF_PLAYERS
+		self.jailCounter = {}
+		self.timeoutTracker = {}
+		self.reason_for_loss = {}
+		self.turn_of_loss = {}
+		for playerId in self.players:
+			self.positions[playerId] = 0
+			self.cash[playerId] = INITIAL_CASH
+			self.bankrupt[playerId] = False
+			self.jailCounter[playerId] = 0
+			self.timeoutTracker[playerId] = False
+			self.reason_for_loss[playerId] = None
+			self.turn_of_loss[playerId] = -1
+			
+			innerDebtDict = {}
+			innerDebtDict[0] = 0 #debt to the bank
+			for otherPlayerId in self.players:
+				if otherPlayerId!=playerId:
+					innerDebtDict[otherPlayerId] = 0 #debt to other players
 	
+	"""The index of the player in the players array"""
+	"""This represents the order of play for the player"""
 	def getCurrentPlayerIndex(self):
 		return self.turn % TOTAL_NO_OF_PLAYERS
 	
+	"""Actual Player Id set inside the agent as the id attribute"""
 	def getCurrentPlayerId(self):
 		return self.players[self.getCurrentPlayerIndex()]
+	
+	def getPlayerId(self,playerIndex):
+		return self.players[playerIndex]
+	
+	"""TURN"""
+	def getTurn(self):
+		return self.turn
 	
 	def updateTurn(self):
 		self.turn+=1
@@ -147,10 +165,10 @@ class State:
 	
 	"""PROPERTIES"""
 	def getPropertyOwner(self,propertyId):
-		return self.properties[propertyId].playerId
+		return self.properties[propertyId].ownerId
 	
-	def setPropertyOwner(self,playerIndex,propertyId):
-		self.properties[propertyId].playerId = playerIndex
+	def setPropertyOwner(self,propertyId,playerIndex):
+		self.properties[propertyId].ownerId = playerIndex
 		self.properties[propertyId].houses = 0 #If a property changes ownership, it shuld always have no houses on it.
 	
 	def isPropertyMortgaged(self,propertyId):
@@ -167,7 +185,7 @@ class State:
 	
 	def getOwnedProperties(self, playerIndex):
 		return [propertyId for propertyId in range(NUMBER_OF_PROPERTIES)
-			if self.properties[propertyId].playerId==playerIndex]
+			if self.properties[propertyId].ownerId==playerIndex]
 	
 	"""
 	This function checks the following:
@@ -182,11 +200,11 @@ class State:
 			if board[propertyId]['class']!="Street":
 				return False
 			
-			if (propertiesCopy[propertyId].playerId!=playerIndex) or (propertiesCopy[propertyId].mortgaged):
+			if (propertiesCopy[propertyId].ownerId!=playerIndex) or (propertiesCopy[propertyId].mortgaged):
 				return False
 			
 			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
-				if (propertiesCopy[monopolyPropertyId].playerId!=playerIndex) or (propertiesCopy[monopolyPropertyId].mortgaged):
+				if (propertiesCopy[monopolyPropertyId].ownerId!=playerIndex) or (propertiesCopy[monopolyPropertyId].mortgaged):
 					return False
 			
 			newHousesCount = propertiesCopy[propertyId].houses+(sign*housesCount)
@@ -209,29 +227,40 @@ class State:
 	def isSellingSequenceValid(self,playerIndex,propertySequence):
 		return self.isSequenceValid(playerIndex, propertySequence, -1)
 	
-	def doesNoOfHousesIncreaseBySelling(self,sellingSequence):
+	def getChangeInNumberOfHousesHotels(self,sequence,sequenceType):
 		totalCurrentHouses = 0
 		totalNewHouses = 0
+		totalCurrentHotels = 0
+		totalNewHotels = 0
 		
-		for (propertyId,newHouses) in sellingSequence:
-			currentHouses = self.properties[propertyId].houses
-			if currentHouses<5:
-				actualCurrentHouses = currentHouses
+		for propertyId,constructions in sequence:
+			housesCounter = self.properties[propertyId].houses
+			if housesCounter<5:
+				currentHouses = housesCounter
+				currentHotels = 0
 			else:
-				actualCurrentHouses = 0
-			totalCurrentHouses+=actualCurrentHouses
+				currentHouses = 0
+				currentHotels = 1
+			totalCurrentHouses+=(sequenceType*currentHouses)
+			totalCurrentHotels+=(sequenceType*currentHotels)
 			
-			updatedNewHouses = currentHouses-newHouses
-			if updatedNewHouses<5:
-				actualNewHouses = updatedNewHouses
+			newHousesCounter = housesCounter+(sequenceType*constructions)
+			if newHousesCounter<5:
+				newHouses = newHousesCounter
+				hewHotels = 0
 			else:
-				actualNewHouses = 0
-			totalNewHouses+=actualNewHouses
-		
-		if totalNewHouses>totalCurrentHouses:
-			return True
-		return False
+				newHouses = 0
+				newHotels = 1
+			totalNewHouses+=(sequenceType*newHouses)
+			totalNewHotels+=(sequenceType*newHotels)
+		return (totalNewHouses-totalCurrentHouses,totalNewHotels-totalCurrentHotels)
 	
+	def evaluateBuyingSequence(self,sequence):
+		return self.getChangeInNumberOfHousesHotels(sequence,1)
+	
+	def evaluateSellingSequence(self,sequence):
+		return self.getChangeInNumberOfHousesHotels(sequence, -1)
+			
 	def getHousesRemaining(self):
 		houses = MAX_HOUSES
 		for prop in self.properties:
@@ -250,21 +279,24 @@ class State:
 	""" Bunch of utilities """
 	# logic to be changed
 	def rightOwner(self,playerId,propertyId):
-		return self.getPropertyOwner(propertyId).playerId == playerId
+		return self.getPropertyOwner(propertyId).ownerId == playerId
 
 	def getLivePlayers(self):
 		# TODO
 		return 0
 
 	def toTuple(self):
-		return StateTuple(self.turn, tuple(self.properties), tuple(self.positions),
-						  tuple(self.money), self.phase, self.phaseData, tuple(self.debt))
+		return (self.turn, self.properties, self.positions,
+				self.cash, self.bankrupt, self.phase, self.phasePayload, self.debt)
+	
+	def toJson(self):
+		return json.dumps(self.toTuple())
 
 	def __str__(self):
 		return str(self.toTuple())
 	
 class Phase:
-	BSTM = 0
+	BSMT = 0
 	TRADE_OFFER = 1
 	DICE_ROLL = 2
 	BUYING = 3
@@ -274,7 +306,17 @@ class Phase:
 	CHANCE_CARD = 7
 	COMMUNITY_CHEST_CARD = 8
 	
+"""
+The reason for victory:
+0 = Greater assets at the end of specified number of turns.
+1 = Timed Out (Could also pass while doing which action did the timeout occur)
+2 = Bankruptcy from Debt to Opponent or Bank
+3 = Bankruptcy from being unable to pay the fine for Jail on the third turn in Jail.
+"""
 class Reason:
 	ASSETS = "Greater Assets"
 	TIMEOUT = "Timeout"
 	BANKRUPT = "Bankruptcy"
+	
+state = State([1,2,3,4])
+print(state.toJson())
