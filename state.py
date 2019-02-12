@@ -14,19 +14,23 @@ NUMBER_OF_PROPERTIES = 42
 
 class Property(dict):
 	def __init__(self,houses,hotel,mortgaged,playerId):
-		self.houses = houses
+		self.houses = houses #value in range 0-4
 		self.hotel = hotel #boolean
-		self.mortgaged = mortgaged
+		self.mortgaged = mortgaged #boolean
 		self.ownerId = playerId #0 means owned by the bank
-		dict.__init__(self, houses=houses,hotel=hotel,mortgaged=mortgaged,playerId=playerId)
+		dict.__init__(self, houses=houses,hotel=hotel,mortgaged=mortgaged,playerId=playerId) #for json parsing
+
+class Debt(dict):
+	def __init__(self,bank,otherPlayers):
+		self.bank = bank
+		self.otherPlayers = otherPlayers
+		dict.__init__(self,bank=bank,otherPlayers=otherPlayers) #for json parsing
 
 class State:
-
-	def __init__(self, playerIds):
-		TOTAL_NO_OF_PLAYERS = len(playerIds)
-		
+	def __init__(self, playerIds):		
 		#List of id's of all the agents in the order in which the game will take place.
 		self.players = playerIds
+		TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
 		self.turn = 0
 		self.properties = [Property(0,False,0)]*NUMBER_OF_PROPERTIES
@@ -50,18 +54,19 @@ class State:
 			self.reason_for_loss[playerId] = None
 			self.turn_of_loss[playerId] = -1
 			
-			innerDebtDict = {}
-			innerDebtDict[0] = 0 #debt to the bank
+			bankDebt = 0
+			otherPlayersDebt = {}
 			for otherPlayerId in self.players:
 				if otherPlayerId!=playerId:
-					innerDebtDict[otherPlayerId] = 0 #debt to other players
+					otherPlayersDebt[otherPlayerId] = 0 #debt to other players
+			self.debt[playerId] = Debt(bankDebt,otherPlayersDebt)
 	
 	"""The index of the player in the players array"""
 	"""This represents the order of play for the player"""
 	def getCurrentPlayerIndex(self):
 		return self.turn % TOTAL_NO_OF_PLAYERS
 	
-	"""Actual Player Id set inside the agent as the id attribute"""
+	"""Actual Player Id set inside the agent accessible as agent.id attribute"""
 	def getCurrentPlayerId(self):
 		return self.players[self.getCurrentPlayerIndex()]
 	
@@ -76,29 +81,29 @@ class State:
 		self.turn+=1
 	
 	"""POSITION"""
-	def getPosition(self,playerIndex):
-		self.positions[playerIndex]
+	def getPosition(self,playerId):
+		self.positions[playerId]
 	
-	def setPosition(self,playerIndex,position):
-		self.positions[playerIndex] = position
+	def setPosition(self,playerId,position):
+		self.positions[playerId] = position
 	
 	"""CASH"""
-	def getCash(self,playerIndex):
-		self.cash[playerIndex]
+	def getCash(self,playerId):
+		self.cash[playerId]
 		
-	def setCash(self,playerIndex,cash):
-		self.cash[playerIndex] = cash
+	def setCash(self,playerId,cash):
+		self.cash[playerId] = cash
 	
 	"""BANKRUPT"""
-	def hasPlayerLost(self,playerIndex):
-		return self.bankrupt[playerIndex]
+	def hasPlayerLost(self,playerId):
+		return self.bankrupt[playerId]
 	
-	def markPlayerLost(self,playerIndex,reason):
-		self.bankrupt[playerIndex] = True
-		self.reason[playerIndex] = reason
+	def markPlayerLost(self,playerId,reason):
+		self.bankrupt[playerId] = True
+		self.reason[playerId] = reason
 		if reason==Reason.TIMEOUT:
-			self.timeoutTracker[playerIndex]=True
-		self.turn_of_loss[playerIndex] = self.turn
+			self.timeoutTracker[playerId]=True
+		self.turn_of_loss[playerId] = self.turn
 	
 	"""PHASE"""
 	def getPhase(self):
@@ -116,59 +121,58 @@ class State:
 	
 
 	"""DEBT"""
-	def getDebtToPlayers(self,playerIndex):
-		#How should we pass the debt here?
+	#TODO: FOLLOWING 2 METHODS ARE CURRENTLY NOT USED. ARE THEY NEEDED?
+	def getDebtToPlayers(self,playerId):
 		totalDebt = 0
-		for i in range(1,1+TOTAL_NO_OF_PLAYERS):
-			totalDebt+=self.debt[playerIndex][i]
+		for _,otherPlayerDebt in self.debt[playerId].otherPlayers.items():
+			totalDebt+=otherPlayerDebt
 		return totalDebt
 	
-	def getDebtToBank(self,playerIndex):
-		return self.debt[playerIndex][0]
+	def getDebtToBank(self,playerId):
+		return self.debt[playerId].bank
 	
-	def setDebtToPlayer(self,playerIndex,otherPlayer,amount):
-		self.debt[playerIndex][otherPlayer+1] = amount
+	def setDebtToPlayer(self,playerId,otherPlayerId,amount):
+		self.debt[playerId][otherPlayerId] = amount
 	
-	def addDebtToBank(self,playerIndex,debt):
-		self.debt[playerIndex][0]+= debt
+	def addDebtToBank(self,playerId,debt):
+		self.debt[playerId].bank += debt
 	
-	def clearDebt(self,playerIndex):
-		playerCash = self.getCash(playerIndex)
-		for i in range(1,TOTAL_NO_OF_PLAYERS+1):
-			debt = self.debt[playerIndex][i]
+	def clearDebt(self,playerId):
+		playerCash = self.getCash(playerId)
+		for otherPlayerId,debt in self.debt[playerId].otherPlayers.items():
 			if playerCash>= debt:
 				playerCash-=debt
-				self.setCash(i, self.getCash(i)+self.debt[playerIndex][i])
-				self.debt[playerIndex][i] = 0
+				self.setCash(otherPlayerId, self.getCash(otherPlayerId)+debt)
+				self.debt[playerIndex][otherPlayerId] = 0
 			else:
 				#Unpaid debt to another player, on rare occasion, there could be debts to multiple players.
-				self.markPlayerLost(playerIndex, Reason.BANKRUPT)
+				self.markPlayerLost(playerId, Reason.BANKRUPT)
 				pass
-		debtToBank = self.debt[playerIndex][0]
+		debtToBank = self.debt[playerId].bank
 		if playerCash>=debtToBank:
 			playerCash-=debtToBank
-			self.debt[playerIndex][0] = 0
+			self.debt[playerId].bank = 0
 		else:
 			#Unpaid debt to the bank
-			self.markPlayerLost(playerIndex, Reason.BANKRUPT)
+			self.markPlayerLost(playerId, Reason.BANKRUPT)
 			pass
 		
 	"""JAIL COUNTER"""
-	def getJailCounter(self,playerIndex):
-		return self.jailCounter[playerIndex]
+	def getJailCounter(self,playerId):
+		return self.jailCounter[playerId]
 	
-	def incrementJailCounter(self,playerIndex):
-		self.jailCounter[playerIndex]+=1
+	def incrementJailCounter(self,playerId):
+		self.jailCounter[playerId]+=1
 	
-	def resetJailCounter(self,playerIndex):
-		self.jailCounter[playerIndex]=0
+	def resetJailCounter(self,playerId):
+		self.jailCounter[playerId]=0
 	
 	"""PROPERTIES"""
 	def getPropertyOwner(self,propertyId):
 		return self.properties[propertyId].ownerId
 	
-	def setPropertyOwner(self,propertyId,playerIndex):
-		self.properties[propertyId].ownerId = playerIndex
+	def setPropertyOwner(self,propertyId,playerId):
+		self.properties[propertyId].ownerId = playerId
 		self.properties[propertyId].houses = 0 #If a property changes ownership, it shuld always have no houses on it.
 	
 	def isPropertyMortgaged(self,propertyId):
@@ -183,9 +187,15 @@ class State:
 	def setNumberOfHouses(self,propertyId,count):
 		self.properties[propertyId].houses = count
 	
-	def getOwnedProperties(self, playerIndex):
+	def getHotel(self,propertyId):
+		return self.properties[propertyId].hotel
+	
+	def setHotel(self,propertyId,hotel):
+		self.properties[propertyId].hotel = hotel
+	
+	def getOwnedProperties(self, playerId):
 		return [propertyId for propertyId in range(NUMBER_OF_PROPERTIES)
-			if self.properties[propertyId].ownerId==playerIndex]
+			if self.properties[propertyId].ownerId==playerId]
 	
 	"""
 	This function checks the following:
@@ -194,17 +204,17 @@ class State:
 	That the end result of the buying operation results in houses being built evenly.
 	If even one fault is found, the entire operation is invalidated,
 	"""
-	def isSequenceValid(self, playerIndex,propertySequence,sign):
+	def isSequenceValid(self, playerId,propertySequence,sign):
 		propertiesCopy = list(self.properties)
 		for (propertyId,housesCount) in propertySequence:
 			if board[propertyId]['class']!="Street":
 				return False
 			
-			if (propertiesCopy[propertyId].ownerId!=playerIndex) or (propertiesCopy[propertyId].mortgaged):
+			if (propertiesCopy[propertyId].ownerId!=playerId) or (propertiesCopy[propertyId].mortgaged):
 				return False
 			
 			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
-				if (propertiesCopy[monopolyPropertyId].ownerId!=playerIndex) or (propertiesCopy[monopolyPropertyId].mortgaged):
+				if (propertiesCopy[monopolyPropertyId].ownerId!=playerId) or (propertiesCopy[monopolyPropertyId].mortgaged):
 					return False
 			
 			newHousesCount = propertiesCopy[propertyId].houses+(sign*housesCount)
@@ -221,11 +231,11 @@ class State:
 					return False
 		return True
 	
-	def isBuyingSequenceValid(self,playerIndex,propertySequence):
-		return self.isSequenceValid(playerIndex, propertySequence, 1)
+	def isBuyingSequenceValid(self,playerId,propertySequence):
+		return self.isSequenceValid(playerId, propertySequence, 1)
 		
-	def isSellingSequenceValid(self,playerIndex,propertySequence):
-		return self.isSequenceValid(playerIndex, propertySequence, -1)
+	def isSellingSequenceValid(self,playerId,propertySequence):
+		return self.isSequenceValid(playerId, propertySequence, -1)
 	
 	def getChangeInNumberOfHousesHotels(self,sequence,sequenceType):
 		totalCurrentHouses = 0
