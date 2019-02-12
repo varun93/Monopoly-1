@@ -105,6 +105,9 @@ class State:
 			self.timeoutTracker[playerId]=True
 		self.turn_of_loss[playerId] = self.turn
 	
+	def getTurnOfLoss(self,playerId):
+		return self.turn_of_loss[playerId]
+	
 	"""PHASE"""
 	def getPhase(self):
 		return self.phase
@@ -118,7 +121,6 @@ class State:
 		
 	def setPhasePayload(self,phasePayload):
 		self.phasePayload = phasePayload
-	
 
 	"""DEBT"""
 	#TODO: FOLLOWING 2 METHODS ARE CURRENTLY NOT USED. ARE THEY NEEDED?
