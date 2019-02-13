@@ -357,6 +357,14 @@ class State:
 	def getLivePlayers(self):
 		return [playerId for playerId in self.players if not self.hasPlayerLost(playerId)]
 
+	def getNextPlayer(self,currentPlayer):
+		try:
+			currentPlayerIndex = self.players.index(currentPlayer)
+			return self.players[(currentPlayerIndex + 1) % TOTAL_NO_OF_PLAYERS]
+		except e:
+			# player not found
+			raise e
+	
 	def toTuple(self):
 		return (self.players, self.turn, self.properties, self.positions,
 				self.cash, self.bankrupt, self.phase, self.phasePayload, self.debt)
