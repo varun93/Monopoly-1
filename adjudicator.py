@@ -1,5 +1,5 @@
 from config import log
-import dice
+from dice import Dice
 import constants
 from cards import Cards
 import copy
@@ -12,10 +12,7 @@ class Adjudicator:
 	
 	def __init__(self,socket=None):
 		
-		num_properties = len(constants.space_to_property_map) + 2
 		self.socket = socket
-		
-		self.DiceClass = dice.Dice
 		
 		"""
 		PROPERTY INDICES OF THE STATE VARIABLE
@@ -55,8 +52,11 @@ class Adjudicator:
 	"""
 	STATE PROPERTIES
 	"""
-	def getPlayer(self,playerIndex):
-		return self.agents[playerIndex]
+	def getPlayer(self,playerId):
+		for agent in self.agents:
+			if agent.id==playerId:
+				return agent
+		return None
 		
 	def updateState(self, state, dimensionOneIndex, dimensionTwoIndex, valueToUpdate):
 		if dimensionTwoIndex is None:
@@ -767,7 +767,7 @@ class Adjudicator:
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
-		isPropertyOwned = self.state.isPropertyOwned(propertyId)
+		isPropertyOwned = self.state.isPropertyOwned(playerPosition)
 		ownerId = self.state.getPropertyOwner(playerPosition)
 		
 		output = {}
@@ -788,8 +788,8 @@ class Adjudicator:
 				if (counter==len(monopolies)+1):
 					rent = rent * 2
 				
-				houseCount = self.state.getNumberOfHouses(propertyId)
-				hasHotel = self.state.getHotel(propertyId)
+				houseCount = self.state.getNumberOfHouses(playerPosition)
+				hasHotel = self.state.getHotel(playerPosition)
 				if houseCount==1:
 					rent = constants.board[playerPosition]['rent_house_1']
 				elif houseCount==2:
@@ -828,7 +828,7 @@ class Adjudicator:
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
-		phaseNumber = self.state.getPhase(currentPlayerId)
+		phaseNumber = self.state.getPhase()
 		updateState = False
 		
 		phasePayload = None
@@ -843,7 +843,7 @@ class Adjudicator:
 
 		elif card['type'] == 2:
 			#-ve represents you need to pay
-			phaseNumber = self.PAYMENT
+			phaseNumber = Phase.PAYMENT
 			if card['money']<0:
 				debtAmount = abs(card['money'])
 				for playerId in self.PLAY_ORDER:
@@ -932,7 +932,7 @@ class Adjudicator:
 				playerPosition = 28
 			
 			ownerId = self.state.getPropertyOwner(playerPosition)
-			if self.state.isPropertyOwned(propertyId):
+			if self.state.isPropertyOwned(playerPosition):
 				#Unowned
 				phaseNumber = Phase.BUYING
 				phasePayload = playerPosition
@@ -972,7 +972,7 @@ class Adjudicator:
 	Handle the action response from the Agent for buying an unowned property
 	Only called for the currentPlayer during his turn.
 	"""	
-	def handle_buy_property(self,state):
+	def handle_buy_property(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
@@ -1002,17 +1002,17 @@ class Adjudicator:
 	"""Function calls the relevant method of the Agent"""
 	def turn_effect(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
-		phase = self.state.getPhase(currentPlayerId)
+		phase = self.state.getPhase()
 		if phase == Phase.BUYING:
 			self.handle_buy_property()
 		elif phase == Phase.AUCTION:
 			#Auction
 			#@Varun: TODO
-			self.start_auction(state)
+			self.start_auction()
 			actionOpponent = self.runPlayerOnStateWithTimeout(opponent,state)
 			actionCurrentPlayer = self.runPlayerOnStateWithTimeout(currentPlayer,state)
 			return self.handle_auction(state,actionOpponent,actionCurrentPlayer)
-		elif phase == self.PAYMENT:
+		elif phase == Phase.PAYMENT:
 			self.handle_payment()
 	
 	"""
@@ -1080,8 +1080,8 @@ class Adjudicator:
 			self.chest.reinit(constants.communityChestCards,communityCards)
 			
 	def broadcastState(self):
-		for playerIndex in range(self.TOTAL_NO_OF_PLAYERS):
-			self.runPlayerOnStateWithTimeout(playerIndex,receiveState=True)
+		for playerId in self.PLAY_ORDER:
+			self.runPlayerOnStateWithTimeout(playerId,receiveState=True)
 	
 	"""
 	Function to be called to start the game.
@@ -1100,7 +1100,9 @@ class Adjudicator:
 		self.PLAY_ORDER = [ agent.id for agent in self.agents] #Stores the id's of all the players in the order of play
 		self.TOTAL_NO_OF_PLAYERS = len(self.agents)
 		
+		self.dice = Dice()
 		self.state =  State(self.PLAY_ORDER)
+		winner = None
 		
 		#Setting an initial state. Used during testing.
 		#if isinstance(state,list) and len(state)==6:
@@ -1205,25 +1207,26 @@ class Adjudicator:
 	The function to called on the agent is determined by reading the state.
 	All threading and signal based logic must go in here
 	"""
-	@timeout_decorator.timeout(3, timeout_exception=TimeoutError)
-	def runPlayerOnStateWithTimeout(self, playerIndex,receiveState=False):
+	@timeout_decorator.timeout(3000, timeout_exception=TimeoutError)
+	def runPlayerOnStateWithTimeout(self, playerId,receiveState=False):
 		try:
-			return self.runPlayerOnState(playerIndex,receiveState)
+			return self.runPlayerOnState(playerId,receiveState)
 		except TimeoutError:
 			print("Agent Timed Out")
 			"""Change the return value here to ensure agent loose"""
-			self.state.markPlayerLost(playerIndex,Reason.TIMEOUT)
+			self.state.markPlayerLost(playerId,Reason.TIMEOUT)
 			return None
 
-	def runPlayerOnState(self,playerIndex,receiveState=False):
-		player = self.getPlayer(playerIndex)
+	def runPlayerOnState(self,playerId,receiveState=False):
+		player = self.getPlayer(playerId)
 		action = None
-		current_phase = self.state.getPhase(playerIndex)
-		stateToBeSent = self.state
+		current_phase = self.state.getPhase()
+		stateToBeSent = self.state.toJson()
 
 		if receiveState:
 			action = player.receiveState(stateToBeSent)
-		elif current_phase == Phase.BSTM:
+		elif current_phase == Phase.BSMT:
+			pass
 			action = player.getBSMTDecision(stateToBeSent)
 		elif current_phase == Phase.TRADE_OFFER:
 			action = player.respondTrade(stateToBeSent)

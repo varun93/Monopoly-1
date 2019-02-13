@@ -1,14 +1,15 @@
 from adjudicator import Adjudicator
 
-import Team007
-import Team001
-import TeamBoardWalk
-import TeamHarambe
-import TeamInsertName
-import TeamMaverick
-import TeamMonopoly
-import TeamNoviceGamblers
-import TeamVAR
+#import Team007
+#import Team001
+#import TeamBoardWalk
+#import TeamHarambe
+#import TeamInsertName
+#import TeamMaverick
+#import TeamMonopoly
+#import TeamNoviceGamblers
+#import TeamVAR
+from agents.TeamBoardwalk.agents.team_boardwalk import RiskyAgent
 
 agents = {
 1:Team001, #

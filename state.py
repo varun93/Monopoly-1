@@ -8,7 +8,6 @@ StateTuple = namedtuple("StateTuple", "turn properties positions money bankrupt 
 INITIAL_CASH = 1500
 MAX_HOUSES = 32
 MAX_HOTELS = 12
-TOTAL_NO_OF_PLAYERS = 4
 NUMBER_OF_PROPERTIES = 42
 
 class Property(dict):
@@ -30,7 +29,7 @@ class State:
 	def __init__(self, playerIds):		
 		#List of id's of all the agents in the order in which the game will take place.
 		self.players = playerIds
-		TOTAL_NO_OF_PLAYERS = len(playerIds)
+		self.TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
 		self.turn = 0
 		self.properties = [Property(0,False,False,False,0)]*NUMBER_OF_PROPERTIES
@@ -64,7 +63,7 @@ class State:
 	"""The index of the player in the players array"""
 	"""This represents the order of play for the player"""
 	def getCurrentPlayerIndex(self):
-		return self.turn % TOTAL_NO_OF_PLAYERS
+		return self.turn % self.TOTAL_NO_OF_PLAYERS
 	
 	"""Actual Player Id set inside the agent accessible as agent.id attribute"""
 	def getCurrentPlayerId(self):
@@ -82,14 +81,14 @@ class State:
 	
 	"""POSITION"""
 	def getPosition(self,playerId):
-		self.positions[playerId]
+		return self.positions[playerId]
 	
 	def setPosition(self,playerId,position):
 		self.positions[playerId] = position
 	
 	"""CASH"""
 	def getCash(self,playerId):
-		self.cash[playerId]
+		return self.cash[playerId]
 		
 	def setCash(self,playerId,cash):
 		self.cash[playerId] = cash
@@ -145,7 +144,7 @@ class State:
 			if playerCash>= debt:
 				playerCash-=debt
 				self.setCash(otherPlayerId, self.getCash(otherPlayerId)+debt)
-				self.debt[playerIndex][otherPlayerId] = 0
+				self.debt[playerId][otherPlayerId] = 0
 			else:
 				#Unpaid debt to another player, on rare occasion, there could be debts to multiple players.
 				self.markPlayerLost(playerId, Reason.BANKRUPT)
@@ -359,14 +358,14 @@ class State:
 		return [playerId for playerId in self.players if not self.hasPlayerLost(playerId)]
 
 	def toTuple(self):
-		return (self.turn, self.properties, self.positions,
+		return (self.players, self.turn, self.properties, self.positions,
 				self.cash, self.bankrupt, self.phase, self.phasePayload, self.debt)
 	
 	def toJson(self):
 		return json.dumps(self.toTuple())
 
 	def __str__(self):
-		return str(self.toTuple())
+		return str(self.toJson())
 	
 class Phase:
 	BSMT = 0
@@ -392,4 +391,7 @@ class Reason:
 	BANKRUPT = "Bankruptcy"
 	
 #state = State([1,2,3,4])
-#print(state.toJson())
+#print()
+#for value in json.loads(state.toJson()):
+#	print(value)
+	#print(value)
