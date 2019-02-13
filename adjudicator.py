@@ -511,8 +511,11 @@ class Adjudicator:
 		self.state.setPropertyOwner (auctionedProperty,winner)	
 		
 		#Receive State
-		phasePayload = [auctionedProperty,winner+1]
+		phasePayload = [auctionedProperty,winner]
 		self.state.setPhasePayload(phasePayload)
+		
+		# TODO: broadcast state
+
 	
 		# not sure what to do with this 
 		return [True,True]
