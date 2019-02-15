@@ -333,56 +333,85 @@ class Adjudicator:
 				pass
 	
 	""" ACTION METHODS """
-	"""
-	TODO: 
-	@Varun: Temporarily moved trade here.
-	"""
-	def handleTrade(agent,otherAgent,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
-
-
+	def conductTrade(self):
 		def validPropertyToTrade(playerId, propertyId):
-			if not  self.state.rightOwner(propertyId, playerId):
+			propertyId = self.typecast(propertyId,int,-1)
+			if propertyId<0 or propertyId>self.BOARD_SIZE-1:
+				return False
+			if not  self.state.rightOwner(playerId,propertyId):
 				return False
 			if self.state.getNumberOfHouses(propertyId) > 0:
 				return False
-
 			return True
+		
+		#Syntax: (otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
+		def validateTradeAction(action):
+			if not ( isinstance(action, list) or isinstance(action, tuple) ) or len(action)<5:
+				return False
+			
+			otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
+			currentPlayerId = self.state.getCurrentPlayerId()
+			
+			passed = False
+			if otherAgentId == currentPlayerId:
+				return False
+			for playerId in self.PLAY_ORDER:
+				if otherAgentId == playerId:
+					passed = True
+					break
+			if not passed:
+				return False
+			
+			cashOffer = self.check_valid_cash(cashOffer)
+			cashRequest = self.check_valid_cash(cashRequest)
+			currentPlayerCash = self.state.getCash(agentId)
+			otherPlayerCash = self.state.getCash(otherAgentId)
+			if cashOffer > currentPlayerCash:
+				return False
+			if cashRequest > otherPlayerCash:
+				return False
+			
+			if not isinstance(propertiesOffer, list) and not isinstance(propertiesOffer, tuple):
+					return False
+			else:
+				for propertyId in propertiesOffer:
+					if not validPropertyToTrade(currentPlayerId, propertyId):
+						return False
+			
+			if not isinstance(propertiesRequest, list) and not isinstance(propertiesRequest, tuple):
+					return False
+			else:
+				for propertyId in propertiesRequest:
+					if not validPropertyToTrade(otherAgentId, propertyId):
+						return False
+			
+			return True
+		
+		while True:
+			actionCount=0
+			for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
+				playerId = self.PLAY_ORDER[i]
+				if not self.state.hasPlayerLost(playerId):
+					action = self.runPlayerOnStateWithTimeout(playerId,"TRADE")
+					if validateTradeAction(action):
+						otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
+						self.handleTrade(playerId, otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesReques)
+						actionCount+=1
 
+			if actionCount==0:
+				break
+	
+	def handleTrade(agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 
-		currentPlayer = agent.id
 		previousPayload = self.state.getPhasePayload()
 		
 		cashRequest = self.check_valid_cash(cashRequest)
 		cashOffer = self.check_valid_cash(cashOffer)
 		
-		otherPlayer = otherAgent.id
-		
-		currentPlayerCash = self.state.getCash(currentPlayer)
-		otherPlayerCash = self.state.getCash(otherPlayer)
-
-		if cashOffer > currentPlayerCash:
-			return False
-
-		if cashRequest > otherPlayerCash:
-			return False
-
-		for propertyOffer in propertiesOffer:
-			if not validPropertyToTrade(currentPlayer, propertyOffer):
-				return False
-				
-
-		for propertyRequest in propertiesRequest:
-			if not validPropertyToTrade(otherPlayer, propertyRequest):
-				return False
-			
-		
 		phasePayload = [cashOffer,propertiesOffer,cashRequest,propertiesRequest]
-
-		# set phase payload and index
-		self.state.setPhase(self.TRADE_OFFER)
 		self.state.setPhasePayload(phasePayload)
 
-		tradeResponse = self.runPlayerOnStateWithTimeout(otherAgent,state)
+		tradeResponse = self.runPlayerOnStateWithTimeout(otherAgentId,"RESPOND_TRADE")
 		tradeResponse = self.typecast(tradeResponse, bool, False)
 		
 		# if the trade was successful update the cash and property status
@@ -391,50 +420,37 @@ class Adjudicator:
 			mortgagedProperties = list(filter(lambda propertyId : self.state.isPropertyMortgaged(propertyId), propertiesOffer + propertiesRequest))
 
 			for mortgagedProperty in mortgagedProperties:
-				if mortgagedProperty not in mortgagedDuringTrade:
-					mortgagedDuringTrade.append(mortgagedProperty)
+				if mortgagedProperty not in self.mortgagedDuringTrade:
+					self.mortgagedDuringTrade.append(mortgagedProperty)
 					space = constants.board[mortgagedProperty]
 					propertyPrice = space['price']
 					mortgagedPrice = propertyPrice/2
-					agentInQuestion = 2
+					agentInQuestion = self.state.getPropertyOwner(mortgagedProperty)
 
-					if getPropertyStatus(state, mortgagedProperty) == -7:
-						agentInQuestion = 1
-																																					
 					agentsCash = self.state.getCash(agentInQuestion)
 					agentsCash -= mortgagedPrice*0.1
-					self.state.setCash(agentInQuestion-1,agentsCash)
+					self.state.setCash(agentInQuestion,agentsCash)
 
-			currentPlayerCash =  self.state.getCash(currentPlayer)
-			otherPlayerCash = self.state.getCash(otherPlayer)
+			currentPlayerCash =  self.state.getCash(agentId)
+			otherPlayerCash = self.state.getCash(otherAgentId)
 
 			currentPlayerCash += (cashRequest - cashOffer)
 			otherPlayerCash += (cashOffer - cashRequest)
 			
-			self.state.setCash(currentPlayer - 1,currentPlayerCash)
-			self.state.setCash(otherPlayer - 1,otherPlayerCash)
-
-			for propertyOffer in propertiesOffer:
-				self.state.setPropertyOwner(propertyOffer,otherPlayer)
+			self.state.setCash(agentId,currentPlayerCash)
+			self.state.setCash(otherAgentId,otherPlayerCash)
 
 			for propertyRequest in propertiesRequest:
-				self.state.setPropertyOwner(propertyRequest,currentPlayer)
+				self.state.setPropertyOwner(propertyRequest,agentId)
+			for propertyOffer in propertiesOffer:
+				self.state.setPropertyOwner(propertyOffer,otherAgentId)
 		
 		#Receive State
-		#Making the phase number BSTM so that tradeResponse isnt called again
-		self.state.setPhase(self.BSTM)
 		phasePayload.insert(0,tradeResponse)
 		self.state.setPhasePayload(phasePayload)
-		
-		self.runPlayerOnStateWithTimeout(agent,state,receiveState=True)
+		self.runPlayerOnStateWithTimeout(agentId,"INFO")
 		self.setPhasePayload(previousPayload)
 		return True
-	
-	# previousPhaseNumber = state[self.PHASE_NUMBER_INDEX]
-	# agentOneDone = False
-	# agentTwoDone = False
-	# agentOneTradeDone = False
-	# agentTwoTradeDone = False
 
 	# mortgageDuringTrade 
 	# buy 
@@ -1194,11 +1210,22 @@ class Adjudicator:
 						log("state","State after moving the player and updating state with effect of the position:")
 						log("state",self.state)
 						
-						"""BSTM"""
+						"""BSMT"""
+						previousPhase = self.state.getPhase()
+						previousPhasePayload = self.state.getPhasePayload()
+						self.state.setPhase(Phase.TRADE)
+						self.state.setPhasePayload(None)
 						self.conductBSM()
 						if self.state.hasPlayerLost(playerId):
 							self.state.updateTurn()
 							continue
+						self.conductTrade()
+						self.state.setPhase(previousPhase)
+						self.conductBSM()
+						if self.state.hasPlayerLost(playerId):
+							self.state.updateTurn()
+							continue
+						self.state.setPhasePayload(previousPhasePayload)
 						
 						"""State now contain info about the position the player landed on"""
 						"""Performing the actual effect of the current position"""
@@ -1276,6 +1303,8 @@ class Adjudicator:
 		elif callType == "INFO":
 			action = player.receiveState(stateToBeSent)
 		elif callType == "TRADE":
+			action = player.getTradeDecision(stateToBeSent)
+		elif callType == "RESPOND_TRADE":
 			"""TODO:"""
 			action = player.respondTrade(stateToBeSent)
 		

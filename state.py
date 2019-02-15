@@ -389,7 +389,7 @@ class State:
 	
 class Phase:
 	NO_ACTION = 0
-	TRADE_OFFER = 1
+	TRADE = 1
 	DICE_ROLL = 2
 	BUYING = 3
 	AUCTION = 4
