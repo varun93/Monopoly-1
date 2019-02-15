@@ -364,7 +364,7 @@ class Adjudicator:
 			
 			cashOffer = self.check_valid_cash(cashOffer)
 			cashRequest = self.check_valid_cash(cashRequest)
-			currentPlayerCash = self.state.getCash(agentId)
+			currentPlayerCash = self.state.getCash(currentPlayerId)
 			otherPlayerCash = self.state.getCash(otherAgentId)
 			if cashOffer > currentPlayerCash:
 				return False
@@ -387,6 +387,7 @@ class Adjudicator:
 			
 			return True
 		
+		currentPlayerIndex = self.state.getCurrentPlayerIndex()
 		while True:
 			actionCount=0
 			for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
@@ -395,13 +396,13 @@ class Adjudicator:
 					action = self.runPlayerOnStateWithTimeout(playerId,"TRADE")
 					if validateTradeAction(action):
 						otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
-						self.handleTrade(playerId, otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesReques)
+						self.handleTrade(playerId, otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
 						actionCount+=1
 
 			if actionCount==0:
 				break
 	
-	def handleTrade(agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
+	def handleTrade(self,agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 
 		previousPayload = self.state.getPhasePayload()
 		
@@ -449,7 +450,7 @@ class Adjudicator:
 		phasePayload.insert(0,tradeResponse)
 		self.state.setPhasePayload(phasePayload)
 		self.runPlayerOnStateWithTimeout(agentId,"INFO")
-		self.setPhasePayload(previousPayload)
+		self.state.setPhasePayload(previousPayload)
 		return True
 
 	# mortgageDuringTrade 

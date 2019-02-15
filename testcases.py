@@ -29,7 +29,7 @@ def compare_states(state,expected_output):
 		if passed:
 			passCounter+=1
 		else:
-			print("cash number doesn't match")
+			print("cash doesn't match")
 	
 	if 'position' in expected_output:
 		passed = True
@@ -61,7 +61,7 @@ def compare_states(state,expected_output):
 		if passed:
 			passCounter+=1
 		else:
-			print("Property"+str(property)+" don't match")
+			print("Properties don't match")
 			
 	if passCounter >= len(expected_output):
 		return True
@@ -80,6 +80,9 @@ def testcase_auction(adjudicator):
 		
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return False
@@ -96,6 +99,9 @@ def testcase_auction(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return False
@@ -111,6 +117,9 @@ def testcase_auction(adjudicator):
 			self.id = id
 			
 		def getBSMTDecision(self, state):
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 			
 		def buyProperty(self, state):
@@ -154,6 +163,9 @@ def testcase_payment(adjudicator):
 		
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return False
@@ -169,6 +181,9 @@ def testcase_payment(adjudicator):
 			self.id = id
 			
 		def getBSMTDecision(self, state):
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 			
 		def buyProperty(self, state):
@@ -214,6 +229,9 @@ def testcase_buying_houses(adjudicator):
 				return ("BHS", [(6,1),(8,2),(9,1)])
 			else:
 				return None
+			
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -231,7 +249,10 @@ def testcase_buying_houses(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
-			
+		
+		def getTradeDecision(self,state):
+			return None	
+		
 		def buyProperty(self, state):
 			return True
 	
@@ -285,6 +306,9 @@ def testcase_selling_houses(adjudicator):
 				return ("BHS", [(6,1),(8,2),(9,1)])
 			
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -301,6 +325,9 @@ def testcase_selling_houses(adjudicator):
 			self.erronous_bstm_counter = 0
 			
 		def getBSMTDecision(self, state):
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 			
 		def buyProperty(self, state):
@@ -343,10 +370,9 @@ def testcase_trade(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
-			
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 	
 		def buyProperty(self, state):
@@ -366,13 +392,16 @@ def testcase_trade(adjudicator):
 			self.id = id
 			self.erronous_bstm_counter = 0
 			self.trade_status = None
-			
+		
 		def getBSMTDecision(self, state):
-			stcharles = state[PROPERTY_STATUS_INDEX][11]
-			virginia = state[PROPERTY_STATUS_INDEX][14]	
+			return None	
+		
+		def getTradeDecision(self, state):
+			isConnecticutOwned = state.isPropertyOwned(9)
+			connecticutOwnerId = state.getPropertyOwner(9)
 			
-			if (virginia == 1) and (self.trade_status==None):
-				return ("T",50.5,[19],0,[14])
+			if isConnecticutOwned and connecticutOwnerId!=self.id and (self.trade_status==None):
+				return (connecticutOwnerId,50.5,[19],0,[9])
 			
 			return None
 			
@@ -383,20 +412,23 @@ def testcase_trade(adjudicator):
 			return False
 		
 		def receiveState(self, state):
-			phase = state[PHASE_NUMBER_INDEX]
+			phase = state.getPhase()
 			if phase == 1:#Trade Offer Phase
-				(self.trade_status,cashOffer,propertiesOffer,cashRequest,propertiesRequest) = state[PHASE_PAYLOAD_INDEX]
+				(self.trade_status,cashOffer,propertiesOffer,cashRequest,propertiesRequest) = state.getPhasePayload()
 	
 	print("\nTest Case: Trade")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3],[2,3]],None,[0])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3],[2,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200-120-160+50,1500-140-200-150-50],
-		"position":[14,28],
-		"properties":[(6,1),(8,1),(9,1),(11,-1),(14,-1),(19,1),(28,-1)]
+		"cash": {"1": 1500-100-100+200-120-160+50, "2": 1500-140-200-150-50},
+		"position": {"1": 14, "2": 28},
+		"properties":[( 6,Property(0,False,True,"1") ),( 8,Property(0,False,True,"1") ),
+					( 9,Property(0,False,True,"2") ),( 11,Property(0,False,True,"2") ),
+					( 14,Property(0,False,True,"1") ),( 19,Property(0,False,True,"1") ),
+					( 28,Property(0,False,True,"2") )]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -1536,7 +1568,6 @@ Testcases that maybe invalid:
 testcase_buying_invalid_two_hotels
 
 	
-	testcase_trade,
 	testcase_buying_houses_invalid_1,
 	testcase_buying_houses_invalid_2,
 	testcase_mortgaging_unmortgaging,
@@ -1559,6 +1590,7 @@ tests = [
 	testcase_payment,
 	testcase_buying_houses,
 	testcase_selling_houses,
+	testcase_trade,
 ]
 
 #Execution
