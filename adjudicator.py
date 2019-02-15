@@ -183,8 +183,9 @@ class Adjudicator:
 		def handleSell(playerId,properties):
 			playerCash = self.state.getCash(playerId)
 			
-			for (propertyId,constructions) in properties:
+			for propertyId,constructions,hotel in properties:
 				space = constants.board[propertyId]
+				if hotel: constructions+=1
 				houseCount = self.state.getNumberOfHouses(propertyId)
 				houseCount -= constructions
 				playerCash += (space['build_cost']*0.5*constructions)
@@ -250,13 +251,13 @@ class Adjudicator:
 		Find a way to ensure that BSMT doesn't go on forever.
 		"""
 		currentPlayerIndex = self.state.getCurrentPlayerIndex()
-		mortgageRequests = []
-		buyingHousesRequests = []
-		buyingHotelsRequests = []
-		sellingRequests = []
 		
 		"""Currently, BSM could go on forever."""
 		while True:
+			mortgageRequests = []
+			buyingHousesRequests = []
+			buyingHotelsRequests = []
+			sellingRequests = []
 			
 			"""Getting the actions for BSM from all the players"""
 			actionCount=0
@@ -326,7 +327,7 @@ class Adjudicator:
 			housesRemaining = self.state.getHousesRemaining()
 			if housesRemaining-housesNeededForBHS>=0:
 				for playerId,request in buyingHousesRequests:
-					handleBuyHouses(player,request)
+					handleBuyHouses(playerId,request)
 			else:
 				#TODO: AUCTION FOR HOUSES
 				pass
@@ -761,7 +762,7 @@ class Adjudicator:
 			if 'debt' in output:
 				self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1])
 			
-			if output['phase']==Phase.BUYING:
+			if self.state.getPhase()==Phase.BUYING:
 				action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
 				action = self.typecast(action, bool, False)
 				if not action:
@@ -1236,7 +1237,8 @@ class Adjudicator:
 		#TODO: Ties
 
 		self.state.setPhasePayload(None)
-		finalState = self.state.toTuple()
+		#finalState = self.state.toTuple()
+		finalState = self.state
 		log("win","Final State:")
 		log("win",finalState)
 		self.notifyUI()
@@ -1260,8 +1262,9 @@ class Adjudicator:
 	def runPlayerOnState(self,playerId,callType):
 		player = self.getPlayer(playerId)
 		action = None
-		stateToBeSent = self.state.toJson()
-
+		#stateToBeSent = self.state.toJson()
+		stateToBeSent = self.state
+		
 		if callType == "BSM":
 			action = player.getBSMTDecision(stateToBeSent)
 		elif callType == "BUY":

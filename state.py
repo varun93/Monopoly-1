@@ -2,6 +2,7 @@ import random
 from collections import namedtuple
 from constants import board
 import json
+from copy import deepcopy
 
 StateTuple = namedtuple("StateTuple", "turn properties positions money bankrupt phase phaseData debt")
 
@@ -40,7 +41,9 @@ class State:
 		self.TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
 		self.turn = 0
-		self.properties = [Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
+		#This causes same instance to be repeated for the entire list
+		#[Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
+		self.properties = [Property(0,False,False,0) for i in range(NUMBER_OF_PROPERTIES)]
 		self.positions = {}
 		self.cash = {}
 		self.bankrupt = {}
@@ -141,7 +144,7 @@ class State:
 		return self.debt[playerId].bank
 	
 	def setDebtToPlayer(self,playerId,otherPlayerId,amount):
-		self.debt[playerId][otherPlayerId] = amount
+		self.debt[playerId].otherPlayers[otherPlayerId] = amount
 	
 	def addDebtToBank(self,playerId,amount):
 		self.debt[playerId].bank += amount
@@ -241,7 +244,7 @@ class State:
 	and that houses are being built evenly.
 	"""
 	def isBuyingHousesSequenceValid(self, playerId,propertySequence):
-		propertiesCopy = list(self.properties)
+		propertiesCopy = deepcopy(self.properties)
 		for propertyId,housesCount in propertySequence:
 			if board[propertyId]['class']!="Street":
 				return False
@@ -270,7 +273,7 @@ class State:
 		return True
 		
 	def isSellingSequenceValid(self,playerId,propertySequence):
-		propertiesCopy = list(self.properties)
+		propertiesCopy = deepcopy(self.properties)
 		for propertyId,housesCount,hotel in propertySequence:
 			if board[propertyId]['class']!="Street":
 				return False
@@ -288,7 +291,7 @@ class State:
 			newHousesCount = currentProperty.houses-housesCount
 			if (newHousesCount>5) or (newHousesCount<0):
 				return False
-			propertiesCopy[propertyId].houses+=housesCount
+			propertiesCopy[propertyId].houses-=housesCount
 		
 		for propertyId,_,_ in propertySequence:
 			houses = propertiesCopy[propertyId].houses
@@ -316,7 +319,7 @@ class State:
 		totalCurrentHotels = 0
 		totalNewHotels = 0
 		
-		for propertyId,constructions,hotel in propertySequence:
+		for propertyId,constructions,hotel in sequence:
 			housesCounter = self.properties[propertyId].houses
 			if housesCounter<5:
 				currentHouses = housesCounter
@@ -331,7 +334,7 @@ class State:
 			newHousesCounter = housesCounter-constructions
 			if newHousesCounter<5:
 				newHouses = newHousesCounter
-				hewHotels = 0
+				newHotels = 0
 			else:
 				newHouses = 0
 				newHotels = 1
