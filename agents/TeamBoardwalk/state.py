@@ -39,7 +39,7 @@ class Debt:
 		
 	def getTotalDebt(self):
 		debt = self.bank
-		for playerDebt in self.otherPlayers:
+		for playerId,playerDebt in self.otherPlayers.items():
 			debt += playerDebt
 		return debt
 	

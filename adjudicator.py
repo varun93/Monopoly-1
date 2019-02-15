@@ -494,7 +494,8 @@ class Adjudicator:
 		for participant in livePlayers:
 			# asking for each participant for the bid
 			auctionBid = self.runPlayerOnStateWithTimeout(participant,"AUCTION")
-		
+			auctionBid = self.check_valid_cash(auctionBid)
+			
 			if auctionBid and auctionBid > winningBid:
 				winningBid = auctionBid
 				winner = participant
@@ -821,7 +822,7 @@ class Adjudicator:
 		ownerId = self.state.getPropertyOwner(playerPosition)
 		
 		output = {}
-		if isPropertyOwned:
+		if not isPropertyOwned:
 			#Unowned
 			output['phase'] = Phase.BUYING
 			output['phase_properties'] = playerPosition
@@ -1058,9 +1059,9 @@ class Adjudicator:
 		if phase == Phase.BUYING:
 			self.handle_buy_property()
 		elif phase == Phase.AUCTION:
-			auctionedProperty = phasePayload[0]
-			return self.handle_auction(state,auctionedProperty)
-		elif phase == self.PAYMENT:
+			auctionedProperty = phasePayload
+			return self.handle_auction(auctionedProperty)
+		elif phase == Phase.PAYMENT:
 			self.handle_payment()
 	
 	"""

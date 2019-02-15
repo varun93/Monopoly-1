@@ -1,55 +1,65 @@
 from adjudicator import Adjudicator
+from state import Property
 
-PLAYER_TURN_INDEX = 0
-PROPERTY_STATUS_INDEX = 1
-PLAYER_POSITION_INDEX = 2
-PLAYER_CASH_INDEX = 3
-PHASE_NUMBER_INDEX = 4
-PHASE_PAYLOAD_INDEX = 5
+PLAYER_ID_INDEX = 0
+PLAYER_TURN_INDEX = 1
+PROPERTY_STATUS_INDEX = 2
+PLAYER_POSITION_INDEX = 3
+PLAYER_CASH_INDEX = 4
+PLAYER_BANKRUPT_INDEX = 5
+PHASE_NUMBER_INDEX = 6
+PHASE_PAYLOAD_INDEX = 7
 DEBT_INDEX = 6
 
 def compare_states(state,expected_output):
+	playerIds = state.players
 	passCounter = 0
 	if 'turn' in expected_output:
-		if (state[PLAYER_TURN_INDEX] == expected_output['turn']):
+		if (state.getTurn() == expected_output['turn']):
 			passCounter+=1
 		else:
 			print("Turn number doesn't match")
 	
 	if 'cash' in expected_output:
-		if (state[PLAYER_CASH_INDEX][0] == expected_output['cash'][0]) and (state[PLAYER_CASH_INDEX][1] == expected_output['cash'][1]):
+		passed = True
+		for playerId in playerIds:
+			if not state.getCash(playerId) == expected_output['cash'][playerId]:
+				passed = False
+				break
+		if passed:
 			passCounter+=1
-			if 'cash_2' in expected_output:
-				passCounter+=1
 		else:
-			print("Cash doesn't match")
-			if 'cash_2' in expected_output:
-				if (state[PLAYER_CASH_INDEX][0] == expected_output['cash_2'][0]) and (state[PLAYER_CASH_INDEX][1] == expected_output['cash_2'][1]):
-					passCounter+=2
-				else:
-					print("Cash_2 doesn't match")
+			print("cash number doesn't match")
 	
 	if 'position' in expected_output:
-		if (state[PLAYER_POSITION_INDEX][0] == expected_output['position'][0]) and (state[PLAYER_POSITION_INDEX][1] == expected_output['position'][1]):
+		passed = True
+		for playerId in playerIds:
+			if not state.getPosition(playerId) == expected_output['position'][playerId]:
+				passed = False
+				break
+		if passed:
 			passCounter+=1
-			if 'position_2' in expected_output:
-				passCounter+=1
 		else:
-			print("Position doesn't match")
-			if 'position_2' in expected_output:
-				if (state[PLAYER_POSITION_INDEX][0] == expected_output['position_2'][0]) and (state[PLAYER_POSITION_INDEX][1] == expected_output['position_2'][1]):
-					passCounter+=2
-				else:
-					print("Position_2 doesn't match")
+			print("position number doesn't match")
 			
 	if 'properties' in expected_output:
-		flag = True
-		for property in expected_output['properties']:
-			if state[PROPERTY_STATUS_INDEX][property[0]] != property[1]:
-				flag = False
+		passed = True
+		for id,attributes in expected_output['properties']:
+			if not attributes.houses == state.getNumberOfHouses(id):
+				passed = False
 				break
-		if flag:
-			passCounter += 1
+			if not attributes.mortgaged == state.isPropertyMortgaged(id):
+				passed = False
+				break
+			if not attributes.owned == state.isPropertyOwned(id):
+				passed = False
+				break
+			if not attributes.ownerId == state.getPropertyOwner(id):
+				passed = False
+				break
+			
+		if passed:
+			passCounter+=1
 		else:
 			print("Property"+str(property)+" don't match")
 			
@@ -96,18 +106,34 @@ def testcase_auction(adjudicator):
 		def receiveState(self, state):
 			pass
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[3,5]],None,None)
+	class AgentThree:
+		def __init__(self, id):
+			self.id = id
+			
+		def getBSMTDecision(self, state):
+			return None
+			
+		def buyProperty(self, state):
+			return False
+	
+		def auctionProperty(self, state):
+			return 170
+		
+		def receiveState(self, state):
+			pass
+	
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	agentThree = AgentThree("3")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo,agentThree],[[3,5]],None,None)
 	
 	final_state = adjudicator.state
 	
 	expected_output = {
-		"cash": [1500,1500-175],
-		"position":[8,0],
-		"properties":[(8,-1)]
+		"cash": {"1": 1500, "2": 1500-175, "3": 1500},
+		"position": {"1": 8, "2": 0,"3": 0},
+		"properties":[( 8,Property(houses=0,mortgaged=False,owned=True,ownerId="2") )]
 	}
-	
 	result = compare_states(final_state,expected_output)
 	
 	if result: print("Pass")
@@ -156,15 +182,15 @@ def testcase_payment(adjudicator):
 		def receiveState(self, state):
 			pass
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[3,1]],None,None)
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[3,1]],None,None)
 	
 	final_state = adjudicator.state
 	
 	expected_output = {
-		"cash": [1500-200,1500],
-		"position":[4,0]
+		"cash": {"1": 1500-200, "2": 1500},
+		"position": {"1": 4, "2": 0}
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -1505,11 +1531,8 @@ print("This testcase validates the following:")
 """
 Testcases that maybe invalid:
 testcase_buying_invalid_two_hotels
-"""
-#20 Testcases in total
-tests = [
-	testcase_auction,
-	testcase_payment,
+
+
 	testcase_buying_houses,
 	testcase_selling_houses,
 	testcase_trade,
@@ -1528,6 +1551,11 @@ tests = [
 	testcase_three_jails_a_day_keeps_the_lawyer_away_2,
 	testcase_utility_chance_card_owned,
 	testcase_railroad_chance_card_owned
+"""
+#20 Testcases in total
+tests = [
+	testcase_auction,
+	testcase_payment,
 ]
 
 #Execution

@@ -25,11 +25,13 @@ class Property:
 			newHouses=0
 		return {"houses":newHouses,"hotel":hotel,"mortgaged":self.mortgaged,"owned":self.owned,"ownerId":self.ownerId}
 
-class Debt(dict):
+class Debt:
 	def __init__(self,bank,otherPlayers):
 		self.bank = bank
 		self.otherPlayers = otherPlayers
-		dict.__init__(self,bank=bank,otherPlayers=otherPlayers) #for json parsing
+		
+	def convert(self):
+		return {"bank":self.bank,"otherPlayers":self.otherPlayers}
 
 class State:
 	def __init__(self, playerIds):		
@@ -141,8 +143,8 @@ class State:
 	def setDebtToPlayer(self,playerId,otherPlayerId,amount):
 		self.debt[playerId][otherPlayerId] = amount
 	
-	def addDebtToBank(self,playerId,debt):
-		self.debt[playerId].bank += debt
+	def addDebtToBank(self,playerId,amount):
+		self.debt[playerId].bank += amount
 	
 	def clearDebt(self,playerId):
 		playerCash = self.getCash(playerId)
@@ -150,7 +152,7 @@ class State:
 			if playerCash>= debt:
 				playerCash-=debt
 				self.setCash(otherPlayerId, self.getCash(otherPlayerId)+debt)
-				self.debt[playerId][otherPlayerId] = 0
+				self.debt[playerId].otherPlayers[otherPlayerId] = 0
 			else:
 				#Unpaid debt to another player, on rare occasion, there could be debts to multiple players.
 				self.markPlayerLost(playerId, Reason.BANKRUPT)
@@ -163,6 +165,7 @@ class State:
 			#Unpaid debt to the bank
 			self.markPlayerLost(playerId, Reason.BANKRUPT)
 			pass
+		self.setCash(playerId, playerCash)
 		
 	"""JAIL COUNTER"""
 	def getJailCounter(self,playerId):
@@ -368,8 +371,12 @@ class State:
 			raise e
 	
 	def toTuple(self):
+		newDebt = {}
+		for key,debtObj in self.debt.items():
+			newDebt[key] = debtObj.convert()
+		
 		return (self.players, self.turn, [prop.convert() for prop in self.properties], self.positions,
-				self.cash, self.bankrupt, self.phase, self.phasePayload, self.debt)
+				self.cash, self.bankrupt, self.phase, self.phasePayload, newDebt)
 	
 	def toJson(self):
 		return json.dumps(self.toTuple())
@@ -400,8 +407,8 @@ class Reason:
 	TIMEOUT = "Timeout"
 	BANKRUPT = "Bankruptcy"
 	
-state = State([1,2,3,4])
-print(state.toTuple())
+#state = State([1,2,3,4])
+#print(state.toTuple())
 #for value in json.loads(state.toJson()):
 #	print(value)
 #	print(value)
