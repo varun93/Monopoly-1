@@ -170,13 +170,12 @@ class Adjudicator:
 		# house can be built only if you own a monopoly of colours 
 		# double house can be built only if I have built one house in each colour 
 		# order of the tuples to be taken into account
-		def handleBuy(playerId,properties):
+		def handleBuyHouses(playerId,properties):
 			playerCash = self.state.getCash(playerId)
 			for propertyId,constructions in properties:
-				space = constants.board[propertyId]
 				houseCount = self.state.getNumberOfHouses(propertyId)
 				houseCount += constructions
-				playerCash -= (space['build_cost']*constructions)
+				playerCash -= (constants.board[propertyId]['build_cost']*constructions)
 				self.state.setNumberOfHouses(propertyId,houseCount)
 			self.state.setCash(playerId,playerCash)
 			return True
@@ -244,84 +243,93 @@ class Adjudicator:
 		
 		"""
 		BSMT will be carried out as decision rounds where each player is asked for his BSMT action during that round.
-		The flag array 'doneWithBSM' stores whether each player wants to perform a BSMT action in the current round or not.
 		If all the player's don't want to take BSMT actions in a given round, then the BSMT phase ends.
 		If a player decides he doesn't want to take any BSMT actions in a given decision round, he can still make BSMT actions in later decision rounds.
 		This is done so that he can react to the BSMT decisions made by other players.
 		TODO:
 		Find a way to ensure that BSMT doesn't go on forever.
 		"""
-		doneWithBSM = [False]*(self.TOTAL_NO_OF_PLAYERS)
+		currentPlayerIndex = self.state.getCurrentPlayerIndex()
+		mortgageRequests = []
+		buyingHousesRequests = []
+		buyingHotelsRequests = []
+		sellingRequests = []
 		
-		while False in doneWithBSM:
+		"""Currently, BSM could go on forever."""
+		while True:
 			
-			#self.updateState(state,self.PHASE_NUMBER_INDEX,None,self.BSTM)
+			"""Getting the actions for BSM from all the players"""
+			actionCount=0
+			for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
+				playerId = self.PLAY_ORDER[i]
+				if not self.state.hasPlayerLost(playerId):
+					action = self.runPlayerOnStateWithTimeout(playerId)
+					actionType = checkActionType(action)
+					if actionType=="M":
+						mortgageRequests.append((playerId,action[1]))
+						actionCount+=1
+					elif actionType=="BHS":
+						if self.state.isBuyingHousesSequenceValid(playerId,action[1]) and hasBuyingCapability(playerId,action[1]):
+							buyingHousesRequests.append((playerId,action[1]))
+							actionCount+=1
+					elif actionType=="BHT":
+						if self.state.isBuyingHotelSequenceValid(playerId,action[1]):
+							buyingHotelsRequests.append((playerId,action[1]))
+							actionCount+=1
+					elif actionType=="S":
+						if self.state.isSellingSequenceValid(playerId,action[1]):
+							sellingRequests.append((playerId,action[1]))
+							actionCount+=1
 			
-			currentPlayerIndex = self.state.getCurrentPlayerIndex()
-			mortgageRequests = []
-			buyingHousesRequests = []
-			buyingHotelsRequests = []
-			sellingRequests = []
+			if actionCount==0:
+				break #Stop BSM if there are no valid BSM requests during a given turn
 			
-			while True:
-				
-				"""Getting the actions for BSM from all the players"""
-				for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
-					playerId = self.PLAY_ORDER[i]
-					if not self.state.hasPlayerLost(playerId):
-						action = self.runPlayerOnStateWithTimeout(playerId)
-						actionType = checkActionType(action)
-						if actionType=="M":
-							mortgageRequests.append((playerId,action[1]))
-						elif actionType=="BHS":
-							if self.state.isBuyingHousesSequenceValid(playerId,action[1]) and hasBuyingCapability(playerId,action[1]):
-								buyingHousesRequests.append((playerId,action[1]))
-						elif actionType=="BHT":
-							if self.state.isBuyingHotelSequenceValid(playerId,action[1]):
-								buyingHotelsRequests.append((playerId,action[1]))
-						elif actionType=="S":
-							if self.state.isSellingSequenceValid(playerId,action[1]):
-								sellingRequests.append((playerId,action[1]))
-				
-				"""Selling Requests"""
-				finishedSellingRequests = []
-				housesRemaining = self.state.getHousesRemaining()
-				for _,request in buyingHousesRequests:
-					housesRemaining -= self.state.evaluateBuyingHousesSequence(request)
-				
-				#TODO: Also consider buying hotel requests here
-				
-				for playerIndex,request in sellingRequests:
-					extraHouses = len(request)*4
-					if extraHouses<=0 or extraHouses<=housesRemaining:
-						handleSell(playerIndex, request)
-						housesRemaining-=extraHouses
-				
-				"""Mortgage/Unmortgage requests"""
-				for playerIndex,mortgageRequest in mortgageRequests:
-					handleMortgage(playerIndex,mortgageRequest)
-				
-				"""Buying Requests"""
-				housesRemaining = self.state.getHousesRemaining()
-				hotelsRemaining = self.state.getHotelsRemaining()
-				for _,request in buyingRequests:
-					result = self.state.evaluateBuyingSequence(request)
-					housesRemaining -= result[0]
-					hotelsRemaining -= result[1]
-				for playerIndex in buyingRequests.keys():
-					for (_,houses) in buyingRequests[playerIndex]:
-						totalHousesNeeded+=houses
-				if (totalHousesNeeded<=self.state.getHousesRemaining()):
-					passplayerIndex
-				
-			"""
-			if agentOneDone and agentTwoDone:
-				#Counter against case where we fall on an idle position and do BSTM.
-				#The previous phase would be dice roll. But it doesn't make sense to set that back.
-				if previousPhaseNumber > self.DICE_ROLL:
-					self.updateState(state,self.PHASE_NUMBER_INDEX,None,previousPhaseNumber)
-				break
-			"""
+			"""Selling Requests"""
+			finishedSellingRequests = []
+			for playerId,request in sellingRequests:
+				housesNeeded,hotelsNeeded = self.state.evaluateSellingSequence(request)
+				if housesNeeded<=0 and hotelsNeeded<=0:
+					handleSell(playerId, request)
+					finishedSellingRequests.append(playerId)
+			sellingRequests = [entry for entry in sellingRequests if entry[0] not in finishedSellingRequests]
+			
+			housesRemaining = self.state.getHousesRemaining()
+			housesNeededForBHS = 0
+			for _,request in buyingHousesRequests:
+				housesNeededForBHS += self.state.evaluateBuyingHousesSequence(request)
+			housesRemaining -= housesNeededForBHS
+			
+			for playerId,request in sellingRequests:
+				housesNeeded,hotelsNeeded = self.state.evaluateSellingSequence(request)
+				if housesNeeded<=housesRemaining:
+					handleSell(playerId, request)
+					housesRemaining-=housesNeeded
+				else: break
+			
+			"""Mortgage/Unmortgage requests"""
+			for playerId,mortgageRequest in mortgageRequests:
+				handleMortgage(playerId,mortgageRequest)
+			
+			"""Buying Hotels Requests"""
+			hotelsRemaining = self.state.getHotelsRemaining()
+			hotelsForBHT = 0
+			for _,request in buyingHotelsRequests:
+				hotelsForBHT += len(request)
+			if hotelsRemaining-hotelsForBHT>=0:
+				for playerId,request in buyingHotelsRequests:
+					self.state.buyHotelSequence(playerId,request)
+			else:
+				#TODO: AUCTION FOR HOTELS
+				pass
+			
+			"""Buying Houses Requests"""
+			housesRemaining = self.state.getHousesRemaining()
+			if housesRemaining-housesNeededForBHS>=0:
+				for playerId,request in buyingHousesRequests:
+					handleBuyHouses(player,request)
+			else:
+				#TODO: AUCTION FOR HOUSES
+				pass
 	
 	""" ACTION METHODS """
 	"""

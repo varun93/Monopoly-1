@@ -10,14 +10,20 @@ MAX_HOUSES = 32
 MAX_HOTELS = 12
 NUMBER_OF_PROPERTIES = 42
 
-class Property(dict):
-	def __init__(self,houses,hotel,mortgaged,owned,ownerId):
-		self.houses = houses #value in range 0-4
-		self.hotel = hotel #boolean
+class Property:
+	def __init__(self,houses,mortgaged,owned,ownerId):
+		self.houses = houses #value in range 0-5
 		self.mortgaged = mortgaged #boolean
 		self.owned = owned #boolean
 		self.ownerId = ownerId
-		dict.__init__(self, houses=houses,hotel=hotel,mortgaged=mortgaged,owned=owned,ownerId=ownerId) #for json parsing
+	
+	def convert(self):
+		hotel = False
+		newHouses = self.houses
+		if self.houses>4:
+			hotel=True
+			newHouses=0
+		return {"houses":newHouses,"hotel":hotel,"mortgaged":self.mortgaged,"owned":self.owned,"ownerId":self.ownerId}
 
 class Debt(dict):
 	def __init__(self,bank,otherPlayers):
@@ -32,11 +38,11 @@ class State:
 		self.TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
 		self.turn = 0
-		self.properties = [Property(0,False,False,False,0)]*NUMBER_OF_PROPERTIES
+		self.properties = [Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
 		self.positions = {}
 		self.cash = {}
 		self.bankrupt = {}
-		self.phase = Phase.BSMT
+		self.phase = Phase.NO_ACTION
 		self.phasePayload = None
 		self.debt = {}
 		
@@ -177,7 +183,6 @@ class State:
 	def setPropertyUnowned(self,propertyId):
 		self.properties[propertyId].owned = False
 		self.properties[propertyId].houses = 0
-		self.properties[propertyId].hotel = False
 		self.properties[propertyId].mortgaged = False
 		
 	def getPropertyOwner(self,propertyId):
@@ -199,37 +204,6 @@ class State:
 	def setPropertyMortgaged(self,propertyId,mortgaged):
 		self.properties[propertyId].mortgaged = mortgaged
 	
-	"""HOTEL FUNCTIONS"""
-	def getHotel(self,propertyId):
-		return self.properties[propertyId].hotel
-	
-	def isBuyingHotelSequenceValid(self,playerId,propertySequence,sequenceType):
-		for propertyId in propertySequence:
-			currentProperty = self.properties[propertyId]
-			if (currentProperty.ownerId!=playerId) or (currentProperty.mortgaged) or (currentProperty.houses<4):
-				return False
-			if currentProperty.hotel:
-				return False
-			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
-				monopolyProperty = self.properties[monopolyPropertyId]
-				if (monopolyProperty.ownerId!=playerId) or (monopolyProperty.mortgaged) or (monopolyProperty.houses<4):
-					return False
-		return True
-	
-	def buyHotel(self,propertyId,playerId):
-		playerCash = self.getCash(playerId)
-		if not self.properties[propertyId].hotel:
-			playerCash -= board[propertyId]["build_cost"] #don't deduct cash if there was already a hotel here
-		self.properties[propertyId].hotel = True
-		self.setCash(playerId, playerCash)
-		
-	def sellHotel(self,propertyId,playerId):
-		playerCash = self.getCash(playerId)
-		if self.properties[propertyId].hotel:
-			playerCash += board[propertyId]["build_cost"]
-		self.properties[propertyId].hotel = False
-		self.setCash(playerId, playerCash)
-	
 	"""HOUSES FUNCTIONS"""
 	def getNumberOfHouses(self,propertyId):
 		return self.properties[propertyId].houses
@@ -237,12 +211,31 @@ class State:
 	def setNumberOfHouses(self,propertyId,count):
 		self.properties[propertyId].houses = count
 	
+	"""HOTEL FUNCTIONS"""
+	"""Checks if hotels can be built on the given set of property ids."""
+	def isBuyingHotelSequenceValid(self,playerId,propertySequence):
+		for propertyId in propertySequence:
+			currentProperty = self.properties[propertyId]
+			if (currentProperty.ownerId!=playerId) or (currentProperty.mortgaged) or (currentProperty.houses!=4):
+				return False
+			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
+				monopolyProperty = self.properties[monopolyPropertyId]
+				if (monopolyProperty.ownerId!=playerId) or (monopolyProperty.mortgaged) or (monopolyProperty.houses<4):
+					return False
+		return True
+	
+	"""Buys hotels on the property ids in the given sequence. Assumes that these are valid properties for hotels."""
+	def buyHotelSequence(self,playerId,sequence):
+		playerCash = self.getCash(playerId)
+		for propertyId in sequence:
+			playerCash -= board[propertyId]["build_cost"]
+			self.setNumberOfHouses(propertyId, 5)
+		self.setCash(playerId, playerCash)
+	
 	"""
-	This function checks the following:
-	Checks if the properties are streets
-	That the player owns all the properties in the monopoly and that they are all unmortgaged.
-	That the end result of the buying operation results in houses being built evenly.
-	If even one fault is found, the entire operation is invalidated,
+	Checks if the properties are streets,
+	that the player owns all the properties in the monopoly and that they are all unmortgaged.
+	and that houses are being built evenly.
 	"""
 	def isBuyingHousesSequenceValid(self, playerId,propertySequence):
 		propertiesCopy = list(self.properties)
@@ -251,12 +244,12 @@ class State:
 				return False
 			
 			currentProperty = propertiesCopy[propertyId]
-			if (currentProperty.ownerId!=playerId) or (currentProperty.mortgaged) or (currentProperty.hotel):
+			if (currentProperty.ownerId!=playerId) or (currentProperty.mortgaged):
 				return False
 			
 			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
 				monopolyProperty = propertiesCopy[monopolyPropertyId]
-				if (monopolyProperty.ownerId!=playerId) or (monopolyProperty.mortgaged) or (monopolyProperty.hotel):
+				if (monopolyProperty.ownerId!=playerId) or (monopolyProperty.mortgaged):
 					return False
 			
 			newHousesCount = currentProperty.houses+housesCount
@@ -280,29 +273,24 @@ class State:
 				return False
 			
 			currentProperty = propertiesCopy[propertyId]
-			if (currentProperty.ownerId!=playerId) or (currentProperty.mortgaged) or (hotel and not currentProperty.hotel) or (not hotel and currentProperty.hotel and housesCount!=0):
+			if (currentProperty.ownerId!=playerId) or (currentProperty.mortgaged):
 				return False
 			
 			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
 				monopolyProperty = propertiesCopy[monopolyPropertyId]
-				if (monopolyProperty.ownerId!=playerId) or (monopolyProperty.mortgaged) or (hotel and monopolyProperty.houses<4):
+				if (monopolyProperty.ownerId!=playerId) or (monopolyProperty.mortgaged):
 					return False
 			
+			if hotel: housesCount+=1
 			newHousesCount = currentProperty.houses-housesCount
-			if (newHousesCount>4) or (newHousesCount<0):
+			if (newHousesCount>5) or (newHousesCount<0):
 				return False
-			
-			if hotel:
-				propertiesCopy[propertyId].hotel=False
 			propertiesCopy[propertyId].houses+=housesCount
 		
-		for propertyId,_ in propertySequence:
+		for propertyId,_,_ in propertySequence:
 			houses = propertiesCopy[propertyId].houses
 			for monopolyPropertyId in board[propertyId]["monopoly_group_elements"]:
 				monopolyHouses = propertiesCopy[monopolyPropertyId].houses
-				monopolyHotel = propertiesCopy[monopolyPropertyId].hotel
-				if monopolyHotel and houses<4:
-					return False
 				if abs(monopolyHouses-houses)>1:
 					return False
 		return True
@@ -312,6 +300,7 @@ class State:
 		totalNewHouses = 0
 		for propertyId,constructions in sequence:
 			currentHouses = self.properties[propertyId].houses
+			#if currentHouses==5: currentHouses=0
 			totalCurrentHouses+=currentHouses
 			
 			newHouses = currentHouses+constructions
@@ -321,29 +310,42 @@ class State:
 	def evaluateSellingSequence(self,sequence):
 		totalCurrentHouses = 0
 		totalNewHouses = 0
-		for propertyId,constructions,hotel in sequence:
-			if self.properties[propertyId].hotel:
+		totalCurrentHotels = 0
+		totalNewHotels = 0
+		
+		for propertyId,constructions,hotel in propertySequence:
+			housesCounter = self.properties[propertyId].houses
+			if housesCounter<5:
+				currentHouses = housesCounter
+				currentHotels = 0
+			else:
 				currentHouses = 0
-			else:
-				currentHouses = self.properties[propertyId].houses
+				currentHotels = 1
 			totalCurrentHouses+=currentHouses
-			if self.properties[propertyId].hotel and not hotel:
-				newHouses = 0
+			totalCurrentHotels+=currentHotels
+			
+			if hotel: constructions+=1
+			newHousesCounter = housesCounter-constructions
+			if newHousesCounter<5:
+				newHouses = newHousesCounter
+				hewHotels = 0
 			else:
-				newHouses = currentHouses-constructions
+				newHouses = 0
+				newHotels = 1
 			totalNewHouses+=newHouses
-		return (totalNewHouses-totalCurrentHouses)
+			totalNewHotels+=newHotels
+		return (totalNewHouses-totalCurrentHouses,totalNewHotels-totalCurrentHotels)
 			
 	def getHousesRemaining(self):
 		houses = MAX_HOUSES
 		for prop in self.properties:
-			houses -= prop.houses
+			if (prop.houses>0) and (prop.houses<5): houses -= prop.houses
 		return houses
 
 	def getHotelsRemaining(self):
 		hotels = MAX_HOTELS
 		for prop in self.properties:
-			if (prop.hotel): hotels -= 1
+			if (prop.houses==5): hotels -= 1
 		return hotels
 	
 	def getOwnedProperties(self, playerId):
@@ -366,7 +368,7 @@ class State:
 			raise e
 	
 	def toTuple(self):
-		return (self.players, self.turn, self.properties, self.positions,
+		return (self.players, self.turn, [prop.convert() for prop in self.properties], self.positions,
 				self.cash, self.bankrupt, self.phase, self.phasePayload, self.debt)
 	
 	def toJson(self):
@@ -376,7 +378,7 @@ class State:
 		return str(self.toJson())
 	
 class Phase:
-	BSMT = 0
+	NO_ACTION = 0
 	TRADE_OFFER = 1
 	DICE_ROLL = 2
 	BUYING = 3
@@ -398,8 +400,8 @@ class Reason:
 	TIMEOUT = "Timeout"
 	BANKRUPT = "Bankruptcy"
 	
-#state = State([1,2,3,4])
-#print()
+state = State([1,2,3,4])
+print(state.toTuple())
 #for value in json.loads(state.toJson()):
 #	print(value)
-	#print(value)
+#	print(value)
