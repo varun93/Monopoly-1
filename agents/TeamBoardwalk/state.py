@@ -36,6 +36,12 @@ class Debt:
 	def __init__(self,bank,otherPlayers):
 		self.bank = bank
 		self.otherPlayers = otherPlayers
+		
+	def getTotalDebt(self):
+		debt = self.bank
+		for playerDebt in self.otherPlayers:
+			debt += playerDebt
+		return debt
 	
 	def __deepcopy__(self, memo):
 		return Property(self.bank, self.otherPlayers)

@@ -263,7 +263,7 @@ class Adjudicator:
 			for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
 				playerId = self.PLAY_ORDER[i]
 				if not self.state.hasPlayerLost(playerId):
-					action = self.runPlayerOnStateWithTimeout(playerId)
+					action = self.runPlayerOnStateWithTimeout(playerId,"BSM")
 					actionType = checkActionType(action)
 					if actionType=="M":
 						mortgageRequests.append((playerId,action[1]))
@@ -493,13 +493,14 @@ class Adjudicator:
 
 		for participant in livePlayers:
 			# asking for each participant for the bid
-			auctionBid = self.runPlayerOnStateWithTimeout(participant)
+			auctionBid = self.runPlayerOnStateWithTimeout(participant,"AUCTION")
 		
 			if auctionBid and auctionBid > winningBid:
 				winningBid = auctionBid
 				winner = participant
 
 		# What if no one is interested? Just return? is this correct? 
+		# TODO: Decide what happens here
 		if winner is None:
 			return
 			
@@ -511,22 +512,16 @@ class Adjudicator:
 			playerCash -= winningBid
 		else:
 			#Player placed a bid greater than the amount of money he/she has. His loss.
-			result = [True,True]
-			result[winner] = False
-			return result
+			#TODO: Is this correct?
+			self.state.markPlayerLost(playerId,Reason.BANKRUPT)
 
 		self.state.setCash(winner,playerCash)
-		self.state.setPropertyOwner (auctionedProperty,winner)	
+		self.state.setPropertyOwner(auctionedProperty,winner)	
 		
 		#Receive State
-		phasePayload = [auctionedProperty,winner]
+		phasePayload = [auctionedProperty,winner,winningBid]
 		self.state.setPhasePayload(phasePayload)
-		
-		# TODO: broadcast state
-
-	
-		# not sure what to do with this 
-		return [True,True]
+		self.broadcastState()
 
 	def updateBuyingDecisions(self,buyingDecisions,auctionWinner,propertySite):
 
@@ -686,7 +681,7 @@ class Adjudicator:
 		#InJail
 		self.state.setPhase(Phase.JAIL)
 		self.state.setPhasePayload(None)
-		action = self.runPlayerOnStateWithTimeout(currentPlayerId)
+		action = self.runPlayerOnStateWithTimeout(currentPlayerId,"JAIL")
 		result = self.handle_in_jail_state(action)
 		
 		phasePayload = [result[0]]
@@ -766,7 +761,7 @@ class Adjudicator:
 				self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1])
 			
 			if output['phase']==Phase.BUYING:
-				action = self.runPlayerOnStateWithTimeout(currentPlayerId)
+				action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
 				action = self.typecast(action, bool, False)
 				if not action:
 					self.state.setPhase(Phase.AUCTION)
@@ -831,32 +826,32 @@ class Adjudicator:
 			output['phase'] = Phase.BUYING
 			output['phase_properties'] = playerPosition
 		elif ownerId!=currentPlayerId:
-			monopolies = constants.board[playerPosition]['monopoly_group_elements']
+			space = constants.board[playerPosition]
+			monopolies = space['monopoly_group_elements']
 			counter = 1
 			for monopoly in monopolies:
 				monopolyPropOwner = self.state.getPropertyOwner(playerPosition)
 				if monopolyPropOwner==ownerId:
 					counter += 1
 			
-			if (constants.board[playerPosition]['class'] == 'Street'):
-				rent = constants.board[playerPosition]['rent']
+			if (space['class'] == 'Street'):
+				rent = space['rent']
 				if (counter==len(monopolies)+1):
 					rent = rent * 2
 				
 				houseCount = self.state.getNumberOfHouses(playerPosition)
-				hasHotel = self.state.getHotel(playerPosition)
 				if houseCount==1:
-					rent = constants.board[playerPosition]['rent_house_1']
+					rent = space['rent_house_1']
 				elif houseCount==2:
-					rent = constants.board[playerPosition]['rent_house_2']
+					rent = space['rent_house_2']
 				elif houseCount==3:
-					rent = constants.board[playerPosition]['rent_house_3']
+					rent = space['rent_house_3']
 				elif houseCount==4:
-					rent = constants.board[playerPosition]['rent_house_4']
-				elif hasHotel:
-					rent = constants.board[playerPosition]['rent_hotel']	
+					rent = space['rent_house_4']
+				elif houseCount==5:
+					rent = space['rent_hotel']	
 				
-			elif (constants.board[playerPosition]['class'] == 'Railroad'):
+			elif (space['class'] == 'Railroad'):
 				rent = 25
 				if counter == 2:
 					rent = 50
@@ -864,7 +859,7 @@ class Adjudicator:
 					rent = 100
 				if counter == 4:
 					rent = 200
-			elif (constants.board[playerPosition]['class'] == 'Utility'):
+			elif (space['class'] == 'Utility'):
 				if (counter==len(monopolies)+1):
 					rent = 10
 				rent = rent * (self.dice.die_1 + self.dice.die_2)
@@ -936,10 +931,11 @@ class Adjudicator:
 			n_hotels = 0
 			for propertyId in range(self.BOARD_SIZE):
 				if self.state.rightOwner(currentPlayerId,propertyId):
-					if self.state.getHotel(propertyId):
+					housesCount = self.state.getNumberOfHouses(propertyId)
+					if housesCount==5:
 						n_hotels+=1
 					else:
-						n_houses+=self.state.getNumberOfHouses(propertyId)
+						n_houses+=housesCount
 
 			debtAmount = abs(card['money'])*n_houses + abs(card['money2'])*n_hotels
 			if debtAmount > 0:
@@ -971,7 +967,7 @@ class Adjudicator:
 				self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1]*2)
 			
 			if output['phase']==Phase.BUYING:
-				action = self.runPlayerOnStateWithTimeout(currentPlayerId)
+				action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
 				action = self.typecast(action, bool, False)
 				if not action:
 					self.state.setPhase(Phase.AUCTION)
@@ -1014,7 +1010,7 @@ class Adjudicator:
 		self.state.setPhasePayload(phasePayload)
 		
 		if phaseNumber==Phase.BUYING:
-				action = self.runPlayerOnStateWithTimeout(currentPlayerId)
+				action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
 				action = self.typecast(action, bool, False)
 				if not action:
 					self.state.setPhase(Phase.AUCTION)
@@ -1062,12 +1058,6 @@ class Adjudicator:
 		if phase == Phase.BUYING:
 			self.handle_buy_property()
 		elif phase == Phase.AUCTION:
-			#Auction
-			#@Varun: TODO
-			# what is the start auction for?
-			# self.start_auction(state)
-			# correct?
-			# is this correct? I can't figure out where this is set
 			auctionedProperty = phasePayload[0]
 			return self.handle_auction(state,auctionedProperty)
 		elif phase == self.PAYMENT:
@@ -1080,7 +1070,7 @@ class Adjudicator:
 	House and Hotel purchase value,
 	Mortgaged properties at half price.
 	"""
-	def final_winning_condition(self,state):
+	def final_winning_condition(self):
 		agentCash = {}
 		agentPropertyWorth = {}
 		
@@ -1093,7 +1083,6 @@ class Adjudicator:
 			isPropertyOwned = self.state.isPropertyOwned(propertyId)
 			ownerId = self.state.getPropertyOwner(propertyId)
 			houses = self.state.getNumberOfHouses(propertyId)
-			hotel = self.state.getHotel(propertyId)
 			mortgaged = self.state.isPropertyMortgaged(propertyId)
 			
 			price = constants.board[propertyId]['price']
@@ -1104,8 +1093,6 @@ class Adjudicator:
 					agentPropertyWorth[ownerId] += price/2
 				else:
 					agentPropertyWorth[ownerId] += (price+build_cost*houses)
-					if hotel:
-						agentPropertyWorth[ownerId] += build_cost
 		
 		for propertyId in [self.CHANCE_GET_OUT_OF_JAIL_FREE,self.COMMUNITY_GET_OUT_OF_JAIL_FREE]:
 			isPropertyOwned = self.state.isPropertyOwned(propertyId)
@@ -1139,7 +1126,7 @@ class Adjudicator:
 			
 	def broadcastState(self):
 		for playerId in self.PLAY_ORDER:
-			self.runPlayerOnStateWithTimeout(playerId,receiveState=True)
+			self.runPlayerOnStateWithTimeout(playerId,"INFO")
 	
 	"""
 	Function to be called to start the game.
@@ -1206,14 +1193,14 @@ class Adjudicator:
 						log("state",self.state)
 						
 						"""BSTM"""
-						#self.conductBSM()
+						self.conductBSM()
 						if self.state.hasPlayerLost(playerId):
 							self.state.updateTurn()
 							continue
 						
 						"""State now contain info about the position the player landed on"""
 						"""Performing the actual effect of the current position"""
-						result = self.turn_effect()
+						self.turn_effect()
 						if self.state.hasPlayerLost(playerId):
 							self.state.updateTurn()
 							continue
@@ -1230,35 +1217,29 @@ class Adjudicator:
 			
 			"""Update the turn counter"""
 			self.state.updateTurn()
-			
-			if winner is not None:
+			lossCount = 0
+			for agentId in self.PLAY_ORDER:
+				if self.state.hasPlayerLost(agentId): lossCount+=1
+			if lossCount>=self.TOTAL_NO_OF_PLAYERS-1:
 				break
 		
+		#TODO:
 		#Storing the state_history to log file
-		f = open("state_history.log", "w")
-		for history in self.stateHistory:
-			f.write(str(history)+",\n")
+		#f = open("state_history.log", "w")
+		#for history in self.stateHistory:
+		#	f.write(str(history)+",\n")
 		
 		"""Determine the winner"""
-		if winner==None:
-			reason = "Greater Assets"
-			winner = self.final_winning_condition(self.state)
-		
-		if winner == 1:
-			log("win","AgentOne won the Game.")
-		elif winner == 2:
-			log("win","AgentTwo won the Game.")
-		else:
-			log("win","It's a Tie!")
+		resultsArray = self.final_winning_condition()
+		log("win","Agent "+str(resultsArray[0])+" won the Game.")
+		#TODO: Ties
 
-		#add to the state history
-		#Clearing the payload as it might contain some internal info used by the adjudicator
 		self.state.setPhasePayload(None)
 		finalState = self.state.toTuple()
 		log("win","Final State:")
 		log("win",finalState)
 		self.notifyUI()
-		return [winner,finalState]
+		return [resultsArray[0],finalState]
 	
 	"""
 	This function is called whenever adjudicator needs to communicate with the agent
@@ -1266,36 +1247,33 @@ class Adjudicator:
 	All threading and signal based logic must go in here
 	"""
 	@timeout_decorator.timeout(3000, timeout_exception=TimeoutError)
-	def runPlayerOnStateWithTimeout(self, playerId,receiveState=False):
+	def runPlayerOnStateWithTimeout(self, playerId,callType):
 		try:
-			return self.runPlayerOnState(playerId,receiveState)
+			return self.runPlayerOnState(playerId,callType)
 		except TimeoutError:
 			print("Agent Timed Out")
-			"""Change the return value here to ensure agent loose"""
+			"""Change the return value here to ensure agent loses"""
 			self.state.markPlayerLost(playerId,Reason.TIMEOUT)
 			return None
 
-	def runPlayerOnState(self,playerId,receiveState=False):
+	def runPlayerOnState(self,playerId,callType):
 		player = self.getPlayer(playerId)
 		action = None
-		current_phase = self.state.getPhase()
 		stateToBeSent = self.state.toJson()
 
-		if receiveState:
-			action = player.receiveState(stateToBeSent)
-		elif current_phase == Phase.BSMT:
-			pass
+		if callType == "BSM":
 			action = player.getBSMTDecision(stateToBeSent)
-		elif current_phase == Phase.TRADE_OFFER:
-			action = player.respondTrade(stateToBeSent)
-		elif current_phase == Phase.BUYING:
+		elif callType == "BUY":
 			action = player.buyProperty(stateToBeSent)
-		elif current_phase == Phase.AUCTION:
+		elif callType == "AUCTION":
 			action = player.auctionProperty(stateToBeSent)
-		elif current_phase == Phase.PAYMENT:
-			pass
-		elif current_phase == Phase.JAIL:
+		elif callType == "JAIL":
 			action = player.jailDecision(stateToBeSent)
+		elif callType == "INFO":
+			action = player.receiveState(stateToBeSent)
+		elif callType == "TRADE":
+			"""TODO:"""
+			action = player.respondTrade(stateToBeSent)
 		
 		return action
 

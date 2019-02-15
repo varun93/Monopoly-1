@@ -11,7 +11,7 @@ class RiskyAgent:
 
 	def getBSMTDecision(self, state):
 		state = State(state)
-		if state.money[self.pid] - state.debt[self.pid * 2 + 1] < 0:
+		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
 			pos = state.positions[self.pid]
 			prop = state.properties[pos]
 			if pos == -1 or not (prop.data.price == state.debt[self.pid * 2 + 1] and prop.owner == -1):
