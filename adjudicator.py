@@ -322,6 +322,7 @@ class Adjudicator:
 					self.state.buyHotelSequence(playerId,request)
 			else:
 				#TODO: AUCTION FOR HOTELS
+				#All the hotel requests are in: buyingHotelsRequests
 				pass
 			
 			"""Buying Houses Requests"""
@@ -331,6 +332,7 @@ class Adjudicator:
 					handleBuyHouses(playerId,request)
 			else:
 				#TODO: AUCTION FOR HOUSES
+				#All the hotel requests are in: buyingHousesRequests
 				pass
 	
 	""" ACTION METHODS """
