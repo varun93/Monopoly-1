@@ -189,7 +189,7 @@ class Adjudicator:
 				if hotel: constructions+=1
 				houseCount = self.state.getNumberOfHouses(propertyId)
 				houseCount -= constructions
-				playerCash += (space['build_cost']*0.5*constructions)
+				playerCash += int(space['build_cost']*0.5*constructions)
 				self.state.setNumberOfHouses(propertyId,houseCount)
 			
 			self.state.setCash(playerId,playerCash)
@@ -223,16 +223,16 @@ class Adjudicator:
 					if self.state.getNumberOfHouses(propertyId)>0:
 						return False
 				
-				mortagePrice = constants.board[propertyId]['price']/2
+				mortagePrice = int(constants.board[propertyId]['price']/2)
 				playerCash += mortagePrice
 			
 			for propertyId in unmortgageRequests:
-				unmortgagePrice = constants.board[propertyId]['price']/2	
+				unmortgagePrice = int(constants.board[propertyId]['price']/2)	
 
 				if propertyId in self.mortgagedDuringTrade:
 					self.mortgagedDuringTrade.remove(propertyId)
 				else:
-					unmortgagePrice = unmortgagePrice + unmortgagePrice*0.1
+					unmortgagePrice = int(unmortgagePrice*1.1)
 
 				if playerCash >= unmortgagePrice:
 					playerCash -= unmortgagePrice 
@@ -412,29 +412,14 @@ class Adjudicator:
 		cashRequest = self.check_valid_cash(cashRequest)
 		cashOffer = self.check_valid_cash(cashOffer)
 		
-		phasePayload = [cashOffer,propertiesOffer,cashRequest,propertiesRequest]
+		#Ask the other agent whether he accepts the trade.
+		phasePayload = [agentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest]
 		self.state.setPhasePayload(phasePayload)
-
 		tradeResponse = self.runPlayerOnStateWithTimeout(otherAgentId,"RESPOND_TRADE")
 		tradeResponse = self.typecast(tradeResponse, bool, False)
 		
 		# if the trade was successful update the cash and property status
 		if tradeResponse:
-			# update the values in the payload index 
-			mortgagedProperties = list(filter(lambda propertyId : self.state.isPropertyMortgaged(propertyId), propertiesOffer + propertiesRequest))
-
-			for mortgagedProperty in mortgagedProperties:
-				if mortgagedProperty not in self.mortgagedDuringTrade:
-					self.mortgagedDuringTrade.append(mortgagedProperty)
-					space = constants.board[mortgagedProperty]
-					propertyPrice = space['price']
-					mortgagedPrice = propertyPrice/2
-					agentInQuestion = self.state.getPropertyOwner(mortgagedProperty)
-
-					agentsCash = self.state.getCash(agentInQuestion)
-					agentsCash -= mortgagedPrice*0.1
-					self.state.setCash(agentInQuestion,agentsCash)
-
 			currentPlayerCash =  self.state.getCash(agentId)
 			otherPlayerCash = self.state.getCash(otherAgentId)
 
@@ -448,9 +433,23 @@ class Adjudicator:
 				self.state.setPropertyOwner(propertyRequest,agentId)
 			for propertyOffer in propertiesOffer:
 				self.state.setPropertyOwner(propertyOffer,otherAgentId)
-		
+				
+			#Handle mortgaged properties that were involved in the trade after transferring ownership
+			mortgagedProperties = list(filter(lambda propertyId : self.state.isPropertyMortgaged(propertyId), propertiesOffer + propertiesRequest))
+			for mortgagedProperty in mortgagedProperties:
+				if mortgagedProperty not in self.mortgagedDuringTrade:
+					self.mortgagedDuringTrade.append(mortgagedProperty)
+					space = constants.board[mortgagedProperty]
+					propertyPrice = space['price']
+					mortgagedPrice = int(propertyPrice/2)
+					agentInQuestion = self.state.getPropertyOwner(mortgagedProperty)
+
+					agentsCash = self.state.getCash(agentInQuestion)
+					agentsCash -= int(mortgagedPrice*0.1)
+					self.state.setCash(agentInQuestion,agentsCash)
+			
 		#Receive State
-		phasePayload.insert(0,tradeResponse)
+		phasePayload = [tradeResponse,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest]
 		self.state.setPhasePayload(phasePayload)
 		self.runPlayerOnStateWithTimeout(agentId,"INFO")
 		self.state.setPhasePayload(previousPayload)
@@ -1108,7 +1107,7 @@ class Adjudicator:
 			
 			if isPropertyOwned:
 				if mortgaged:
-					agentPropertyWorth[ownerId] += price/2
+					agentPropertyWorth[ownerId] += int(price/2)
 				else:
 					agentPropertyWorth[ownerId] += (price+build_cost*houses)
 		
@@ -1211,6 +1210,7 @@ class Adjudicator:
 						log("state",self.state)
 						
 						"""BSMT"""
+						self.mortgagedDuringTrade = []
 						previousPhase = self.state.getPhase()
 						previousPhasePayload = self.state.getPhasePayload()
 						self.state.setPhase(Phase.TRADE)
