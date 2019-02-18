@@ -34,6 +34,7 @@ class Adjudicator:
 		
 		self.JUST_VISTING = 10
 		self.OWNED_BY_BANK = -1
+		self.JAIL = -1
 		
 		self.dice = None
 		
@@ -265,7 +266,7 @@ class Adjudicator:
 				playerId = self.PLAY_ORDER[i]
 				if not self.state.hasPlayerLost(playerId):
 					action = self.runPlayerOnStateWithTimeout(playerId,"BSM")
-					actionType = checkActionType(action)
+					actionType = checkActionType(action) #Some basic validation like syntax,type checking and value range.
 					if actionType=="M":
 						mortgageRequests.append((playerId,action[1]))
 						actionCount+=1
@@ -649,7 +650,7 @@ class Adjudicator:
 				#Check if the player has the mentioned property card.
 				if (len(action)>1) & (action[1] in [self.CHANCE_GET_OUT_OF_JAIL_FREE,self.COMMUNITY_GET_OUT_OF_JAIL_FREE]):
 					
-					if self.state.isPropertyOwned() and self.state.rightOwner(currentPlayerId,action[1]):
+					if self.state.isPropertyOwned(action[1]) and self.state.rightOwner(currentPlayerId,action[1]):
 						if action[1] == self.COMMUNITY_GET_OUT_OF_JAIL_FREE:
 							self.chest.deck.append(constants.communityChestCards[4])
 						elif action[1] == self.CHANCE_GET_OUT_OF_JAIL_FREE:
@@ -694,7 +695,7 @@ class Adjudicator:
 	def handle_jail(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
-		if playerPosition != -1:
+		if playerPosition != self.JAIL:
 			return [True,False]
 		
 		#InJail
@@ -716,7 +717,7 @@ class Adjudicator:
 		
 		currentPlayerId = self.state.getCurrentPlayerId()
 		log("jail","Agent "+str(currentPlayerId)+" has been sent to jail")
-		self.state.setPosition(currentPlayerId,self.JUST_VISTING)
+		self.state.setPosition(currentPlayerId,self.JAIL)
 		self.state.setPhase(Phase.JAIL)
 		self.state.setPhasePayload(None)
 	
@@ -767,6 +768,7 @@ class Adjudicator:
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
+		turn_number = self.state.getTurn()
 		
 		isProperty = self.isProperty(playerPosition)
 		
@@ -849,12 +851,10 @@ class Adjudicator:
 			monopolies = space['monopoly_group_elements']
 			counter = 1
 			for monopoly in monopolies:
-				monopolyPropOwner = self.state.getPropertyOwner(playerPosition)
-				if monopolyPropOwner==ownerId:
+				if self.state.rightOwner(ownerId,monopoly):
 					counter += 1
-			
+			rent = space['rent']
 			if (space['class'] == 'Street'):
-				rent = space['rent']
 				if (counter==len(monopolies)+1):
 					rent = rent * 2
 				
@@ -871,7 +871,6 @@ class Adjudicator:
 					rent = space['rent_hotel']	
 				
 			elif (space['class'] == 'Railroad'):
-				rent = 25
 				if counter == 2:
 					rent = 50
 				if counter == 3:
@@ -925,9 +924,9 @@ class Adjudicator:
 						self.state.setDebtToPlayer(playerId,currentPlayerId,debtAmount)
 			
 		elif card['type'] == 3:
-			if card['position'] == -1:
+			if card['position'] == self.JAIL:
 				#sending the player to jail
-				playerPosition = -1
+				playerPosition = self.JAIL
 				self.send_player_to_jail()
 			else:
 				if (card['position'] - 1) < playerPosition:
@@ -1002,7 +1001,7 @@ class Adjudicator:
 				playerPosition = 28
 			
 			ownerId = self.state.getPropertyOwner(playerPosition)
-			if self.state.isPropertyOwned(playerPosition):
+			if not self.state.isPropertyOwned(playerPosition):
 				#Unowned
 				phaseNumber = Phase.BUYING
 				phasePayload = playerPosition
@@ -1079,8 +1078,6 @@ class Adjudicator:
 		elif phase == Phase.AUCTION:
 			auctionedProperty = phasePayload
 			return self.handle_auction(auctionedProperty)
-		elif phase == Phase.PAYMENT:
-			self.handle_payment()
 	
 	"""
 	On final winner calculation, following are considered:
@@ -1176,11 +1173,13 @@ class Adjudicator:
 		
 		while (self.state.getTurn() < self.TOTAL_NO_OF_TURNS) and ( (self.diceThrows is None) or (len(self.diceThrows)>0) ):
 			
+			self.state.updateTurn()
+			
 			playerId = self.state.getCurrentPlayerId()
 			if self.state.hasPlayerLost(playerId):
-				self.state.updateTurn()
 				continue
 			
+			self.state.setPhase(Phase.NO_ACTION)
 			self.state.setPhasePayload(None)
 			self.dice.reset()
 			
@@ -1192,20 +1191,18 @@ class Adjudicator:
 				
 				[outOfJail,diceThrown] = self.handle_jail()
 				if self.state.hasPlayerLost(playerId):
-					self.state.updateTurn()
+					
 					continue
 				
 				if outOfJail:
 					"""rolls dice, moves the player and determines what happens on the space he has fallen on."""
 					notInJail = self.dice_roll(diceThrown)
 					if self.state.hasPlayerLost(playerId):
-						self.state.updateTurn()
 						continue
 					
 					if notInJail:
 						self.determine_position_effect()
 						if self.state.hasPlayerLost(playerId):
-							self.state.updateTurn()
 							continue
 						
 						log("state","State after moving the player and updating state with effect of the position:")
@@ -1218,13 +1215,11 @@ class Adjudicator:
 						self.state.setPhasePayload(None)
 						self.conductBSM()
 						if self.state.hasPlayerLost(playerId):
-							self.state.updateTurn()
 							continue
 						self.conductTrade()
 						self.state.setPhase(previousPhase)
 						self.conductBSM()
 						if self.state.hasPlayerLost(playerId):
-							self.state.updateTurn()
 							continue
 						self.state.setPhasePayload(previousPhasePayload)
 						
@@ -1232,7 +1227,10 @@ class Adjudicator:
 						"""Performing the actual effect of the current position"""
 						self.turn_effect()
 						if self.state.hasPlayerLost(playerId):
-							self.state.updateTurn()
+							continue
+						
+						self.handle_payment()
+						if self.state.hasPlayerLost(playerId):
 							continue
 				
 				log("state","State at the end of the turn:")
@@ -1243,10 +1241,9 @@ class Adjudicator:
 				else:
 					log("dice","Rolled Doubles. Play again.")
 			
-			log("turn","Turn "+str(self.state.turn)+" end")
+			log("turn","Turn "+str(self.state.getTurn())+" end")
 			
 			"""Update the turn counter"""
-			self.state.updateTurn()
 			lossCount = 0
 			for agentId in self.PLAY_ORDER:
 				if self.state.hasPlayerLost(agentId): lossCount+=1

@@ -1,10 +1,10 @@
 import random
-from collections import namedtuple
+from collections import namedtuple,OrderedDict
 from constants import board
 import json
 from copy import deepcopy
 
-StateTuple = namedtuple("StateTuple", "turn properties positions money bankrupt phase phaseData debt")
+StateTuple = namedtuple("StateTuple", "turnNumber properties positions money bankrupt phase phaseData debt")
 
 INITIAL_CASH = 1500
 MAX_HOUSES = 32
@@ -40,7 +40,8 @@ class State:
 		self.players = playerIds
 		self.TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
-		self.turn = 0
+		self.turnNumber = -1
+		self.currentPlayerId = None
 		#This causes same instance to be repeated for the entire list
 		#[Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
 		self.properties = [Property(0,False,False,0) for i in range(NUMBER_OF_PROPERTIES)]
@@ -74,7 +75,7 @@ class State:
 	"""The index of the player in the players array"""
 	"""This represents the order of play for the player"""
 	def getCurrentPlayerIndex(self):
-		return self.turn % self.TOTAL_NO_OF_PLAYERS
+		return self.turnNumber % self.TOTAL_NO_OF_PLAYERS
 	
 	"""Actual Player Id set inside the agent accessible as agent.id attribute"""
 	def getCurrentPlayerId(self):
@@ -85,10 +86,11 @@ class State:
 	
 	"""TURN"""
 	def getTurn(self):
-		return self.turn
+		return self.turnNumber
 	
 	def updateTurn(self):
-		self.turn+=1
+		self.turnNumber+=1
+		self.currentPlayerId = self.getCurrentPlayerId()
 	
 	"""POSITION"""
 	def getPosition(self,playerId):
@@ -113,7 +115,7 @@ class State:
 		self.reason[playerId] = reason
 		if reason==Reason.TIMEOUT:
 			self.timeoutTracker[playerId]=True
-		self.turn_of_loss[playerId] = self.turn
+		self.turn_of_loss[playerId] = self.turnNumber
 	
 	def getTurnOfLoss(self,playerId):
 		return self.turn_of_loss[playerId]
@@ -373,16 +375,24 @@ class State:
 			# player not found
 			raise e
 	
-	def toTuple(self):
+	def toDict(self):
 		newDebt = {}
 		for key,debtObj in self.debt.items():
 			newDebt[key] = debtObj.convert()
 		
-		return (self.players, self.turn, [prop.convert() for prop in self.properties], self.positions,
-				self.cash, self.bankrupt, self.phase, self.phasePayload, newDebt)
+		return OrderedDict([ ("player_ids", self.players),
+					("current_player_id", self.currentPlayerId),
+					("turn_number", self.turnNumber),
+					("properties", [prop.convert() for prop in self.properties]),
+					("player_board_positions", self.positions),
+					("player_cash",self.cash),
+					("player_loss_status", self.bankrupt),
+					("current_phase_number", self.phase),
+					("phase_payload", self.phasePayload),
+					("player_debts", newDebt) ])
 	
 	def toJson(self):
-		return json.dumps(self.toTuple())
+		return json.dumps(self.toDict())
 
 	def __str__(self):
 		return str(self.toJson())
@@ -403,7 +413,7 @@ The reason for victory:
 0 = Greater assets at the end of specified number of turns.
 1 = Timed Out (Could also pass while doing which action did the timeout occur)
 2 = Bankruptcy from Debt to Opponent or Bank
-3 = Bankruptcy from being unable to pay the fine for Jail on the third turn in Jail.
+3 = Bankruptcy from being unable to pay the fine for Jail on the third turnNumber in Jail.
 """
 class Reason:
 	ASSETS = "Greater Assets"

@@ -448,14 +448,17 @@ def testcase_buying_houses_invalid_1(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
 			
-			if (oriental == 1) and (vermont == 1):
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id):
 				if self.erronous_bstm_counter < 1:
 					self.erronous_bstm_counter += 1
-					return ("B", [(6,1),(8,2)]) # Erroneous Buy house command
+					return ("BHS", [(6,1),(8,3),(9,1)]) # Uneven buying of houses
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 	
 		def buyProperty(self, state):
@@ -473,10 +476,13 @@ def testcase_buying_houses_invalid_1(adjudicator):
 			self.erronous_bstm_counter = 0
 			
 		def getBSMTDecision(self, state):
-			stcharles = state[PROPERTY_STATUS_INDEX][11]	
-			if (stcharles == -1) and (self.erronous_bstm_counter < 1):
+			stcharles = state.getPropertyOwner(11)
+			if (stcharles == self.id) and (self.erronous_bstm_counter < 1):
 				self.erronous_bstm_counter += 1
-				return ("B", [(11,1)]) #Erroneous Buying command. Should not do anything.
+				return ("BHS", [(11,1)]) #Buying houses without completing monopoly
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 			
 		def buyProperty(self, state):
@@ -490,14 +496,16 @@ def testcase_buying_houses_invalid_1(adjudicator):
 	
 	print("\nTest Case: Trying to buy houses without completing monopoly")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6]],None,[0])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200,1500-140-200],
-		"position":[0,19],
-		"properties":[(6,1),(8,1),(11,-1),(19,-1)]
+		"cash": {"1": 1500-100-100+200-120, "2": 1500-140-200-150},
+		"position": {"1": 9, "2": 28},
+		"properties":[ ( 6,Property(0,False,True,"1") ),( 8,Property(0,False,True,"1") ),
+					( 9,Property(0,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 19,Property(0,False,True,"2") ),( 28,Property(0,False,True,"2") ) ]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -517,14 +525,16 @@ def testcase_buying_houses_invalid_2(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
 			
-			if (oriental == 1) and (vermont == 1) and (connecticut == 1):
-				return ("B", [(6,1),(8,3),(9,1)])
-			else:
-				return None
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id):
+				return ("BHS", [(6,4),(8,5),(9,4)]) #Trying to buy houses and a hotel together
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -542,6 +552,9 @@ def testcase_buying_houses_invalid_2(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -554,14 +567,16 @@ def testcase_buying_houses_invalid_2(adjudicator):
 	
 	print("\nTest Case: Trying to buy an invalid number of houses in a completed monopoly")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200-120,1500-140-200-150],
-		"position":[9,28],
-		"properties":[(6,1),(8,1),(9,1),(11,-1),(19,-1),(28,-1)]
+		"cash": {"1": 1500-100-100+200-120, "2": 1500-140-200-150},
+		"position": {"1": 9, "2": 28},
+		"properties":[ ( 6,Property(0,False,True,"1") ),( 8,Property(0,False,True,"1") ),
+					( 9,Property(0,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 19,Property(0,False,True,"2") ),( 28,Property(0,False,True,"2") ) ]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -581,16 +596,21 @@ def testcase_mortgaging_unmortgaging(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			isOrientalMortgaged = state.isPropertyMortgaged(6)
+			vermont = state.getPropertyOwner(8)
+			isVermontMortgaged = state.isPropertyMortgaged(8)
+			connecticut = state.getPropertyOwner(9)
+			isConnecticutMortgaged = state.isPropertyMortgaged(9)
 			
-			if (oriental == 1) and (vermont == 1) and (connecticut == 1):
+			if (oriental == self.id) and not isOrientalMortgaged and (vermont == self.id) and not isVermontMortgaged and (connecticut == self.id) and not isConnecticutMortgaged:
 				return ("M", [6,8,9])
-			elif (oriental == 7):
+			elif isOrientalMortgaged:
 				return ("M", [6])
-			else:
-				return None
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -608,6 +628,9 @@ def testcase_mortgaging_unmortgaging(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -620,14 +643,16 @@ def testcase_mortgaging_unmortgaging(adjudicator):
 	
 	print("\nTest Case: Unmortgaging a property")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200-120+50+50+60-50-5,1500-140-200-150],
-		"position":[9,28],
-		"properties":[(6,1),(8,7),(9,7),(11,-1),(19,-1),(28,-1)]
+		"cash": {"1": 1500-100-100+200-120+50+50+60-50-5, "2": 1500-140-200-150},
+		"position": {"1": 9, "2": 28},
+		"properties":[ ( 6,Property(0,False,True,"1") ),( 8,Property(0,True,True,"1") ),
+					( 9,Property(0,True,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 19,Property(0,False,True,"2") ),( 28,Property(0,False,True,"2") ) ]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -647,15 +672,17 @@ def testcase_invalid_mortgaging(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			newyork = state[PROPERTY_STATUS_INDEX][19]
-			waterworks = state[PROPERTY_STATUS_INDEX][28]
+			newyork = state.getPropertyOwner(19)
+			waterworks = state.getPropertyOwner(28)
 			
 			if (newyork == -1):
 				return ("M", [19]) #Owned by opponent
 			elif (waterworks == -1):
 				return ("M", [29]) #Unowned Property
-			else:
-				return None
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -673,6 +700,9 @@ def testcase_invalid_mortgaging(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -685,14 +715,16 @@ def testcase_invalid_mortgaging(adjudicator):
 	
 	print("\nTest Case: Trying to mortgage opponent's property and an unowned property")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200-120,1500-140-200-150],
-		"position":[9,28],
-		"properties":[(6,1),(8,1),(9,1),(11,-1),(19,-1),(28,-1)]
+		"cash": {"1": 1500-100-100+200-120, "2": 1500-140-200-150},
+		"position": {"1": 9, "2": 28},
+		"properties":[ ( 6,Property(0,False,True,"1") ),( 8,Property(0,False,True,"1") ),
+					( 9,Property(0,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 19,Property(0,False,True,"2") ),( 28,Property(0,False,True,"2") ) ]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -717,6 +749,9 @@ def testcase_auction_for_invalid_action(adjudicator):
 
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 
 		def buyProperty(self, state):
 			return False
@@ -733,6 +768,9 @@ def testcase_auction_for_invalid_action(adjudicator):
 
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 
 		def buyProperty(self, state):
 			return False
@@ -743,16 +781,16 @@ def testcase_auction_for_invalid_action(adjudicator):
 		def receiveState(self, state):
 			pass
 
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	adjudicator.runGame(agentOne,agentTwo,[[3, 5]], None, None)
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	adjudicator.runGame([agentOne,agentTwo],[[3, 5]], None, None)
 
 	final_state = adjudicator.state
-
+	
 	expected_output = {
-		"cash": [1500, 1500 - 170],
-		"position": [8, 0],
-		"properties": [(8, -1)]
+		"cash": {"1": 1500, "2": 1500-170},
+		"position": {"1": 8, "2": 0},
+		"properties":[ ( 8,Property(0,False,True,"2") ) ]
 	}
 
 	result = compare_states(final_state, expected_output)
@@ -780,10 +818,15 @@ def testcase_trade_for_invalid_action(adjudicator):
 			self.erronous_bstm_counter = 0
 
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			if oriental == 1 and self.erronous_bstm_counter == 0:
+			isOrientalOwned = state.isPropertyOwned(6)
+			orientalOwnerId = state.getPropertyOwner(6)
+			
+			if isOrientalOwned and (orientalOwnerId != self.id) and self.erronous_bstm_counter == 0:
 				self.erronous_bstm_counter = 1
-				return ("T", 0, [6], 0, [11])
+				return (orientalOwnerId, 0, [6], 0, [11])
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 
 		def buyProperty(self, state):
@@ -804,6 +847,9 @@ def testcase_trade_for_invalid_action(adjudicator):
 
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 
 		def buyProperty(self, state):
 			return True
@@ -817,14 +863,16 @@ def testcase_trade_for_invalid_action(adjudicator):
 		def respondTrade(self, state):
 			return "Junk Value"
 
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	adjudicator.runGame(agentOne,agentTwo,[[1, 5], [5, 6]], None, [0])
-
-	final_state = adjudicator.state
-
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1, 5], [5, 6]], None, [0])
+	
 	# Since the trade is unsuccessful here
-	result = final_state[PROPERTY_STATUS_INDEX][6] == 1
+	expected_output = {
+		"properties":[ ( 6,Property(0,False,True,"1") ) ]
+	}
+	
+	result = compare_states(final_state,expected_output)
 
 	if result:
 		print("Pass")
@@ -849,6 +897,9 @@ def testcase_buyproperty_for_invalid_action(adjudicator):
 
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 
 		def buyProperty(self, state):
 			return "Junk Value"
@@ -865,6 +916,9 @@ def testcase_buyproperty_for_invalid_action(adjudicator):
 
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 
 		def buyProperty(self, state):
 			return False
@@ -875,16 +929,16 @@ def testcase_buyproperty_for_invalid_action(adjudicator):
 		def receiveState(self, state):
 			pass
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	adjudicator.runGame(agentOne,agentTwo,[[3, 5]], None, None)
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	adjudicator.runGame([agentOne,agentTwo],[[3, 5]], None, None)
 
 	final_state = adjudicator.state
-
+	
 	expected_output = {
-		"cash": [1500, 1500 - 170],
-		"position": [8, 0],
-		"properties": [(8, -1)]
+		"cash": {"1": 1500, "2": 1500-170},
+		"position": {"1": 8, "2": 0},
+		"properties":[( 8,Property(0,False,True,"2") )]
 	}
 
 	result = compare_states(final_state, expected_output)
@@ -898,21 +952,30 @@ def testcase_buyproperty_for_invalid_action(adjudicator):
 
 	return result
 
-def testcase_buying_invalid_two_hotels(adjudicator):
+def testcase_buying_two_hotels(adjudicator):
 	class AgentOne:
 		def __init__(self, id):
 			self.id = id
-			self.erronous_bstm_counter = 0
+			self.erronous_bsm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
 			
-			if (oriental == 1) and (vermont == 1) and (connecticut == 1):
-				return ("B", [(6,4),(8,5),(9,5)])
-			else:
-				return None
+			orientalHouses = state.getNumberOfHouses(6)
+			vermontHouses = state.getNumberOfHouses(8)
+			connecticutHouses = state.getNumberOfHouses(9)
+			
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id):
+				if orientalHouses==0 and vermontHouses==0 and connecticutHouses==0:
+					return ("BHS", [(6,4),(8,4),(9,4)])
+				elif orientalHouses==4 and vermontHouses==4 and connecticutHouses==4:
+					return ("BHT",[6,8]) #Valid
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -930,6 +993,9 @@ def testcase_buying_invalid_two_hotels(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -940,15 +1006,17 @@ def testcase_buying_invalid_two_hotels(adjudicator):
 		def receiveState(self, state):
 			pass
 	
-	print("\nTest Case: Invalid buying of 2 hotels on two properties in a single monopoly")
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
+	print("\nTest Case: Buying hotels on two properties in a single monopoly")
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200-120,1500-140-200-150],
-		"position":[9,28],
-		"properties":[(6,1),(8,1),(9,1),(11,-1),(19,-1),(28,-1)]
+		"cash": {"1": 1500-100-100+200-120-14*50, "2": 1500-140-200-150},
+		"position": {"1": 9, "2": 28},
+		"properties":[( 6,Property(5,False,True,"1") ),( 8,Property(5,False,True,"1") ),
+					( 9,Property(4,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 19,Property(0,False,True,"2") ),( 28,Property(0,False,True,"2") )]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -961,39 +1029,36 @@ def testcase_buying_invalid_two_hotels(adjudicator):
 	
 	return result
 
-def testcase_buying_max_houses(adjudicator):
+def testcase_invalid_hotel(adjudicator):
 	class AgentOne:
 		def __init__(self, id):
 			self.id = id
-			self.erronous_bstm_counter = 0
+			self.erronous_bsm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
 			
-			orange_0 = state[PROPERTY_STATUS_INDEX][16]
-			orange_1 = state[PROPERTY_STATUS_INDEX][18]
-			orange_2 = state[PROPERTY_STATUS_INDEX][19]
+			orientalHouses = state.getNumberOfHouses(6)
+			vermontHouses = state.getNumberOfHouses(8)
+			connecticutHouses = state.getNumberOfHouses(9)
 			
-			if (oriental == 1) and (vermont == 1) and (connecticut == 1):
-				return ("B", [(6,4),(8,4),(9,4)])
-			elif orange_0==1 and orange_1==1 and orange_2==1:
-				return ("B", [(16,2),(18,1),(19,1)])
-			elif state[PROPERTY_STATUS_INDEX][19]==2:
-				#This build operation would fail.Already reached 32 houses.
-				return ("B", [(19,1)])
-			else:
-				return None
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id):
+				if orientalHouses==0 and vermontHouses==0 and connecticutHouses==0:
+					return ("BHS", [(6,4),(8,4),(9,3)])
+				elif orientalHouses==4 and vermontHouses==4 and connecticutHouses==3:
+					return ("BHT",[6,8]) #Valid
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
-			propertyId = state[PHASE_PAYLOAD_INDEX]
-			if propertyId == 39:
-				return False
 			return True
 		
 		def auctionProperty(self, state):
-			return 8
+			return False
 		
 		def receiveState(self, state):
 			pass
@@ -1004,46 +1069,31 @@ def testcase_buying_max_houses(adjudicator):
 			self.erronous_bstm_counter = 0
 			
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][11]
-			vermont = state[PROPERTY_STATUS_INDEX][13]
-			connecticut = state[PROPERTY_STATUS_INDEX][14]
-			
-			red_0 = state[PROPERTY_STATUS_INDEX][21]
-			red_1 = state[PROPERTY_STATUS_INDEX][23]
-			red_2 = state[PROPERTY_STATUS_INDEX][24]
-			cash = state[PLAYER_CASH_INDEX][1]
-			
-			if (oriental == -1) and (vermont == -1) and (connecticut == -1):
-				return ("B", [(11,4),(13,4),(14,4)])
-			elif red_0==-1 and red_1==-1 and red_2==-1 and cash>=600:
-				return ("B", [(21,2),(23,1),(24,1)])
-			else:
-				return None
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
-			return False
+			return True
 	
 		def auctionProperty(self, state):
-			property = state[PHASE_PAYLOAD_INDEX][0]
-			if property==18:
-				return 5
-			return 10
+			return False
 		
 		def receiveState(self, state):
 			pass
-		
-		def jailDecision(self,state):
-			return ("P",)
 	
-	print("\nTest Case: Trying to buy a house when all 32 houses have already been constructed")
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5], [5,6], [1,1],[5,4], [1,1],[5,5],[3,3], [5,4], [2,2],[5,5],[3,3], [3,4], [6,5], [1,2], [6,6],[5,4], [1,2], [5,4], [3,5], [4,3]],[13,0],[0,1,7])
+	print("\nTest Case: Buying hotels without completing the monopoly")
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3]],None,[0])
 	
 	expected_output = {
-		"cash": [1500-100-100+200-120-600-180-200+200+200-8-400,1500-10-10-10-50-1200-10-50-10-10+200+200+100-600-10],
-		"position":[0,18],
-		"properties":[(6,5),(8,5),(9,5),(11,-5),(13,-5),(14,-5),(16,3),(18,2),(19,2),(21,-3),(23,-2),(24,-2),(39,-1)]
+		"cash": {"1": 1500-100-100+200-120-11*50, "2": 1500-140-200-150},
+		"position": {"1": 9, "2": 28},
+		"properties":[( 6,Property(4,False,True,"1") ),( 8,Property(4,False,True,"1") ),
+					( 9,Property(3,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 19,Property(0,False,True,"2") ),( 28,Property(0,False,True,"2") )]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -1064,6 +1114,9 @@ def testGettingOutOfJail(adjudicator):
 		
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -1084,6 +1137,9 @@ def testGettingOutOfJail(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -1095,16 +1151,289 @@ def testGettingOutOfJail(adjudicator):
 			pass
 		
 	print("\nTest Case: AgentOne ends up in Jail by rolling 3 doubles in a row. He pays to get out in the next turn and moves to a certain position.")
-	p1 = AgentOne(0)
-	p2 = AgentTwo(1)
-	dice = [(6, 6), (6, 6),(6, 6), (2, 3),(4,2)]
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	dice = [(6, 6),(6, 6),(6, 6), (2, 3),(4,2)]
 	
-	[winner, final_state] = adjudicator.runGame(p1, p2, dice, [], [])
+	[winner, final_state] = adjudicator.runGame([agentOne,agentTwo], dice, [], [])
 	
 	expected_output = {
-		"cash": [1500-150-240-50-180,1500-200],
-		"position":[16,5],
-		"properties":[(12,1),(24,1),(5,-1)]
+		"cash": {"1": 1500-150-240-50-180, "2": 1500-200},
+		"position": {"1": 16, "2": 5},
+		"properties":[( 12,Property(0,False,True,"1") ),( 24,Property(0,False,True,"1") ),
+					( 5,Property(0,False,True,"2") )]
+	}
+	
+	result = compare_states(final_state,expected_output)
+	
+	if result: print("Pass")
+	else:
+		print("Fail")
+		print("Received Output:")
+		print(final_state)
+	
+	return result
+
+def testcase_three_jails_a_day_keeps_the_lawyer_away(adjudicator):
+	class AgentOne:
+		def __init__(self, id):
+			self.id = id
+			self.erronous_bstm_counter = 0
+		
+		def getBSMTDecision(self, state):
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
+			orientalHouses = state.getNumberOfHouses(6)
+			
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id) and orientalHouses==0:
+				return ("BHS", [(6,4),(8,4),(9,4)])
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
+	
+		def buyProperty(self, state):
+			return True
+		
+		def auctionProperty(self, state):
+			return False
+		
+		def receiveState(self, state):
+			pass
+		
+		def jailDecision(self,state):
+			return ("R",)
+		
+	class AgentTwo:
+		def __init__(self, id):
+			self.id = id
+			self.erronous_bstm_counter = 0
+			
+		def getBSMTDecision(self, state):
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
+			
+		def buyProperty(self, state):
+			return True
+	
+		def auctionProperty(self, state):
+			return False
+		
+		def receiveState(self, state):
+			pass
+	
+	print("\nTest Case: Player stays in jail for 3 turns and has to pay and get out on the third turn.")
+	
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5], [5,6], [1,1],[5,4], [2,6], [5,4], [6,3], [3,3],[5,4], [5,4], [5,1], [5,3], [5,6], [4,3], [4,3], [5,3], [4,5]],None,[0,1])
+	
+	expected_output = {
+		"cash": {"1": 1500-100-100+200-120-600-200-240-50-16, "2": 1500-140-200-150-350-150+16},
+		"position": {"1": 19, "2": 20},
+		"properties":[( 6,Property(4,False,True,"1") ),( 8,Property(4,False,True,"1") ),
+					( 9,Property(4,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 12,Property(0,False,True,"2") ),( 15,Property(0,False,True,"1") ),
+					( 19,Property(0,False,True,"2") ),( 24,Property(0,False,True,"1") ),
+					( 28,Property(0,False,True,"2") ),( 37,Property(0,False,True,"2") ),
+					( 5,Property(0,False,True,"2") )]
+	}
+	
+	result = compare_states(final_state,expected_output)
+	
+	if result and winner=="2": 
+		print("Pass")
+	else:
+		print("Fail")
+		print("Received Output:")
+		print(final_state)
+	
+	return result
+
+def testcase_three_jails_a_day_keeps_the_lawyer_away_2(adjudicator):
+	class AgentOne:
+		def __init__(self, id):
+			self.id = id
+			self.erronous_bstm_counter = 0
+		
+		def getBSMTDecision(self, state):
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
+			orientalHouses = state.getNumberOfHouses(6)
+			
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id) and orientalHouses==0:
+				return ("BHS", [(6,4),(8,4),(9,4)])
+			return None
+			
+		def getTradeDecision(self,state):
+			return None
+	
+		def buyProperty(self, state):
+			return True
+		
+		def auctionProperty(self, state):
+			return False
+		
+		def receiveState(self, state):
+			pass
+		
+		def jailDecision(self,state):
+			return ("R",)
+		
+	class AgentTwo:
+		def __init__(self, id):
+			self.id = id
+			self.erronous_bstm_counter = 0
+			
+		def getBSMTDecision(self, state):
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
+			
+		def buyProperty(self, state):
+			return True
+	
+		def auctionProperty(self, state):
+			return False
+		
+		def receiveState(self, state):
+			pass
+	
+	print("\nTest Case: Player stays in jail for 3 turns and has to pay and get out on the third turn. But he doesn't have enough and goes bankrupt.")
+	
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5], [5,6], [1,1],[5,4], [2,6], [5,4], [6,3], [3,3],[5,4], [5,4], [1,1],[1,1],[1,1], [5,3], [5,6], [4,3], [4,3], [5,3], [4,3]],None,[0,1])
+	
+	expected_output = {
+		"cash": {"1": 1500-100-100+200-120-600-200-240-260-8+200-50, "2": 1500-140-200-150-350-150+8},
+		"position": {"1": 17, "2": 20},
+		"properties":[( 6,Property(4,False,True,"1") ),( 8,Property(4,False,True,"1") ),
+					( 9,Property(4,False,True,"1") ),( 11,Property(0,False,True,"2") ),
+					( 12,Property(0,False,True,"2") ),( 15,Property(0,False,True,"1") ),
+					( 19,Property(0,False,True,"2") ),( 24,Property(0,False,True,"1") ),
+					( 26,Property(0,False,True,"1") ),( 28,Property(0,False,True,"2") ),
+					( 37,Property(0,False,True,"2") ),( 5,Property(0,False,True,"2") )]
+	}
+	
+	result = compare_states(final_state,expected_output)
+	
+	if result: 
+		print("Pass")
+	else:
+		print("Fail")
+		print("Received Output:")
+		print(final_state)
+	
+	return result
+
+def testcase_buying_max_houses(adjudicator):
+	class AgentOne:
+		def __init__(self, id):
+			self.id = id
+			self.erronous_bstm_counter = 0
+		
+		def getBSMTDecision(self, state):
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
+			
+			oriental_houses = state.getNumberOfHouses(6)
+			
+			orange_0 = state.getPropertyOwner(16)
+			orange_1 = state.getPropertyOwner(18)
+			orange_2 = state.getPropertyOwner(19)
+			
+			orange_2_houses = state.getNumberOfHouses(19)
+			
+			if (oriental == self.id) and (vermont == self.id) and (connecticut == self.id) and oriental_houses==0:
+				return ("BHS", [(6,4),(8,4),(9,4)])
+			if (orange_0 == self.id) and (orange_1 == self.id) and (orange_2 == self.id) and orange_2_houses==0:
+				return ("BHS", [(16,2),(18,1),(19,1)])
+			if orange_2_houses==1 and self.erronous_bstm_counter==0:
+				#This build operation would fail.Already reached 32 houses.
+				self.erronous_bstm_counter+=1
+				return ("BHS", [(19,1)])
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
+	
+		def buyProperty(self, state):
+			propertyId = state.getPhasePayload()
+			if propertyId == 39:
+				return False
+			return True
+		
+		def auctionProperty(self, state):
+			return 8
+		
+		def receiveState(self, state):
+			pass
+		
+	class AgentTwo:
+		def __init__(self, id):
+			self.id = id
+			self.erronous_bstm_counter = 0
+			
+		def getBSMTDecision(self, state):
+			pink_0 = state.getPropertyOwner(11)
+			pink_1 = state.getPropertyOwner(13)
+			pink_2 = state.getPropertyOwner(14)
+			
+			pink_0_houses = state.getNumberOfHouses(11)
+			
+			red_0 = state.getPropertyOwner(21)
+			red_1 = state.getPropertyOwner(23)
+			red_2 = state.getPropertyOwner(24)
+			red_2_houses = state.getNumberOfHouses(24)
+			
+			cash = state.getCash("2")
+			
+			if (pink_0 == self.id) and (pink_1 == self.id) and (pink_2 == self.id) and pink_0_houses==0:
+				return ("BHS", [(11,4),(13,4),(14,4)])
+			if (red_0 == self.id) and (red_1 == self.id) and (red_2 == self.id) and red_2_houses==0 and cash>=600:
+				return ("BHS", [(21,2),(23,1),(24,1)])
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
+			
+		def buyProperty(self, state):
+			return False
+	
+		def auctionProperty(self, state):
+			propertyId = state.getPhasePayload()
+			if propertyId==18:
+				return 5
+			return 10
+		
+		def receiveState(self, state):
+			pass
+		
+		def jailDecision(self,state):
+			return ("P",)
+	
+	print("\nTest Case: Trying to buy a house when all 32 houses have already been constructed")
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5], [5,6], [1,1],[5,4], [1,1],[5,5],[3,3], [5,4], [2,2],[5,5],[3,3], [3,4], [6,5], [1,2], [6,6],[5,4], [1,2], [5,4], [3,5], [4,3], [5,3]],[13,0],[0,1,7])
+	
+	expected_output = {
+		"cash": {"1": 1500-100-100+200-120-600-180-200+200+200-8-400, "2": 1500-10-10-10-50-10-1200-10-50-10+200+200+100-600-10},
+		"position": {"1": 8, "2": 18},
+		"properties":[( 6,Property(4,False,True,"1") ),( 8,Property(4,False,True,"1") ),
+					( 9,Property(4,False,True,"1") ),( 11,Property(4,False,True,"2") ),
+					( 13,Property(4,False,True,"2") ),( 14,Property(4,False,True,"2") ),
+					( 16,Property(2,False,True,"1") ),( 18,Property(1,False,True,"1") ),
+					( 19,Property(1,False,True,"1") ),( 21,Property(2,False,True,"2") ),
+					( 23,Property(1,False,True,"2") ),( 24,Property(1,False,True,"2") ),
+					( 39,Property(0,False,True,"2") )]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -1124,9 +1453,9 @@ def testcase_selling_hotel_aftermax(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
 			
 			orange_0 = state[PROPERTY_STATUS_INDEX][16]
 			orange_1 = state[PROPERTY_STATUS_INDEX][18]
@@ -1140,8 +1469,10 @@ def testcase_selling_hotel_aftermax(adjudicator):
 				return ("B", [(6,1),(18,1),(19,2)])
 			elif oriental==6:
 				return ("S",[(6,1)]) # Should fail
-			else:
-				return None
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			propertyId = state[PHASE_PAYLOAD_INDEX]
@@ -1174,8 +1505,10 @@ def testcase_selling_hotel_aftermax(adjudicator):
 				return ("B", [(11,4),(13,4),(14,4)])
 			elif red_0==-1 and red_1==-1 and red_2==-1 and cash>=600:
 				return ("B", [(21,2),(23,1),(24,1)])
-			else:
-				return None
+			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return False
@@ -1193,9 +1526,9 @@ def testcase_selling_hotel_aftermax(adjudicator):
 			return ("P",)
 	
 	print("\nTest Case: Trying to sell a hotel when more than 28 houses have already been constructed")
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5], [5,6], [1,1],[5,4], [1,1],[5,5],[3,3], [5,4], [2,2],[5,5],[3,3], [3,4], [6,5], [1,2], [6,6],[5,4], [1,2], [5,4], [3,5], [4,3], [3,4]],[13,0,15],[0,1,7])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5], [5,6], [1,1],[5,4], [1,1],[5,5],[3,3], [5,4], [2,2],[5,5],[3,3], [3,4], [6,5], [1,2], [6,6],[5,4], [1,2], [5,4], [3,5], [4,3], [3,4]],[13,0,15],[0,1,7])
 	
 	expected_output = {
 		"cash": [1500-100-100+200-120-600-180-200+200+200-8-400-350+150,1500-10-10-10-50-1200-10-50-10-10+200+200+100-600-10],
@@ -1220,12 +1553,15 @@ def testcase_trade_mortgage(adjudicator):
 			self.erronous_bstm_counter = 0
 		
 		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
+			oriental = state.getPropertyOwner(6)
+			vermont = state.getPropertyOwner(8)
+			connecticut = state.getPropertyOwner(9)
 			if (state[PROPERTY_STATUS_INDEX][19] == 7):
 				return ("M",[19])
 			
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 	
 		def buyProperty(self, state):
@@ -1256,6 +1592,9 @@ def testcase_trade_mortgage(adjudicator):
 				return ("T",50,[19],0,[14])
 			
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -1270,9 +1609,9 @@ def testcase_trade_mortgage(adjudicator):
 	
 	print("\nTest Case: Trade involving one mortgaged item. The item is unmortgaged in the next turn.")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3],[2,3],[4,3]],None,[0])
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[1,5],[5,6],[1,1],[5,4],[2,6],[5,4],[6,3],[2,3],[4,3]],None,[0])
 	
 	expected_output = {
 		"cash": [1500-100-100+200-120-160+50-10-110,1500-140-200+100-150-50-200],
@@ -1289,151 +1628,15 @@ def testcase_trade_mortgage(adjudicator):
 	
 	return result
 
-def testcase_three_jails_a_day_keeps_the_lawyer_away(adjudicator):
-	class AgentOne:
-		def __init__(self, id):
-			self.id = id
-			self.erronous_bstm_counter = 0
-		
-		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
-			
-			if (oriental == 1) and (vermont == 1) and (connecticut == 1):
-				return ("B", [(6,4),(8,4),(9,5)])
-			else:
-				return None
-	
-		def buyProperty(self, state):
-			return True
-		
-		def auctionProperty(self, state):
-			return False
-		
-		def receiveState(self, state):
-			pass
-		
-		def jailDecision(self,state):
-			return ("R",)
-		
-	class AgentTwo:
-		def __init__(self, id):
-			self.id = id
-			self.erronous_bstm_counter = 0
-			
-		def getBSMTDecision(self, state):
-			return None
-			
-		def buyProperty(self, state):
-			return True
-	
-		def auctionProperty(self, state):
-			return False
-		
-		def receiveState(self, state):
-			pass
-	
-	print("\nTest Case: Player stays in jail for 3 turns and has to pay and get out on the third turn.")
-	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5], [5,6], [1,1],[5,4], [2,6], [5,4], [6,3], [3,3],[5,4], [5,4], [5,1], [5,3], [5,6], [4,3], [4,3], [5,3], [4,5]],None,[0,1])
-	
-	expected_output = {
-		"cash": [1500-100-100+200-120-650-200-240-50-16,1500-140-200-150-350-150+16],
-		"position":[19,20],
-		"properties":[(5,-1),(6,5),(8,5),(9,6),(12,-1),(15,1),(11,-1),(19,-1),(24,1),(28,-1),(37,-1)]
-	}
-	
-	result = compare_states(final_state,expected_output)
-	
-	if result and winner==2: 
-		print("Pass")
-	else:
-		print("Fail")
-		print("Received Output:")
-		print(final_state)
-	
-	return result
-
-def testcase_three_jails_a_day_keeps_the_lawyer_away_2(adjudicator):
-	class AgentOne:
-		def __init__(self, id):
-			self.id = id
-			self.erronous_bstm_counter = 0
-		
-		def getBSMTDecision(self, state):
-			oriental = state[PROPERTY_STATUS_INDEX][6]
-			vermont = state[PROPERTY_STATUS_INDEX][8]
-			connecticut = state[PROPERTY_STATUS_INDEX][9]
-			
-			if (oriental == 1) and (vermont == 1) and (connecticut == 1):
-				return ("B", [(6,4),(8,4),(9,5)])
-			else:
-				return None
-	
-		def buyProperty(self, state):
-			return True
-		
-		def auctionProperty(self, state):
-			return False
-		
-		def receiveState(self, state):
-			pass
-		
-		def jailDecision(self,state):
-			return ("R",)
-		
-	class AgentTwo:
-		def __init__(self, id):
-			self.id = id
-			self.erronous_bstm_counter = 0
-			
-		def getBSMTDecision(self, state):
-			return None
-			
-		def buyProperty(self, state):
-			return True
-	
-		def auctionProperty(self, state):
-			return False
-		
-		def receiveState(self, state):
-			pass
-	
-	print("\nTest Case: Player stays in jail for 3 turns and has to pay and get out on the third turn. But he doesn't have enough and goes bankrupt.")
-	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[1,5], [5,6], [1,1],[5,4], [2,6], [5,4], [6,3], [3,3],[5,4], [5,4], [1,1],[1,1],[1,1], [5,3], [5,6], [4,3], [4,3], [5,3], [4,3]],None,[0,1])
-	
-	#Acept the answer if the final cash includes the jail payment or not. This could vary based on adjudicator implementation.
-	expected_output = {
-		"cash": [1500-100-100+200-120-650-200-240-260-8-50,1500-140-200-150-350+8-150],
-		"cash_2": [1500-100-100+200-120-650-200-240-260-8,1500-140-200-150-350+8-150],
-		"position":[10,20],
-		"position_2":[-1,20],
-		"properties":[(5,-1),(6,5),(8,5),(9,6),(12,-1),(15,1),(11,-1),(19,-1),(24,1),(26,1),(28,-1),(37,-1)]
-	}
-	
-	result = compare_states(final_state,expected_output)
-	
-	if result and winner==2: 
-		print("Pass")
-	else:
-		print("Fail")
-		print("Received Output:")
-		print(final_state)
-	
-	return result
-
 def testcase_utility_chance_card_owned(adjudicator):
 	class AgentOne:
 		def __init__(self, id):
 			self.id = id
 		
 		def getBSMTDecision(self, state):
+			return None
+		
+		def getTradeDecision(self,state):
 			return None
 	
 		def buyProperty(self, state):
@@ -1451,6 +1654,9 @@ def testcase_utility_chance_card_owned(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -1463,14 +1669,14 @@ def testcase_utility_chance_card_owned(adjudicator):
 	
 	print("\nTest Case: Player falls on the Chance card which makes you advance to nearest Utility. But it is owned. Checking if rent is correctly calculated.")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[6,6],[1,2],[4,3],[6,4]],[3],None)
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[6,6],[1,2],[4,3],[6,4]],[3],None)
 	
 	expected_output = {
-		"cash": [1500-150-200+100,1500-100],
-		"position":[15,12],
-		"properties":[(12,1),(15,1)]
+		"cash": {"1": 1500-150-200+100, "2": 1500-100},
+		"position": {"1": 15, "2": 12},
+		"properties":[( 12,Property(0,False,True,"1") ),( 15,Property(0,False,True,"1") )]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -1490,6 +1696,9 @@ def testcase_railroad_chance_card_owned(adjudicator):
 		
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 	
 		def buyProperty(self, state):
 			return True
@@ -1506,6 +1715,9 @@ def testcase_railroad_chance_card_owned(adjudicator):
 			
 		def getBSMTDecision(self, state):
 			return None
+		
+		def getTradeDecision(self,state):
+			return None
 			
 		def buyProperty(self, state):
 			return True
@@ -1518,14 +1730,14 @@ def testcase_railroad_chance_card_owned(adjudicator):
 	
 	print("\nTest Case: Player falls on the Chance card which makes you advance to nearest Railroad. But it is owned. Checking if rent is correctly calculated.")
 	
-	agentOne = AgentOne(1)
-	agentTwo = AgentTwo(2)
-	[winner,final_state] = adjudicator.runGame(agentOne,agentTwo,[[6,6],[1,2],[4,3]],[5],None)
+	agentOne = AgentOne("1")
+	agentTwo = AgentTwo("2")
+	[winner,final_state] = adjudicator.runGame([agentOne,agentTwo],[[6,6],[1,2],[4,3]],[5],None)
 	
 	expected_output = {
-		"cash": [1500-150-200+50,1500-50],
-		"position":[15,15],
-		"properties":[(12,1),(15,1)]
+		"cash": {"1": 1500-150-200+50, "2": 1500-50},
+		"position": {"1": 15, "2": 15},
+		"properties":[ ( 12,Property(0,False,True,"1") ),( 15,Property(0,False,True,"1") )]
 	}
 	
 	result = compare_states(final_state,expected_output)
@@ -1564,25 +1776,13 @@ print("AgentOne accepts.\n")
 print("This testcase validates the following:")
 
 """
-Testcases that maybe invalid:
-testcase_buying_invalid_two_hotels
-
 	
-	testcase_buying_houses_invalid_1,
-	testcase_buying_houses_invalid_2,
-	testcase_mortgaging_unmortgaging,
-	testcase_invalid_mortgaging,
-	testcase_auction_for_invalid_action,
-	testcase_trade_for_invalid_action,
-	testcase_buyproperty_for_invalid_action,
-	testGettingOutOfJail,
-	testcase_buying_max_houses,
 	testcase_trade_mortgage,
 	testcase_selling_hotel_aftermax,
-	testcase_three_jails_a_day_keeps_the_lawyer_away,
-	testcase_three_jails_a_day_keeps_the_lawyer_away_2,
-	testcase_utility_chance_card_owned,
-	testcase_railroad_chance_card_owned
+	
+	
+	
+	
 """
 #20 Testcases in total
 tests = [
@@ -1591,6 +1791,22 @@ tests = [
 	testcase_buying_houses,
 	testcase_selling_houses,
 	testcase_trade,
+	testcase_buying_houses_invalid_1,
+	testcase_buying_houses_invalid_2,
+	testcase_mortgaging_unmortgaging,
+	testcase_invalid_mortgaging,
+	testcase_auction_for_invalid_action,
+	testcase_trade_for_invalid_action,
+	testcase_buyproperty_for_invalid_action,
+	testcase_buying_two_hotels,
+	testcase_invalid_hotel,
+	testGettingOutOfJail,
+	testcase_three_jails_a_day_keeps_the_lawyer_away,
+	testcase_three_jails_a_day_keeps_the_lawyer_away_2,
+	
+	testcase_buying_max_houses,
+	testcase_utility_chance_card_owned,
+	testcase_railroad_chance_card_owned
 ]
 
 #Execution
