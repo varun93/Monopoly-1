@@ -566,11 +566,6 @@ class Adjudicator:
 			return list(filter(lambda triple :  triple[2] > 0,buyingDecisions)) 
 
 
-		def getNextParticipant(currentParticipant, interestedParticipants):
-			currentParticipantIndex = interestedParticipants.index(currentParticipant) 
-			return interestedParticipants[(currentParticipantIndex + 1) % len(interestedParticipants)]
-			
-
 		def updateWinnerCash(auctionWinner, bidValue):
 			auctionWinnerCurrentCash = self.state.getCash(auctionWinner)
 			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - bidValue)
@@ -613,15 +608,26 @@ class Adjudicator:
 		while constructionsRemaining:
 
 			highestBid = min(list(map(lambda triple: self.state.getConstructionValue(triple[1]),buyingDecisions))) 
-			interestedParticipants = set(map(lambda triple : triple[0], buyingDecisions))
+			interestedParticipants = list(set(map(lambda triple : triple[0], buyingDecisions)))
 			participantsCount = len(interestedParticipants) 
 			#initializing
-			currentParticipant = interestedParticipants[0]
-			auctionWinner = currentParticipant
-			propertySite = buyingDecisions[0][1]
+			currentParticipantIndex = -1
+			currentParticipant = None
+			auctionWinner = None
+			propertySite = None
 			
-			while participantsCount > 1:
+
+			while True:
+
+				participationCount = len(interestedParticipants) 
+		
+				if participationCount < 2:
+					break
+
+				currentParticipantIndex = currentParticipantIndex % participationCount
+				currentParticipant = interestedParticipants[currentParticipantIndex]
 				
+				# initization
 				currentBid = None
 				propertyId = None
 
@@ -635,11 +641,10 @@ class Adjudicator:
 					highestBid = currentBid
 					propertySite = propertyId
 					auctionWinner = currentParticipant
+					currentParticipantIndex +=1 
 				else:
-					participantsCount -= 1
-
-				currentParticipant = getNextParticipant(currentParticipant,interestedParticipants)
-
+					interestedParticipants.remove(currentParticipant)
+			
 			buyingDecisions = updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite)
 			constructionsRemaining -= 1
 
