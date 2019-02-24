@@ -112,7 +112,7 @@ class State:
 	
 	def markPlayerLost(self,playerId,reason):
 		self.bankrupt[playerId] = True
-		self.reason[playerId] = reason
+		self.reason_for_loss[playerId] = reason
 		if reason==Reason.TIMEOUT:
 			self.timeoutTracker[playerId]=True
 		self.turn_of_loss[playerId] = self.turnNumber
@@ -420,8 +420,8 @@ class Reason:
 	TIMEOUT = "Timeout"
 	BANKRUPT = "Bankruptcy"
 	
-#state = State([1,2,3,4])
-#print(state.toTuple())
+state = State([1,2,3,4])
+print(json.loads(state.toJson()))
 #for value in json.loads(state.toJson()):
 #	print(value)
 #	print(value)

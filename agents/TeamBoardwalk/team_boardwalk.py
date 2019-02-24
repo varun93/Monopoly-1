@@ -12,10 +12,7 @@ class RiskyAgent:
 	def getBSMTDecision(self, state):
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
-			pos = state.positions[self.pid]
-			prop = state.properties[pos]
-			if pos == -1 or not (prop.data.price == state.debt[self.pid * 2 + 1] and prop.owner == -1):
-				return self.getBestActionForMoney(state)
+			return self.getBestActionForMoney(state)
 		if state.money[self.pid] < self.getSafeMoney(state):
 			return self.getBestMortgageAction(state, state.getOwnedGroupProperties(self.pid))
 		bestGroup = self.getBestGroupToImprove(state)
@@ -27,7 +24,10 @@ class RiskyAgent:
 			for prop in groupProps:
 				if prop.mortgaged:
 					return "M", [prop.id]
-			return "B", [(prop.id, 1) for prop in groupProps]
+			if groupProps[0].houses>4:
+				return "BHT", [prop.id for prop in groupProps]
+			else:
+				return "BHS", [(prop.id, 1) for prop in groupProps]
 		return None
 
 	def respondTrade(self, state):
@@ -35,6 +35,8 @@ class RiskyAgent:
 
 	def buyProperty(self, state):
 		state = State(state)
+		if not isinstance(state.phaseData, int):
+			print(state)
 		prop = state.properties[state.phaseData]
 		opponents = state.getOpponents(self.pid)
 		bestGroup = self.getBestGroupToImprove(state)
@@ -48,7 +50,9 @@ class RiskyAgent:
 
 	def auctionProperty(self, state):
 		state = State(state)
-		prop = state.properties[state.phaseData[0]]
+		if not isinstance(state.phaseData, int):
+			print(state)
+		prop = state.properties[state.phaseData]
 		opponents = state.getOpponents(self.pid)
 		bid = prop.data.price // 2 + 1
 		if self.stealing:
@@ -119,12 +123,15 @@ class RiskyAgent:
 				if prop.data.type == Type.PROPERTY:
 					rent = prop.data.rents[prop.houses]
 				if prop.data.type == Type.RAILROAD:
-					rent = 25 * 2 ** state.getRailroadCount((self.pid + 1) % 2)
+					rent = 25 * 2 ** state.getRailroadCount(self.pid)
 				ratio = (prop.data.price // 2) / rent
 				if ratio > maxRatio:
 					maxRatio = ratio
 					bestProp = prop
 		if bestProp: return "M", [bestProp.id]
+		return None
+	
+	def getTradeDecision(self,state):
 		return None
 
 	def getBestActionForMoney(self, state):
@@ -133,5 +140,7 @@ class RiskyAgent:
 		ownedGroups = state.getOwnedBuildableGroups(self.pid)
 		for group in ownedGroups:
 			groupProps = state.getGroupProperties(group)
-			if groupProps[0].houses > 0:
-				return "S", [(prop.id, 1) for prop in groupProps]
+			if groupProps[0].houses > 4:
+				return "S", [(prop.id, 0,True) for prop in groupProps]
+			elif groupProps[0].houses > 0:
+				return "S", [(prop.id, 1,False) for prop in groupProps]

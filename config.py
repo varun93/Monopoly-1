@@ -2,7 +2,7 @@ n_players = 2 # Number of players
 
 verbose = {'pay': True, #Player has a debt to pay handle_payments method
            'buy': True, #player is buying an unowned property
-           'bstm':True,
+           'bsm':True,
            'auction':True,
            'cards':True, #when player falls on chance or community cards
            'state': True, #state information during each turn
@@ -19,5 +19,6 @@ f.write("----------------------------------------------------------\n")
 
 def log(section,msg):
   if verbose[section]:
-    f.write(str(msg)+'\n')
+    #f.write(str(msg)+'\n')
+    print(str(msg)+'\n')
   

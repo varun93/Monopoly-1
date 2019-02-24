@@ -23,6 +23,3 @@ adjudicator = Adjudicator()
 [winner,final_state] = adjudicator.runGame([agentOne, agentTwo, agentThree])
 print(winner)
 print(final_state)
-
-	
-	

@@ -225,7 +225,8 @@ class Adjudicator:
 				
 				mortagePrice = int(constants.board[propertyId]['price']/2)
 				playerCash += mortagePrice
-			
+				log("bsm","Player "+str(playerId)+" wants to mortgage.")
+				
 			for propertyId in unmortgageRequests:
 				unmortgagePrice = int(constants.board[propertyId]['price']/2)	
 
@@ -238,7 +239,10 @@ class Adjudicator:
 					playerCash -= unmortgagePrice 
 				else:
 					return False
+				
+				log("bsm","Player "+str(playerId)+" wants to unmortgage.")
 			
+			log("bsm",str(properties))	
 			for propertyId in properties:
 				self.state.setPropertyMortgaged(propertyId,not self.state.isPropertyMortgaged(propertyId))
 			self.state.setCash(playerId,playerCash)
@@ -273,14 +277,20 @@ class Adjudicator:
 					elif actionType=="BHS":
 						if self.state.isBuyingHousesSequenceValid(playerId,action[1]) and hasBuyingCapability(playerId,action[1]):
 							buyingHousesRequests.append((playerId,action[1]))
+							log("bsm","Player "+str(playerId)+" wants to buy houses.")
+							log("bsm",str(action[1]))
 							actionCount+=1
 					elif actionType=="BHT":
 						if self.state.isBuyingHotelSequenceValid(playerId,action[1]):
 							buyingHotelsRequests.append((playerId,action[1]))
+							log("bsm","Player "+str(playerId)+" wants to buy hotels.")
+							log("bsm",str(action[1]))
 							actionCount+=1
 					elif actionType=="S":
 						if self.state.isSellingSequenceValid(playerId,action[1]):
 							sellingRequests.append((playerId,action[1]))
+							log("bsm","Player "+str(playerId)+" wants to sell houses/hotels.")
+							log("bsm",str(action[1]))
 							actionCount+=1
 			
 			if actionCount==0:
@@ -795,11 +805,13 @@ class Adjudicator:
 			log("cards","Chance card \""+str(card['content'])+"\" has been drawn")
 			
 			#ReceiveState
-			phasePayload = [card['id']]
+			phasePayload = card['id']
 			self.state.setPhase(Phase.CHANCE_CARD)
 			self.state.setPhasePayload(phasePayload)
 			
 			self.broadcastState()
+			self.state.setPhase(Phase.NO_ACTION)
+			self.state.setPhasePayload(None)
 			self.handle_cards_pre_turn(card,'Chance')
 			
 		elif constants.board[playerPosition]['class'] == 'Chest':
@@ -809,11 +821,13 @@ class Adjudicator:
 			log("cards","Community Chest card \""+str(card['content'])+"\" has been drawn")
 			
 			#ReceiveState
-			phasePayload = [card['id']]
+			phasePayload = card['id']
 			self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
 			self.state.setPhasePayload(phasePayload)
-
+			
 			self.broadcastState()
+			self.state.setPhase(Phase.NO_ACTION)
+			self.state.setPhasePayload(None)
 			self.handle_cards_pre_turn(card,'Chest')
 		   
 		elif constants.board[playerPosition]['class'] == 'Tax':
@@ -984,12 +998,6 @@ class Adjudicator:
 			if 'debt' in output:
 				#We need to double rent if the player landed on opponent's property.
 				self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1]*2)
-			
-			if output['phase']==Phase.BUYING:
-				action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
-				action = self.typecast(action, bool, False)
-				if not action:
-					self.state.setPhase(Phase.AUCTION)
 		
 		elif card['type'] == 7:
 			#Advance to nearest utility. Pay 10x dice roll if owned
@@ -1180,15 +1188,16 @@ class Adjudicator:
 			if self.state.hasPlayerLost(playerId):
 				continue
 			
-			self.state.setPhase(Phase.NO_ACTION)
-			self.state.setPhasePayload(None)
 			self.dice.reset()
 			
 			log("turn","Turn "+str(self.state.getTurn())+" start")
 			log("state","State at the start of the turn:")
-			log("state",self.state)
+			log("state",self.state.toJson())
 			
 			while ( (self.diceThrows is None) or (len(self.diceThrows)>0) ):
+				
+				self.state.setPhase(Phase.NO_ACTION)
+				self.state.setPhasePayload(None)	
 				
 				[outOfJail,diceThrown] = self.handle_jail()
 				if self.state.hasPlayerLost(playerId):
@@ -1207,7 +1216,7 @@ class Adjudicator:
 							continue
 						
 						log("state","State after moving the player and updating state with effect of the position:")
-						log("state",self.state)
+						log("state",self.state.toJson())
 						
 						"""BSMT"""
 						self.mortgagedDuringTrade = []
@@ -1236,7 +1245,7 @@ class Adjudicator:
 							continue
 				
 				log("state","State at the end of the turn:")
-				log("state",self.state)
+				log("state",self.state.toJson())
 				
 				if (not self.dice.double):
 					break
@@ -1264,8 +1273,8 @@ class Adjudicator:
 		#TODO: Ties
 
 		self.state.setPhasePayload(None)
-		#finalState = self.state.toTuple()
-		finalState = self.state
+		finalState = self.state.toJson()
+		#finalState = self.state
 		log("win","Final State:")
 		log("win",finalState)
 		self.notifyUI()
@@ -1289,8 +1298,8 @@ class Adjudicator:
 	def runPlayerOnState(self,playerId,callType):
 		player = self.getPlayer(playerId)
 		action = None
-		#stateToBeSent = self.state.toJson()
-		stateToBeSent = self.state
+		stateToBeSent = self.state.toJson()
+		#stateToBeSent = self.state
 		
 		if callType == "BSM":
 			action = player.getBSMTDecision(stateToBeSent)

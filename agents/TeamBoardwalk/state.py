@@ -4,7 +4,7 @@ import json
 
 from .board import board, MAX_HOUSES, MAX_HOTELS, groups, Group
 
-StateTuple = namedtuple("StateTuple", "turn properties positions money phase phaseData debt pastStates")
+StateTuple = namedtuple("StateTuple", "current_player turn properties positions money phase phaseData debt")
 TradeData = namedtuple("TradeData", "moneyOffered propertiesOffered moneyRequested propertiesRequested")
 
 # makes it possible to print a state without printing all of the past states
@@ -27,7 +27,10 @@ class Property:
 		# 5 houses = hotel
 		self.houses = houses
 		self.mortgaged = mortgaged
-
+	
+	def __str__(self):
+		return str(self.id)+","+str(self.owned)+","+str(self.owner)+","+str(self.houses)+","+str(self.mortgaged)
+	
 	# speed up deepcopy of state
 	def __deepcopy__(self, memo):
 		return Property(self.id, self.owned, self.owner, self.houses, self.mortgaged)
@@ -42,37 +45,36 @@ class Debt:
 		for playerId,playerDebt in self.otherPlayers.items():
 			debt += playerDebt
 		return debt
-	
-	def __deepcopy__(self, memo):
-		return Property(self.bank, self.otherPlayers)
 
 class State:
 	def __init__(self, stateTuple):
 		if stateTuple:
 			stateTuple = json.loads(stateTuple)
-			self.playerIds = stateTuple[0]
-			self.turn = stateTuple[1]
+			self.player_ids = stateTuple['player_ids']
+			self.current_player_id = stateTuple['current_player_id']
+			self.turn = stateTuple['turn_number']
 			self.properties = []
-			for id, value in enumerate(stateTuple[2]):
+			for id, value in enumerate(stateTuple['properties']):
 				owned = value['owned']
 				owner = value['ownerId']
 				mortgaged = value['mortgaged']
 				houses = value['houses']
+				if value['hotel']: houses=5
 				self.properties.append(Property(id, owned, owner, houses, mortgaged))
 			
-			self.positions = stateTuple[3]
-			self.money = stateTuple[4]
-			self.bankrupt = stateTuple[5]
-			self.phase = stateTuple[6]
-			self.phaseData = stateTuple[7]
+			self.positions = stateTuple['player_board_positions']
+			self.money = stateTuple['player_cash']
+			self.bankrupt = stateTuple['player_loss_status']
+			self.phase = stateTuple['current_phase_number']
+			self.phaseData = stateTuple['phase_payload']
 			self.debt = {}
-			for id, value in stateTuple[8].items():
+			for id, value in stateTuple['player_debts'].items():
 				bank = value['bank']
 				otherPlayers = value['otherPlayers']
 				self.debt[id] = Debt(bank,otherPlayers)
 	
 	def getOpponents(self,id):
-		return [playerId for playerId in self.playerIds if not playerId==id]
+		return [playerId for playerId in self.player_ids if not playerId==id]
 	
 	def getNextRoll(self):
 		if self.diceRolls:
@@ -94,6 +96,11 @@ class State:
 		return hotels
 
 	def getGroupProperties(self, group):
+		if group<0 or group>=len(groups):
+			print(group)
+		for id in groups[group]:
+			if id<0 or id>len(self.properties):
+				print("id: ",id)	
 		return [self.properties[id] for id in groups[group]]
 
 	def getOwnedProperties(self, player):
@@ -125,22 +132,22 @@ class State:
 		if player2 != -1: self.money[player2] += amount
 
 	def toTuple(self):
-		return StateTuple(self.turn, tuple([prop.toValue() for prop in self.properties]), tuple(self.positions),
-						  tuple(self.money), self.phase, self.phaseData, tuple(self.debt), StateList(self.pastStates))
+		return StateTuple(self.current_player_id, self.turn, [str(prop) for prop in self.properties], self.positions,
+						  self.money, self.phase, self.phaseData, self.debt)
 
 	def __str__(self):
 		return str(self.toTuple())
 
 class Phase:
-	BSMT = 0
+	NO_ACTION = 0
 	TRADE = 1
-	ROLL = 2
-	BUY = 3
+	DICE_ROLL = 2
+	BUYING = 3
 	AUCTION = 4
-	RENT = 5
+	PAYMENT = 5
 	JAIL = 6
-	CHANCE = 7
-	COMMUNITY = 8
+	CHANCE_CARD = 7
+	COMMUNITY_CHEST_CARD = 8
 
 class GameOverException(Exception):
 	pass
