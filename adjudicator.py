@@ -333,7 +333,7 @@ class Adjudicator:
 			else:
 				#TODO: AUCTION FOR HOTELS
 				#All the hotel requests are in: buyingHotelsRequests
-				pass
+				self.auctionInBSM(buyingHotelsRequests,"hotels")
 			
 			"""Buying Houses Requests"""
 			housesRemaining = self.state.getHousesRemaining()
@@ -343,7 +343,7 @@ class Adjudicator:
 			else:
 				#TODO: AUCTION FOR HOUSES
 				#All the hotel requests are in: buyingHousesRequests
-				pass
+				self.auctionInBSM(buyingHousesRequests)
 	
 	""" ACTION METHODS """
 	def conductTrade(self):
@@ -554,39 +554,90 @@ class Adjudicator:
 		self.state.setPhasePayload(phasePayload)
 		self.broadcastState()
 
-	def updateBuyingDecisions(self,buyingDecisions,auctionWinner,propertySite):
-
-		def mapper(triple):
-		 	
-			(playerId,propertyId,constructions) = triple
-			
-			if playerId == auctionWinner and propertyId == propertySite:
-				return (playerId,propertyId,constructions - 1)
-						
-			return (playerId,propertyId,constructions)
-
-		buyingDecisions = list(map(mapper, buyingDecisions))
-		return list(filter(lambda triple :  triple[2] > 0,buyingDecisions)) 
-
-
 	# [(1,4,2),(2,6,1),(3,8,1),(4,9,1)]
 	# Triple of playerId, propertyId, numberOfConstructions
-	def auctionInBSM(self, buyingDecisions):
+	def auctionInBSM(self,buyingDecisions,auctionEntity = "houses"):
 
-		maxHouses = self.state.getHousesRemaining() 
+		"""
+			Bunch of small utitilies
+		""" 
+		def updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite):
 
-		while maxHouses:
+			def mapper(triple):
+			 	
+				(playerId,propertyId,constructions) = triple
+				
+				if playerId == auctionWinner and propertyId == propertySite:
+					return (playerId,propertyId,constructions - 1)
+							
+				return (playerId,propertyId,constructions)
+
+			buyingDecisions = list(map(mapper, buyingDecisions))
+			return list(filter(lambda triple :  triple[2] > 0,buyingDecisions)) 
+
+
+		def updateWinnerCash(auctionWinner, bidValue):
+			auctionWinnerCurrentCash = self.state.getCash(auctionWinner)
+			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - bidValue)
+
+		def updateWinnerProperty(auctionedProperty):
+			currentConstructions = 4
+			
+			if auctionEntity == "houses":
+				currentConstructions = self.state.getNumberOfHouses(auctionedProperty)
+			
+			self.state.setNumberOfHouses(auctionedProperty, currentConstructions + 1)
+		
+		def getConstructionsRemaining():
+
+			if auctionEntity == "houses":
+				return self.state.getHousesRemaining()
+			
+			return self.state.getHotelsRemaining()
+
+		def transformBuyingDecisions():
+
+			# not doing any checks; to check if the the list is valid 
+			def mapper(buyingDecision):
+				if auctionEntity == "houses":
+					return (buyingDecision[0],buyingDecision[1][0],buyingDecision[1][1])
+
+				return (buyingDecision[0], buyingDecision[1][0],1)
+
+			return list(map(mapper,buyingDecisions))
+
+
+		"""
+			End of Utilities;
+			Start of auction logic 
+		"""
+
+		buyingDecisions = transformBuyingDecisions()
+		constructionsRemaining = getConstructionsRemaining()
+
+		while constructionsRemaining:
 
 			highestBid = min(list(map(lambda triple: self.state.getConstructionValue(triple[1]),buyingDecisions))) 
-			interestedParticipants = set(map(lambda triple : triple[0], buyingDecisions))
+			interestedParticipants = list(set(map(lambda triple : triple[0], buyingDecisions)))
 			participantsCount = len(interestedParticipants) 
 			#initializing
-			currentParticipant = interestedParticipants[0]
-			auctionWinner = currentParticipant
-			propertySite = buyingDecisions[0][1]
+			currentParticipantIndex = -1
+			currentParticipant = None
+			auctionWinner = None
+			propertySite = None
 			
-			while participantsCount > 1:
+
+			while True:
+
+				participationCount = len(interestedParticipants) 
+		
+				if participationCount < 2:
+					break
+
+				currentParticipantIndex = currentParticipantIndex % participationCount
+				currentParticipant = interestedParticipants[currentParticipantIndex]
 				
+				# initization
 				currentBid = None
 				propertyId = None
 
@@ -600,20 +651,16 @@ class Adjudicator:
 					highestBid = currentBid
 					propertySite = propertyId
 					auctionWinner = currentParticipant
+					currentParticipantIndex +=1 
 				else:
-					participantsCount -= 1
+					interestedParticipants.remove(currentParticipant)
+			
+			buyingDecisions = updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite)
+			constructionsRemaining -= 1
 
-				# code repitition; to be changed
-				currentParticipantIndex = interestedParticipants.index(currentParticipant) 
-				currentParticipant = interestedParticipants[(currentParticipantIndex + 1) % len(interestedParticipants)]
-
-			buyingDecisions = self.updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite)
-			maxHouses -= 1
-			# update the buyingDecisions  
-			auctionWinnerCurrentCash = self.state.getCash(auctionWinner)
-			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - highestBid)
-			currentNumberOfHouses = self.state.setNumberOfHouses(auctionedProperty)
-			self.state.setNumberOfHouses(auctionedProperty, currentNumberOfHouses + 1)
+			# update cash and property 
+			updateWinnerCash(auctionWinner, highestBid)
+			updateWinnerProperty(auctionedProperty)
 
 	
 	"""
