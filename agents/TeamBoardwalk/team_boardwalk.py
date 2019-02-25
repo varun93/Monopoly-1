@@ -1,13 +1,9 @@
+import sys
 from board import Type, Group
 from state import State
-import six
-import sys
-
-# crossbar init
-from os import environ
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
-from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
+from autobahn.twisted.wamp import ApplicationSession
 from twisted.python.failure import Failure
 from autobahn import wamp
 
@@ -182,16 +178,5 @@ class Component(ApplicationSession):
 			groupProps = state.getGroupProperties(group)
 			if groupProps[0].houses > 0:
 				return "S", [(prop.id, 1) for prop in groupProps]
-
-
-if __name__ == '__main__':
-	import six
-	url = environ.get("AUTOBAHN_DEMO_ROUTER", u"ws://127.0.0.1:8080/ws")
-	if six.PY2 and type(url) == six.binary_type:
-		url = url.decode('utf8')
-	realm = u"crossbardemo"
-	runner = ApplicationRunner(url, realm)
-	runner.run(Component)
-
 
 
