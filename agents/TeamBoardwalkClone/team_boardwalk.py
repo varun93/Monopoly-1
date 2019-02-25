@@ -21,8 +21,8 @@ class Component(ApplicationSession):
 		
 		# print("session attached")
 		
-		self.id = "2"
-		self.pid = "2"
+		self.id = "1"
+		self.pid = "1"
 		self.minMoney = 200
 		# self.test = self.pid == 0
 		self.stealing = False
@@ -44,7 +44,7 @@ class Component(ApplicationSession):
 		reactor.stop()
 
 
-	@wamp.register(u'monopoly.agent2.bsm')
+	@wamp.register(u'monopoly.agent1.bsm')
 	def getBSMTDecision(self, state):
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
@@ -66,11 +66,11 @@ class Component(ApplicationSession):
 			return "B", [(prop.id, 1) for prop in groupProps]
 		return None
 
-	@wamp.register(u'monopoly.agent2.respondtrade')
+	@wamp.register(u'monopoly.agent1.respondtrade')
 	def respondTrade(self, state):
 		return False
 
-	@wamp.register(u'monopoly.agent2.buy')
+	@wamp.register(u'monopoly.agent1.buy')
 	def buyProperty(self, state):
 		state = State(state)
 		prop = state.properties[state.phaseData]
@@ -84,7 +84,7 @@ class Component(ApplicationSession):
 		if self.stealing: return False
 		return True
 
-	@wamp.register(u'monopoly.agent2.auction')
+	@wamp.register(u'monopoly.agent1.auction')
 	def auctionProperty(self, state):
 		state = State(state)
 		prop = state.properties[state.phaseData[0]]
@@ -100,7 +100,7 @@ class Component(ApplicationSession):
 		if maxOpponent < bid: bid = maxOpponent
 		return min(state.money[self.pid], bid)
 
-	@wamp.register(u'monopoly.agent2.jail')
+	@wamp.register(u'monopoly.agent1.jail')
 	def jailDecision(self, state):
 		state = State(state)
 		if self.getSafeMoney(state) > self.minMoney:
@@ -108,11 +108,11 @@ class Component(ApplicationSession):
 		else:
 			return "P"
 
-	@wamp.register(u'monopoly.agent2.receivestate')
+	@wamp.register(u'monopoly.agent1.receivestate')
 	def receiveState(self, state):
 		pass
 
-	@wamp.register(u'monopoly.agent2.trade')
+	@wamp.register(u'monopoly.agent1.trade')
 	def getTradeDecision(self,state):
 		return None
 

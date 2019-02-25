@@ -19,6 +19,7 @@ f.write("----------------------------------------------------------\n")
 
 def log(section,msg):
   if verbose[section]:
+    pass
     #f.write(str(msg)+'\n')
-    print(str(msg)+'\n')
+    # print(str(msg)+'\n')
   
