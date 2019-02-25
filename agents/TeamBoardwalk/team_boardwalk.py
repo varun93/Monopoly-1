@@ -1,6 +1,7 @@
 from board import Type, Group
 from state import State
 import six
+import sys
 
 # crossbar init
 from os import environ
@@ -21,14 +22,15 @@ class Component(ApplicationSession):
 		
 		# print("session attached")
 		
-		self.id = "2"
-		self.pid = "2"
+		self.id = sys.argv[1]
+		self.pid = sys.argv[1]
 		self.minMoney = 200
+		print(self.minMoney)
 		# self.test = self.pid == 0
 		self.stealing = False
 		
 		results = []
-		
+
 		res = yield self.register(self)
 		results.extend(res)
 
@@ -44,7 +46,7 @@ class Component(ApplicationSession):
 		reactor.stop()
 
 
-	@wamp.register(u'monopoly.agent2.bsm')
+	@wamp.register('monopoly.agent{}.bsm'.format(sys.argv[1]))
 	def getBSMTDecision(self, state):
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
@@ -66,11 +68,11 @@ class Component(ApplicationSession):
 			return "B", [(prop.id, 1) for prop in groupProps]
 		return None
 
-	@wamp.register(u'monopoly.agent2.respondtrade')
+	@wamp.register('monopoly.agent{}.respondtrade'.format(sys.argv[1]))
 	def respondTrade(self, state):
 		return False
 
-	@wamp.register(u'monopoly.agent2.buy')
+	@wamp.register(u'monopoly.agent{}.buy'.format(sys.argv[1]))
 	def buyProperty(self, state):
 		state = State(state)
 		prop = state.properties[state.phaseData]
@@ -84,7 +86,7 @@ class Component(ApplicationSession):
 		if self.stealing: return False
 		return True
 
-	@wamp.register(u'monopoly.agent2.auction')
+	@wamp.register('monopoly.agent{}.auction'.format(sys.argv[1]))
 	def auctionProperty(self, state):
 		state = State(state)
 		prop = state.properties[state.phaseData[0]]
@@ -100,7 +102,7 @@ class Component(ApplicationSession):
 		if maxOpponent < bid: bid = maxOpponent
 		return min(state.money[self.pid], bid)
 
-	@wamp.register(u'monopoly.agent2.jail')
+	@wamp.register('monopoly.agent{}.jail'.format(sys.argv[1]))
 	def jailDecision(self, state):
 		state = State(state)
 		if self.getSafeMoney(state) > self.minMoney:
@@ -108,11 +110,11 @@ class Component(ApplicationSession):
 		else:
 			return "P"
 
-	@wamp.register(u'monopoly.agent2.receivestate')
+	@wamp.register('monopoly.agent{}.receivestate'.format(sys.argv[1]))
 	def receiveState(self, state):
 		pass
 
-	@wamp.register(u'monopoly.agent2.trade')
+	@wamp.register('monopoly.agent{}.trade'.format(sys.argv[1]))
 	def getTradeDecision(self,state):
 		return None
 
