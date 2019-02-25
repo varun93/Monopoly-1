@@ -86,7 +86,12 @@ class Component(ApplicationSession):
 	@wamp.register('monopoly.agent{}.auction'.format(sys.argv[1]))
 	def auctionProperty(self, state):
 		state = State(state)
-		prop = state.properties[state.phaseData[0]]
+		data = None 
+		if type(state.phaseData) is int:
+			data = state.phaseData
+		else:
+			data = state.phaseData[0] 
+		prop = state.properties[data]
 		opponents = state.getOpponents(self.pid)
 		bid = prop.data.price // 2 + 1
 		if self.stealing:

@@ -1374,8 +1374,6 @@ class Component(ApplicationSession):
     def runPlayerOnStateWithTimeout(self,playerId,callType):
         # player = self.getPlayer(playerId)
         action = None
-        if not playerId:
-            playerId = "1"
         stateToBeSent = self.state.toJson()
         # stateToBeSent = self.state
         
