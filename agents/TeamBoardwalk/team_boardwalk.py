@@ -8,6 +8,7 @@ from twisted.python.failure import Failure
 from autobahn import wamp
 
 
+
 class Component(ApplicationSession):
 	"""
 	An application component calling the different backend procedures.

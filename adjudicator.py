@@ -53,39 +53,8 @@ class Component(ApplicationSession):
         self.TOTAL_NO_OF_TURNS = 100
         self.INITIAL_CASH = 1500
 
-        procs = [
-            u"monopoly.agent1.bsm",
-            # u"monopoly.agent1.respondtrade",
-            # u"monopoly.agent1.auction",
-            # u"monopoly.agent1.jail",
-            # u"monopoly.agent1.receivestate",
-            # u"monopoly.agent1.trade",
-            u"monopoly.agent2.bsm",
-            # u"monopoly.agent2.respondtrade",
-            # u"monopoly.agent2.auction",
-            # u"monopoly.agent2.jail",
-            # u"monopoly.agent2.receivestate",
-            # u"monopoly.agent2.trade"
-        ]
-
-        self.chest = Cards(constants.communityChestCards)
-        self.chance = Cards(constants.chanceCards)
-        
-        self.PLAY_ORDER = [ "1","2"] #Stores the id's of all the players in the order of play
-        self.state = State(self.PLAY_ORDER)
-
-
-        stateToBeSent = self.state.toJson()
-        # res = yield self.call(proc, stateToBeSent)
-
-        # res = yield self.call(proc, stateToBeSent)
-
-        try:
-            for proc in procs:
-                res = yield self.call(proc, stateToBeSent)
-                print("{}: {}".format(proc, res))
-        except Exception as e:
-            print("Something went wrong: {}".format(e))
+        # this will be pulled in from the command line
+        yield self.runGame(["1","2"])
 
         self.leave()
 
@@ -93,20 +62,17 @@ class Component(ApplicationSession):
         print("disconnected")
         reactor.stop()
 
-    def notifyUI(self):
-        if self.socket is not None:
-            # print(self.stateHistory)
-            send = json.dumps(self.stateHistory, cls=NumpyEncoder)
-            self.socket.emit('game_state_updated', {'state': json.loads(send)} )
     
     """
     STATE PROPERTIES
     """
-    def getPlayer(self,playerId):
-        for agent in self.agents:
-            if agent.id==playerId:
-                return agent
-        return None
+    # def getPlayer(self,playerId):
+    #     if playerId in self.agents:
+    #         return
+    #     # for agent in self.agents:
+    #         if agent.id==playerId:
+    #             return agent
+    #     return None
         
     def updateState(self, state, dimensionOneIndex, dimensionTwoIndex, valueToUpdate):
         if dimensionTwoIndex is None:
@@ -247,6 +213,7 @@ class Component(ApplicationSession):
         # If property is mortgaged, player gets back 50% of the price.
         # If the player tries to unmortgage something and he doesn't have the money, the entire operation fails.
         # If the player tries to mortgage an invalid property, entire operation fails.
+        @inlineCallbacks
         def handleMortgage(playerId,properties):
             playerCash = self.state.getCash(playerId)
             mortgageRequests = []
@@ -318,7 +285,7 @@ class Component(ApplicationSession):
             for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
                 playerId = self.PLAY_ORDER[i]
                 if not self.state.hasPlayerLost(playerId):
-                    action = self.runPlayerOnStateWithTimeout(playerId,"BSM")
+                    action = yield self.runPlayerOnStateWithTimeout(playerId,"BSM")
                     actionType = checkActionType(action) #Some basic validation like syntax,type checking and value range.
                     if actionType=="M":
                         mortgageRequests.append((playerId,action[1]))
@@ -369,7 +336,7 @@ class Component(ApplicationSession):
             
             """Mortgage/Unmortgage requests"""
             for playerId,mortgageRequest in mortgageRequests:
-                handleMortgage(playerId,mortgageRequest)
+                yield handleMortgage(playerId,mortgageRequest)
             
             """Buying Hotels Requests"""
             hotelsRemaining = self.state.getHotelsRemaining()
@@ -407,6 +374,7 @@ class Component(ApplicationSession):
             return True
         
         #Syntax: (otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
+        @inlineCallbacks
         def validateTradeAction(action):
             if not ( isinstance(action, list) or isinstance(action, tuple) ) or len(action)<5:
                 return False
@@ -450,20 +418,23 @@ class Component(ApplicationSession):
             return True
         
         currentPlayerIndex = self.state.getCurrentPlayerIndex()
+
         while True:
             actionCount=0
             for i in self.crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
                 playerId = self.PLAY_ORDER[i]
                 if not self.state.hasPlayerLost(playerId):
-                    action = self.runPlayerOnStateWithTimeout(playerId,"TRADE")
-                    if validateTradeAction(action):
+                    action = yield self.runPlayerOnStateWithTimeout(playerId,"TRADE")
+                    validTrade = yield validateTradeAction(action)
+                    if validTrade:
                         otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
-                        self.handleTrade(playerId, otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
+                        yield self.handleTrade(playerId, otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
                         actionCount+=1
 
             if actionCount==0:
                 break
-    
+
+    @inlineCallbacks
     def handleTrade(self,agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 
         previousPayload = self.state.getPhasePayload()
@@ -474,7 +445,7 @@ class Component(ApplicationSession):
         #Ask the other agent whether he accepts the trade.
         phasePayload = [agentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest]
         self.state.setPhasePayload(phasePayload)
-        tradeResponse = self.runPlayerOnStateWithTimeout(otherAgentId,"RESPOND_TRADE")
+        tradeResponse = yield self.runPlayerOnStateWithTimeout(otherAgentId,"RESPOND_TRADE")
         tradeResponse = self.typecast(tradeResponse, bool, False)
         
         # if the trade was successful update the cash and property status
@@ -510,7 +481,7 @@ class Component(ApplicationSession):
         #Receive State
         phasePayload = [tradeResponse,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest]
         self.state.setPhasePayload(phasePayload)
-        self.runPlayerOnStateWithTimeout(agentId,"INFO")
+        yield self.runPlayerOnStateWithTimeout(agentId,"INFO")
         self.state.setPhasePayload(previousPayload)
         return True
 
@@ -564,6 +535,7 @@ class Component(ApplicationSession):
         else Opponent wins. i.e., opponent would win even if his action has incorrect type
         as long as the current player also made a mistake in the type of his action
     """ 
+    @inlineCallbacks
     def handle_auction(self,auctionedProperty):
 
         livePlayers = self.state.getLivePlayers()
@@ -572,7 +544,7 @@ class Component(ApplicationSession):
 
         for participant in livePlayers:
             # asking for each participant for the bid
-            auctionBid = self.runPlayerOnStateWithTimeout(participant,"AUCTION")
+            auctionBid = yield self.runPlayerOnStateWithTimeout(participant,"AUCTION")
             auctionBid = self.check_valid_cash(auctionBid)
             
             if auctionBid and auctionBid > winningBid:
@@ -601,7 +573,7 @@ class Component(ApplicationSession):
         #Receive State
         phasePayload = [auctionedProperty,winner,winningBid]
         self.state.setPhasePayload(phasePayload)
-        self.broadcastState()
+        yield self.broadcastState()
 
     # [(1,4,2),(2,6,1),(3,8,1),(4,9,1)]
     # Triple of playerId, propertyId, numberOfConstructions
@@ -799,6 +771,7 @@ class Component(ApplicationSession):
     First is True if not in jail or no longer in jail
     Second is True if dice has already been thrown for the current turn while determining if the player should be let out or remain in jail
     """
+    @inlineCallbacks
     def handle_jail(self):
         currentPlayerId = self.state.getCurrentPlayerId()
         playerPosition = self.state.getPosition(currentPlayerId)
@@ -808,14 +781,14 @@ class Component(ApplicationSession):
         #InJail
         self.state.setPhase(Phase.JAIL)
         self.state.setPhasePayload(None)
-        action = self.runPlayerOnStateWithTimeout(currentPlayerId,"JAIL")
+        action = yield self.runPlayerOnStateWithTimeout(currentPlayerId,"JAIL")
         result = self.handle_in_jail_state(action)
         
         phasePayload = [result[0]]
         self.state.setPhasePayload(phasePayload)
         
         #The player needs to know if he is still in jail or not.
-        self.broadcastState()
+        yield self.broadcastState()
         return result
     
     def send_player_to_jail(self):
@@ -871,6 +844,7 @@ class Component(ApplicationSession):
     Performed after dice is rolled and the player is moved to a new position.
     Determines the effect of the position and action required from the player.
     """     
+    @inlineCallbacks
     def determine_position_effect(self):
         currentPlayerId = self.state.getCurrentPlayerId()
         playerPosition = self.state.getPosition(currentPlayerId)
@@ -889,7 +863,7 @@ class Component(ApplicationSession):
                 self.state.setDebtToPlayer(currentPlayerId,output['debt'][0],output['debt'][1])
             
             if self.state.getPhase()==Phase.BUYING:
-                action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
+                action = yield self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
                 action = self.typecast(action, bool, False)
                 if not action:
                     self.state.setPhase(Phase.AUCTION)
@@ -905,7 +879,7 @@ class Component(ApplicationSession):
             self.state.setPhase(Phase.CHANCE_CARD)
             self.state.setPhasePayload(phasePayload)
             
-            self.broadcastState()
+            yield self.broadcastState()
             self.state.setPhase(Phase.NO_ACTION)
             self.state.setPhasePayload(None)
             self.handle_cards_pre_turn(card,'Chance')
@@ -921,7 +895,7 @@ class Component(ApplicationSession):
             self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
             self.state.setPhasePayload(phasePayload)
             
-            self.broadcastState()
+            yield self.broadcastState()
             self.state.setPhase(Phase.NO_ACTION)
             self.state.setPhasePayload(None)
             self.handle_cards_pre_turn(card,'Chest')
@@ -1003,6 +977,7 @@ class Component(ApplicationSession):
         return output
 
     """Method handles various events for Chance and Community cards"""
+    @inlineCallbacks
     def handle_cards_pre_turn(self,card,deck):
         currentPlayerId = self.state.getCurrentPlayerId()
         playerPosition = self.state.getPosition(currentPlayerId)
@@ -1133,14 +1108,14 @@ class Component(ApplicationSession):
         self.state.setPhasePayload(phasePayload)
         
         if phaseNumber==Phase.BUYING:
-                action = self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
+                action = yield self.runPlayerOnStateWithTimeout(currentPlayerId,"BUY")
                 action = self.typecast(action, bool, False)
                 if not action:
                     self.state.setPhase(Phase.AUCTION)
         
         # make further calls
         if updateState:
-            self.determine_position_effect()
+            yield self.determine_position_effect()
     
     """
     Handle the action response from the Agent for buying an unowned property
@@ -1174,6 +1149,7 @@ class Component(ApplicationSession):
                 self.state.clearDebt(playerId)
     
     """Function calls the relevant method of the Agent"""
+    @inlineCallbacks
     def turn_effect(self):
         currentPlayerId = self.state.getCurrentPlayerId()
         phase = self.state.getPhase()
@@ -1182,8 +1158,8 @@ class Component(ApplicationSession):
             self.handle_buy_property()
         elif phase == Phase.AUCTION:
             auctionedProperty = phasePayload
-            return self.handle_auction(auctionedProperty)
-    
+            turn_effect = yield self.handle_auction(auctionedProperty)
+            return turn_effect
     """
     On final winner calculation, following are considered:
     Player's cash,
@@ -1244,15 +1220,17 @@ class Component(ApplicationSession):
         
         if isinstance(communityCards, list) and len(communityCards)>0:
             self.chest.reinit(constants.communityChestCards,communityCards)
-            
+    
+    @inlineCallbacks
     def broadcastState(self):
         for playerId in self.PLAY_ORDER:
-            self.runPlayerOnStateWithTimeout(playerId,"INFO")
+            yield self.runPlayerOnStateWithTimeout(playerId,"INFO")
     
     """
     Function to be called to start the game.
     Expects agents to be in the order of play.
     """
+    @inlineCallbacks
     def runGame(self,agents,diceThrows=None,chanceCards=None,communityCards=None):
         
         self.stateHistory = []
@@ -1263,7 +1241,7 @@ class Component(ApplicationSession):
         
         #Stores the list of agents which are competing in the current game in the order of play.
         self.agents = agents
-        self.PLAY_ORDER = [ agent.id for agent in self.agents] #Stores the id's of all the players in the order of play
+        self.PLAY_ORDER = agents #Stores the id's of all the players in the order of play
         self.TOTAL_NO_OF_PLAYERS = len(self.agents)
         
         self.dice = Dice()
@@ -1295,9 +1273,8 @@ class Component(ApplicationSession):
                 self.state.setPhase(Phase.NO_ACTION)
                 self.state.setPhasePayload(None)    
                 
-                [outOfJail,diceThrown] = self.handle_jail()
+                [outOfJail,diceThrown] = yield self.handle_jail()
                 if self.state.hasPlayerLost(playerId):
-                    
                     continue
                 
                 if outOfJail:
@@ -1307,7 +1284,7 @@ class Component(ApplicationSession):
                         continue
                     
                     if notInJail:
-                        self.determine_position_effect()
+                        yield self.determine_position_effect()
                         if self.state.hasPlayerLost(playerId):
                             continue
                         
@@ -1332,7 +1309,7 @@ class Component(ApplicationSession):
                         
                         """State now contain info about the position the player landed on"""
                         """Performing the actual effect of the current position"""
-                        self.turn_effect()
+                        yield self.turn_effect()
                         if self.state.hasPlayerLost(playerId):
                             continue
                         
@@ -1373,7 +1350,6 @@ class Component(ApplicationSession):
         #finalState = self.state
         log("win","Final State:")
         log("win",finalState)
-        self.notifyUI()
         return [resultsArray[0],finalState]
     
     """
@@ -1381,37 +1357,44 @@ class Component(ApplicationSession):
     The function to called on the agent is determined by reading the state.
     All threading and signal based logic must go in here
     """
-    @timeout_decorator.timeout(3000, timeout_exception=TimeoutError)
-    def runPlayerOnStateWithTimeout(self, playerId,callType):
-        try:
-            return self.runPlayerOnState(playerId,callType)
-        except TimeoutError:
-            print("Agent Timed Out")
-            """Change the return value here to ensure agent loses"""
-            self.state.markPlayerLost(playerId,Reason.TIMEOUT)
-            return None
+    """
+        Not sure the timning related thing works now; lets keep it on hold
+    """
+    # @timeout_decorator.timeout(3000, timeout_exception=TimeoutError)
+    # def runPlayerOnStateWithTimeout(self, playerId,callType):
+    #     try:
+    #         return self.runPlayerOnState(playerId,callType)
+    #     except TimeoutError:
+    #         print("Agent Timed Out")
+    #         """Change the return value here to ensure agent loses"""
+    #         self.state.markPlayerLost(playerId,Reason.TIMEOUT)
+    #         return None
 
-    def runPlayerOnState(self,playerId,callType):
-        player = self.getPlayer(playerId)
+    @inlineCallbacks
+    def runPlayerOnStateWithTimeout(self,playerId,callType):
+        # player = self.getPlayer(playerId)
         action = None
+        if not playerId:
+            playerId = "1"
         stateToBeSent = self.state.toJson()
-        #stateToBeSent = self.state
+        # stateToBeSent = self.state
         
-        if callType == "BSM":
-            action = player.getBSMTDecision(stateToBeSent)
-        elif callType == "BUY":
-            action = player.buyProperty(stateToBeSent)
-        elif callType == "AUCTION":
-            action = player.auctionProperty(stateToBeSent)
-        elif callType == "JAIL":
-            action = player.jailDecision(stateToBeSent)
-        elif callType == "INFO":
-            action = player.receiveState(stateToBeSent)
-        elif callType == "TRADE":
-            action = player.getTradeDecision(stateToBeSent)
-        elif callType == "RESPOND_TRADE":
-            """TODO:"""
-            action = player.respondTrade(stateToBeSent)
+        phaseProcedureMapping = {
+            "BSM" : "monopoly.agent{}.bsm",
+            "BUY" : "monopoly.agent{}.buy",
+            "AUCTION" : "monopoly.agent{}.auction",
+            "JAIL" : "monopoly.agent{}.jail",
+            "TRADE" : "monopoly.agent{}.trade",
+            "INFO" : "monopoly.agent{}.receivestate",
+            "RESPOND_TRADE" : "monopoly.agent{}.respondtrade"
+        }
+
+        procedure = phaseProcedureMapping[callType].format(str(playerId))
+       
+        try:
+            action = yield self.call(procedure, stateToBeSent)
+        except:
+            print(procedure)
         
         return action
 
