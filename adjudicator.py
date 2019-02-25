@@ -54,7 +54,8 @@ class Component(ApplicationSession):
         self.INITIAL_CASH = 1500
 
         # this will be pulled in from the command line
-        yield self.runGame(["1","2"])
+        result = yield self.runGame(["1","2"])
+        print(result)
 
         self.leave()
 
@@ -362,6 +363,7 @@ class Component(ApplicationSession):
                 self.auctionInBSM(buyingHousesRequests)
     
     """ ACTION METHODS """
+    @inlineCallbacks
     def conductTrade(self):
         def validPropertyToTrade(playerId, propertyId):
             propertyId = self.typecast(propertyId,int,-1)
@@ -374,7 +376,6 @@ class Component(ApplicationSession):
             return True
         
         #Syntax: (otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
-        @inlineCallbacks
         def validateTradeAction(action):
             if not ( isinstance(action, list) or isinstance(action, tuple) ) or len(action)<5:
                 return False
@@ -446,6 +447,7 @@ class Component(ApplicationSession):
         phasePayload = [agentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest]
         self.state.setPhasePayload(phasePayload)
         tradeResponse = yield self.runPlayerOnStateWithTimeout(otherAgentId,"RESPOND_TRADE")
+        print("TRADE", tradeResponse)
         tradeResponse = self.typecast(tradeResponse, bool, False)
         
         # if the trade was successful update the cash and property status
@@ -1300,7 +1302,7 @@ class Component(ApplicationSession):
                         self.conductBSM()
                         if self.state.hasPlayerLost(playerId):
                             continue
-                        self.conductTrade()
+                        yield self.conductTrade()
                         self.state.setPhase(previousPhase)
                         self.conductBSM()
                         if self.state.hasPlayerLost(playerId):
