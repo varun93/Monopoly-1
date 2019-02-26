@@ -1205,22 +1205,22 @@ class Component(ApplicationSession):
         #return sorted(self.PLAY_ORDER,key=winnerSorting,reverse=True)
         
         #Using an array here to handle ties
-    	winners = []
-    	highestAssets = 0
-    	for playerId in self.PLAY_ORDER:
-			turn_of_loss = self.state.getTurnOfLoss(playerId)
-			if turn_of_loss!=-1:
-				log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
-			 	log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
-				playerAssets = agentCash[playerId]+agentPropertyWorth[playerId]
-				if playerAssets > highestAssets:
-					winners = [playerId]
-				elif playerAssets == highestAssets:
-					winners.append(playerId)
-			else:
-				log("win_condition","Agent "+str(playerId)+" had lost in the turn: "+str(turn_of_loss))
-    	
-    	return winners
+        winners = []
+        highestAssets = 0
+        for playerId in self.PLAY_ORDER:
+            turn_of_loss = self.state.getTurnOfLoss(playerId)
+            if turn_of_loss!=-1:
+                log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
+                log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
+                playerAssets = agentCash[playerId]+agentPropertyWorth[playerId]
+                if playerAssets > highestAssets:
+                    winners = [playerId]
+                elif playerAssets == highestAssets:
+                    winners.append(playerId)
+            else:
+                log("win_condition","Agent "+str(playerId)+" had lost in the turn: "+str(turn_of_loss))
+        
+        return winners
     
     def initialize_debug_state(self,diceThrows,chanceCards,communityCards):
         if isinstance(diceThrows, list) and len(diceThrows)>0:
@@ -1358,10 +1358,9 @@ class Component(ApplicationSession):
         """Determine the winner"""
         resultsArray = self.final_winning_condition()
         if len(resultsArray)>1:
-         	log("win","Agents "+str(resultsArray)+" won the Game.")
+             log("win","Agents "+str(resultsArray)+" won the Game.")
         else:
-         	log("win","Agent "+str(resultsArray[0])+" won the Game.")
-        #TODO: Ties
+             log("win","Agent "+str(resultsArray[0])+" won the Game.")
 
         self.state.setPhasePayload(None)
         finalState = self.state.toJson()
