@@ -1215,6 +1215,7 @@ class Component(ApplicationSession):
                 playerAssets = agentCash[playerId]+agentPropertyWorth[playerId]
                 if playerAssets > highestAssets:
                     winners = [playerId]
+                    highestAssets = playerAssets
                 elif playerAssets == highestAssets:
                     winners.append(playerId)
             else:
