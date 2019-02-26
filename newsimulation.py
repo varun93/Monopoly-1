@@ -21,5 +21,7 @@ agentThree = RiskyAgent(agentThreeId)
 
 adjudicator = Adjudicator()
 [winner,final_state] = adjudicator.runGame([agentOne, agentTwo, agentThree])
+print("Winner:")
 print(winner)
+print("Final State:")
 print(final_state)

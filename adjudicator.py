@@ -1268,7 +1268,7 @@ class Component(ApplicationSession):
             
             log("turn","Turn "+str(self.state.getTurn())+" start")
             log("state","State at the start of the turn:")
-            log("state",self.state.toJson())
+            log("state",self.state)
             
             while ( (self.diceThrows is None) or (len(self.diceThrows)>0) ):
                 
@@ -1277,21 +1277,21 @@ class Component(ApplicationSession):
                 
                 [outOfJail,diceThrown] = yield self.handle_jail()
                 if self.state.hasPlayerLost(playerId):
-                    continue
+                    break
                 
                 if outOfJail:
                     """rolls dice, moves the player and determines what happens on the space he has fallen on."""
                     notInJail = self.dice_roll(diceThrown)
                     if self.state.hasPlayerLost(playerId):
-                        continue
+                        break
                     
                     if notInJail:
                         yield self.determine_position_effect()
                         if self.state.hasPlayerLost(playerId):
-                            continue
+                            break
                         
                         log("state","State after moving the player and updating state with effect of the position:")
-                        log("state",self.state.toJson())
+                        log("state",self.state)
                         
                         """BSMT"""
                         self.mortgagedDuringTrade = []
@@ -1301,26 +1301,26 @@ class Component(ApplicationSession):
                         self.state.setPhasePayload(None)
                         self.conductBSM()
                         if self.state.hasPlayerLost(playerId):
-                            continue
+                            break
                         yield self.conductTrade()
                         self.state.setPhase(previousPhase)
                         self.conductBSM()
                         if self.state.hasPlayerLost(playerId):
-                            continue
+                            break
                         self.state.setPhasePayload(previousPhasePayload)
                         
                         """State now contain info about the position the player landed on"""
                         """Performing the actual effect of the current position"""
                         yield self.turn_effect()
                         if self.state.hasPlayerLost(playerId):
-                            continue
+                            break
                         
                         self.handle_payment()
                         if self.state.hasPlayerLost(playerId):
-                            continue
+                            break
                 
                 log("state","State at the end of the turn:")
-                log("state",self.state.toJson())
+                log("state",self.state)
                 
                 if (not self.dice.double):
                     break
@@ -1334,6 +1334,8 @@ class Component(ApplicationSession):
             for agentId in self.PLAY_ORDER:
                 if self.state.hasPlayerLost(agentId): lossCount+=1
             if lossCount>=self.TOTAL_NO_OF_PLAYERS-1:
+                #Only one player left. Winner has been decided.
+                log("win","Only one player left.")
                 break
         
         #TODO:
@@ -1350,8 +1352,6 @@ class Component(ApplicationSession):
         self.state.setPhasePayload(None)
         finalState = self.state.toJson()
         #finalState = self.state
-        log("win","Final State:")
-        log("win",finalState)
         return [resultsArray[0],finalState]
     
     """
