@@ -1209,7 +1209,7 @@ class Component(ApplicationSession):
         highestAssets = 0
         for playerId in self.PLAY_ORDER:
             turn_of_loss = self.state.getTurnOfLoss(playerId)
-            if turn_of_loss!=-1:
+            if turn_of_loss==-1:
                 log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
                 log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
                 playerAssets = agentCash[playerId]+agentPropertyWorth[playerId]
