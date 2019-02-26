@@ -539,36 +539,29 @@ class Component(ApplicationSession):
     """ 
     @inlineCallbacks
     def handle_auction(self,auctionedProperty):
-
+        
+        currentPlayerId = self.state.getCurrentPlayerId()
         livePlayers = self.state.getLivePlayers()
-        winner = None
-        winningBid = 0
+        
+        #By default, the player who started the auction would win and he would have to pay $1.
+        winner = currentPlayerId
+        winningBid = 1
 
         for participant in livePlayers:
             # asking for each participant for the bid
             auctionBid = yield self.runPlayerOnStateWithTimeout(participant,"AUCTION")
             auctionBid = self.check_valid_cash(auctionBid)
+            playerCash = self.state.getCash(participant)
             
-            if auctionBid and auctionBid > winningBid:
+            #Only if the player has enough money should his bid be considered valid
+            if auctionBid and auctionBid > winningBid and playerCash >= auctionBid:
                 winningBid = auctionBid
                 winner = participant
-
-        # What if no one is interested? Just return? is this correct? 
-        # TODO: Decide what happens here
-        if winner is None:
-            return
             
         log("auction","Player "+str(winner)+" won the Auction")
         
         playerCash = self.state.getCash(winner)
-
-        if playerCash >= winningBid:
-            playerCash -= winningBid
-        else:
-            #Player placed a bid greater than the amount of money he/she has. His loss.
-            #TODO: Is this correct?
-            self.state.markPlayerLost(playerId,Reason.BANKRUPT)
-
+        playerCash -= winningBid
         self.state.setCash(winner,playerCash)
         self.state.setPropertyOwner(auctionedProperty,winner)   
         
@@ -1199,17 +1192,35 @@ class Component(ApplicationSession):
             if isPropertyOwned:
                 agentPropertyWorth[ownerId] += 50
         
-        for playerId in self.PLAY_ORDER:
-            log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
-            log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
+        #Gives the list of players sorted in descending order.
+        #Also takes into consideration if player lost earlier in the game.
+        #for playerId in self.PLAY_ORDER:
+        #    log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
+        #    log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
+        #def winnerSorting(playerId):
+        #    if self.state.getTurnOfLoss(playerId)==-1:
+        #        return self.TOTAL_NO_OF_TURNS+agentCash[playerId]+agentPropertyWorth[playerId]
+        #    else:
+        #        return self.state.getTurnOfLoss(playerId)
+        #return sorted(self.PLAY_ORDER,key=winnerSorting,reverse=True)
         
-        def winnerSorting(playerId):
-            if self.state.getTurnOfLoss(playerId)==-1:
-                return self.TOTAL_NO_OF_TURNS+agentCash[playerId]+agentPropertyWorth[playerId]
-            else:
-                return self.state.getTurnOfLoss(playerId)
-        
-        return sorted(self.PLAY_ORDER,key=winnerSorting,reverse=True)
+        #Using an array here to handle ties
+    	winners = []
+    	highestAssets = 0
+    	for playerId in self.PLAY_ORDER:
+			turn_of_loss = self.state.getTurnOfLoss(playerId)
+			if turn_of_loss!=-1:
+				log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
+			 	log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
+				playerAssets = agentCash[playerId]+agentPropertyWorth[playerId]
+				if playerAssets > highestAssets:
+					winners = [playerId]
+				elif playerAssets == highestAssets:
+					winners.append(playerId)
+			else:
+				log("win_condition","Agent "+str(playerId)+" had lost in the turn: "+str(turn_of_loss))
+    	
+    	return winners
     
     def initialize_debug_state(self,diceThrows,chanceCards,communityCards):
         if isinstance(diceThrows, list) and len(diceThrows)>0:
@@ -1346,13 +1357,16 @@ class Component(ApplicationSession):
         
         """Determine the winner"""
         resultsArray = self.final_winning_condition()
-        log("win","Agent "+str(resultsArray[0])+" won the Game.")
+        if len(resultsArray)>1:
+         	log("win","Agents "+str(resultsArray)+" won the Game.")
+        else:
+         	log("win","Agent "+str(resultsArray[0])+" won the Game.")
         #TODO: Ties
 
         self.state.setPhasePayload(None)
         finalState = self.state.toJson()
         #finalState = self.state
-        return [resultsArray[0],finalState]
+        return [resultsArray,finalState]
     
     """
     This function is called whenever adjudicator needs to communicate with the agent
