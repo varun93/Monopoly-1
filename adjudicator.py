@@ -18,22 +18,22 @@ class Component(ApplicationSession):
     """
     An application component calling the different backend procedures.
     """
+    
+    def startGame(self,msg):
+        print("In "+self.startGame.__name__)
+        print(msg)
+        if not self.gameStarted:
+            self.gameStarted = True
+            
+            print("About to start the game")
+            #result = yield self.runGame(msg)
+            #print(result)
+    
+            self.leave()
 
     @inlineCallbacks
     def onJoin(self, details):
         print("session attached")
-
-        """
-        PROPERTY INDICES OF THE STATE VARIABLE
-        """
-        self.PLAYER_TURN_INDEX = 0
-        self.PROPERTY_STATUS_INDEX = 1
-        self.PLAYER_POSITION_INDEX = 2
-        self.PLAYER_CASH_INDEX = 3
-        self.PLAYER_BANKRUPTCY_STATUS_INDEX = 4
-        self.PHASE_NUMBER_INDEX = 5
-        self.PHASE_PAYLOAD_INDEX = 6
-        self.DEBT_INDEX = 7
         
         self.CHANCE_GET_OUT_OF_JAIL_FREE = 40
         self.COMMUNITY_GET_OUT_OF_JAIL_FREE = 41
@@ -47,12 +47,15 @@ class Component(ApplicationSession):
         
         self.dice = None
         
-        """
-        CONFIGURATION SETTINGS
-        """
+        """CONFIGURATION SETTINGS"""
         self.TOTAL_NO_OF_TURNS = 100
         self.INITIAL_CASH = 1500
-
+        
+        #self.game_id = 1
+        #self.gameStarted = False
+        #self.game_start_uri = 'com.game{}.start_game'.format(self.game_id)
+        #yield self.subscribe(self.startGame, self.game_start_uri)
+        
         # this will be pulled in from the command line
         result = yield self.runGame(["1","2"])
         print(result)
@@ -63,7 +66,6 @@ class Component(ApplicationSession):
         print("disconnected")
         reactor.stop()
 
-    
     """
     STATE PROPERTIES
     """

@@ -11,18 +11,15 @@ class GameGen(ApplicationSession):
     
     #Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
     #TODO: Should we verify if these connections are active?
-    def confirm_register(self,gameId,agentId):
+    def confirm_register(self,agentId):
         if self.current_no_players >= self.expected_no_players:
             return False
         
         self.current_no_players+=1
         self.agents.append(agentId)
         
-        print("Agent with counter "+agentId+" for game "+gameId+" confirmed.")
-        
-        # this will be pulled in from the command line
-        #result = yield self.runGame(["1","2"])
-        #print(result)
+        if self.current_no_players == self.expected_no_players:
+            self.publish(self.game_start_uri, self.agents)
         
         return True
         
@@ -30,17 +27,15 @@ class GameGen(ApplicationSession):
         self.agentCounter+=1
         
         agent_attributes = {}
-        for id,value in self.agent_info.items():
-            if id == 'agent_id':
-                agent_attributes[id] = value.format(self.agentCounter)
+        for agentId,value in self.agent_info.items():
+            if agentId == 'agent_id':
+                agent_attributes[agentId] = value.format(self.agentCounter)
             else:
-                agent_attributes[id] = value.format(self.game_id,self.agentCounter)
-               
-                #Create channel where the agent can confirm  his registration
-                gameId = str(self.game_id)
-                agentId = str(self.agentCounter)
-                self.register(partial(self.confirm_register,gameId,agentId),
-                    agent_attributes['confirm_register'])
+                agent_attributes[agentId] = value.format(self.game_id,self.agentCounter)
+                
+        #Create channel where the agent can confirm  his registration
+        self.register(partial(self.confirm_register,str(self.agentCounter)),
+            agent_attributes['confirm_register'])
                
         print("Agent with counter "+str(self.agentCounter)+" initialized.")
         return agent_attributes
@@ -49,13 +44,27 @@ class GameGen(ApplicationSession):
     def onJoin(self, details):
         print("In "+self.onJoin.__name__)
         
+        self.CHANCE_GET_OUT_OF_JAIL_FREE = 40
+        self.COMMUNITY_GET_OUT_OF_JAIL_FREE = 41
+        self.JUST_VISTING = 10
+        self.JAIL = -1
+        
+        self.dice = None
+        
+        """CONFIGURATION SETTINGS"""
+        self.BOARD_SIZE = 40
+        self.PASSING_GO_MONEY = 200
+        self.TOTAL_NO_OF_TURNS = 100
+        self.INITIAL_CASH = 1500
+        
         #TODO: Configuration for these
         #TODO: The  agentCounter used in the URI needs to be hashed to prevent impersonation (Or some other solution)
         self.expected_no_players = 3
         self.current_no_players = 0
         self.agents = [] #Stores ids of agents in the current game
         self.game_id = 1
-        
+        self.gameStarted = False
+        self.game_start_uri = 'com.game{}.start_game'.format(self.game_id)
         
         self.agentCounter = 0
         self.agent_info = { 'agent_id':'{}',
@@ -69,8 +78,9 @@ class GameGen(ApplicationSession):
                 'trade':'com.game{}.agent{}.trade'}
         
         yield self.register(self.generateAgentDetails,'com.game{}.joingame'.format(self.game_id))
-
+        
         #self.leave()
+
 
     def onDisconnect(self):
         print("disconnected")
