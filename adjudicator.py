@@ -19,17 +19,19 @@ class Component(ApplicationSession):
     An application component calling the different backend procedures.
     """
     
-    def startGame(self,msg):
-        print("In "+self.startGame.__name__)
-        print(msg)
+    @inlineCallbacks
+    def startGame(self,agents, end_game_uri):
         if not self.gameStarted:
             self.gameStarted = True
-            
-            print("About to start the game")
-            #result = yield self.runGame(msg)
-            #print(result)
+            result = yield self.runGame(agents)
+            print(result)
+            # the reason for not notifying the agent
+            # directly is to make sure that message is sent via game gen
+            for agent in agents:
+                yield self.call(end_game_uri,agent)
     
             self.leave()
+
 
     @inlineCallbacks
     def onJoin(self, details):
@@ -51,20 +53,21 @@ class Component(ApplicationSession):
         self.TOTAL_NO_OF_TURNS = 100
         self.INITIAL_CASH = 1500
         
-        #self.game_id = 1
-        #self.gameStarted = False
-        #self.game_start_uri = 'com.game{}.start_game'.format(self.game_id)
-        #yield self.subscribe(self.startGame, self.game_start_uri)
+        self.game_id = 1
+        self.gameStarted = False
+        self.game_start_uri = 'com.game{}.start_game'.format(self.game_id)
+        yield self.subscribe(self.startGame, self.game_start_uri)
         
         # this will be pulled in from the command line
-        result = yield self.runGame(["1","2"])
-        print(result)
+        # result = yield self.runGame(["1","2"])
+        # print(result)
 
-        self.leave()
+        # self.leave()
 
     def onDisconnect(self):
         print("disconnected")
-        reactor.stop()
+        if reactor.running:
+            reactor.stop()
 
     """
     STATE PROPERTIES

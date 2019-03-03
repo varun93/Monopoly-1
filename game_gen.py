@@ -1,45 +1,16 @@
+import sys
 from os import environ
 from functools import partial
-
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
+from autobahn import wamp
+from twisted.python.failure import Failure
 
 
 
 class GameGen(ApplicationSession):
     
-    #Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
-    #TODO: Should we verify if these connections are active?
-    def confirm_register(self,agentId):
-        if self.current_no_players >= self.expected_no_players:
-            return False
-        
-        self.current_no_players+=1
-        self.agents.append(agentId)
-        
-        if self.current_no_players == self.expected_no_players:
-            self.publish(self.game_start_uri, self.agents)
-        
-        return True
-        
-    def generateAgentDetails(self):
-        self.agentCounter+=1
-        
-        agent_attributes = {}
-        for agentId,value in self.agent_info.items():
-            if agentId == 'agent_id':
-                agent_attributes[agentId] = value.format(self.agentCounter)
-            else:
-                agent_attributes[agentId] = value.format(self.game_id,self.agentCounter)
-                
-        #Create channel where the agent can confirm  his registration
-        self.register(partial(self.confirm_register,str(self.agentCounter)),
-            agent_attributes['confirm_register'])
-               
-        print("Agent with counter "+str(self.agentCounter)+" initialized.")
-        return agent_attributes
-
     @inlineCallbacks
     def onJoin(self, details):
         print("In "+self.onJoin.__name__)
@@ -59,13 +30,13 @@ class GameGen(ApplicationSession):
         
         #TODO: Configuration for these
         #TODO: The  agentCounter used in the URI needs to be hashed to prevent impersonation (Or some other solution)
-        self.expected_no_players = 3
+        self.expected_no_players = int(sys.argv[2])
         self.current_no_players = 0
         self.agents = [] #Stores ids of agents in the current game
-        self.game_id = 1
+        self.game_id = int(sys.argv[1])
         self.gameStarted = False
-        self.game_start_uri = 'com.game{}.start_game'.format(self.game_id)
-        
+       
+        self.game_end_uri = 'com.game{}.end_game'.format(self.game_id)
         self.agentCounter = 0
         self.agent_info = { 'agent_id':'{}',
                 'confirm_register':'com.game{}.agent{}.confirm_register',
@@ -75,16 +46,67 @@ class GameGen(ApplicationSession):
                 'auction':'com.game{}.agent{}.auction',
                 'jail':'com.game{}.agent{}.jail',
                 'receivestate':'com.game{}.agent{}.receivestate',
-                'trade':'com.game{}.agent{}.trade'}
-        
-        yield self.register(self.generateAgentDetails,'com.game{}.joingame'.format(self.game_id))
-        
-        #self.leave()
+                'trade':'com.game{}.agent{}.trade',
+                'endgame':'com.game{}.agent{}.endgame'
+                }
+       
+        results = []
+        res = yield self.register(self)
+        results.extend(res)
 
+        for res in results:
+            if isinstance(res, Failure):
+                print("Failed to register procedure: {}".format(res.value))
+            else:
+                print("registration ID {}: {}".format(res.id, res.procedure))
 
+    #Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
+    #TODO: Should we verify if these connections are active?
+    def confirm_register(self,agentId):
+        if self.current_no_players >= self.expected_no_players:
+            return False
+        
+        self.current_no_players+=1
+        self.agents.append(agentId)
+        
+        # publish the message to the adjudicator
+        if self.current_no_players == self.expected_no_players:
+            game_start_uri = 'com.game{}.start_game'.format(self.game_id)
+            # I dont like the hardcoding here but its fine for the time being
+            game_end_uri = 'com.game{}.endgame'.format(sys.argv[1])
+            self.publish(game_start_uri, self.agents, game_end_uri)
+        
+        return True
+    
+    @wamp.register('com.game{}.joingame'.format(sys.argv[1]))
+    def generateAgentDetails(self):
+        self.agentCounter += 1
+        
+        agent_attributes = {}
+        for agentId,value in self.agent_info.items():
+            if agentId == 'agent_id':
+                agent_attributes[agentId] = value.format(self.agentCounter)
+            else:
+                agent_attributes[agentId] = value.format(self.game_id,self.agentCounter)
+                
+        #Create channel where the agent can confirm  his registration
+        self.register(partial(self.confirm_register,str(self.agentCounter)),
+            agent_attributes['confirm_register'])
+               
+        print("Agent with counter "+str(self.agentCounter)+" initialized.")
+        return agent_attributes
+
+    @wamp.register('com.game{}.endgame'.format(sys.argv[1]))
+    def teardownAgent(self,agent_id):
+        self.agentCounter -= 1
+        end_game_uri = self.agent_info["endgame"].format(self.game_id,agent_id)
+        # game you would want to aggregate some data and send back the payload here
+        self.publish(end_game_uri)
+        
+        
     def onDisconnect(self):
-        print("disconnected")
-        reactor.stop()
+        if reactor.running:
+            reactor.stop()
 
 if __name__ == '__main__':
     import six
