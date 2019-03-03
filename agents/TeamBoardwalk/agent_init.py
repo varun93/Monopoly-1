@@ -7,7 +7,7 @@ from autobahn.twisted.wamp import ApplicationRunner
 if __name__ == '__main__':
 
 	if len(sys.argv) < 2:
-		print("Agent Id is mandatory!")
+		print("Game Id is mandatory!")
 	else:
 		from team_boardwalk import *
 		# pass
