@@ -53,8 +53,9 @@ class Component(ApplicationSession):
         if reactor.running:
             reactor.stop()
 
-    def endGame(self):
+    def endGame(self,result):
         # do some cleanup stuff if you have any
+        print("************* The winner is player {} *************".format(result[0][0]))
         self.leave()
 
     def getBSMTDecision(self, state):

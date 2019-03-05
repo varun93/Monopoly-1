@@ -28,7 +28,7 @@ class Component(ApplicationSession):
             # the reason for not notifying the agent
             # directly is to make sure that message is sent via game gen
             for agent in agents:
-                yield self.call(end_game_uri,agent)
+                yield self.call(end_game_uri,agent,result)
     
             self.leave()
 

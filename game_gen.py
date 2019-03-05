@@ -97,11 +97,11 @@ class GameGen(ApplicationSession):
         return agent_attributes
 
     @wamp.register('com.game{}.endgame'.format(sys.argv[1]))
-    def teardownAgent(self,agent_id):
+    def teardownAgent(self,agent_id, result):
         self.agentCounter -= 1
         end_game_uri = self.agent_info["endgame"].format(self.game_id,agent_id)
         # game you would want to aggregate some data and send back the payload here
-        self.publish(end_game_uri)
+        self.publish(end_game_uri,result)
         
         
     def onDisconnect(self):
