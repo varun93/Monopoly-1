@@ -1,0 +1,18 @@
+version: "3"
+services:
+  router:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - router:/node
+
+  adjudicator:
+    build: adjudicator
+    links:
+      - router
+    volumes 
+  game_gen:
+    build: game_gen
+    links:
+      - router
