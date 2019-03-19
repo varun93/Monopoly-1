@@ -41,7 +41,7 @@
                     "paths": {
                         "/": {
                             "type": "static",
-                            "directory": "../web",
+                            "directory": "../build",
                             "options": {
                                 "enable_directory_listing": true
                             }

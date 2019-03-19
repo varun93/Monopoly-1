@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import 'bootstrap/dist/css/bootstrap.css';
 import Board from "./Board";
-import TurnChooser from "./TurnChooser";
+// import TurnChooser from "./TurnChooser";
 import "./App.css";
 
 class App extends Component {
