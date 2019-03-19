@@ -20,18 +20,15 @@ class Component(ApplicationSession):
     
     @inlineCallbacks
     def startGame(self,agents, end_game_uri):
-        if not self.gameStarted:
-            self.gameStarted = True
-            result = yield self.runGame(agents)
-            print(result)
-            # the reason for not notifying the agent
-            # directly is to make sure that message is sent via game gen
-            for agent in agents:
-                yield self.call(end_game_uri,agent,result)
+        result = yield self.runGame(agents)
+        print(result)
+        # the reason for not notifying the agent
+        # directly is to make sure that message is sent via game gen
+        for agent in agents:
+        	print(end_game_uri)
+        	yield self.publish(end_game_uri,agent,result)
     
-            self.leave()
-
-
+        
     @inlineCallbacks
     def onJoin(self, details):
         print("session attached")
@@ -53,7 +50,6 @@ class Component(ApplicationSession):
         self.INITIAL_CASH = 1500
         
         self.game_id = 1
-        self.gameStarted = False
         self.game_start_uri = 'com.game{}.start_game'.format(self.game_id)
         yield self.subscribe(self.startGame, self.game_start_uri)
         

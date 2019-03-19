@@ -32,19 +32,19 @@ class Component(ApplicationSession):
         self.minMoney = 200
         self.stealing = False
         
-        self.register(self.getBSMTDecision,res['bsm'])
-        self.register(self.respondTrade,res['respondtrade'])
-        self.register(self.buyProperty,res['buy'])
-        self.register(self.auctionProperty,res['auction'])
-        self.register(self.jailDecision,res['jail'])
-        self.register(self.receiveState,res['receivestate'])
-        self.register(self.getTradeDecision,res['trade'])
+        self.bsmRegistration = yield self.register(self.getBSMTDecision,res['bsm'])
+        self.respondTradeRegistration = yield self.register(self.respondTrade,res['respondtrade'])
+        self.buyRegistration = yield self.register(self.buyProperty,res['buy'])
+        self.auctionRegistration = yield self.register(self.auctionProperty,res['auction'])
+        self.jailRegistration = yield self.register(self.jailDecision,res['jail'])
+        self.receiveStateRegistration = yield self.register(self.receiveState,res['receivestate'])
+        self.tradeRegistration = yield self.register(self.getTradeDecision,res['trade'])
         
         # subsribe for end game results
         yield self.subscribe(self.endGame,res["endgame"])
 
         #Successfully Registered. Invoke confirm_register
-        res = yield self.call(res['confirm_register'])
+        res = yield self.call(res['confirm_register'],self.id)
         print("Result of calling confirm_register: "+str(res))
 
 
@@ -56,6 +56,14 @@ class Component(ApplicationSession):
     def endGame(self,result):
         # do some cleanup stuff if you have any
         print("************* The winner is player {} *************".format(result[0][0]))
+        self.bsmRegistration.unregister()
+        self.respondTradeRegistration.unregister()
+        self.buyRegistration.unregister()
+        self.auctionRegistration.unregister()
+        self.jailRegistration.unregister()
+        self.receiveStateRegistration.unregister()
+        self.tradeRegistration.unregister()
+        # 
         self.leave()
 
     def getBSMTDecision(self, state):
