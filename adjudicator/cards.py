@@ -1,10 +1,10 @@
-import numpy as np
+from random import shuffle
 import constants
 
 class Cards:
 	def __init__(self, items):
 		self.deck = list(map(lambda item : self.transformCard(item), items))
-		np.random.shuffle(self.deck)
+		shuffle(self.deck)
 	
 	#Reinitialize the given deckType(Community or Chance) using only the cards specified and in the order specified
 	def reinit(self,deckType,cardIds):

@@ -3,8 +3,7 @@ from dice import Dice
 import constants
 from cards import Cards
 import copy
-import timeout_decorator
-import numpy as np
+# import timeout_decorator
 from state import State,Phase,Reason
 
 # autobahn imports
@@ -1420,10 +1419,10 @@ class Component(ApplicationSession):
 
 if __name__ == '__main__':
     import six
-    url = environ.get("AUTOBAHN_DEMO_ROUTER", u"ws://127.0.0.1:8080/ws")
+    url = environ.get("CBURL", u"ws://127.0.0.1:8080/ws")
     if six.PY2 and type(url) == six.binary_type:
         url = url.decode('utf8')
-    realm = u"crossbardemo"
+    realm = environ.get('CBREALM', u'realm1')
     runner = ApplicationRunner(url, realm)
     runner.run(Component)
 
