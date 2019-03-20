@@ -1,31 +1,17 @@
 version: "3"
 services:
   router:
-    image: crossbario/crossbar
+    build: ./router
+    container_name: crossbar
     ports:
       - "80:80"
-    volumes:
-      - $PWD/router:/node
 
   adjudicator:
     build: ./adjudicator
     links:
       - router
-    volumes:
-      - $PWD/adjudicator:/app/adjudicator
- 
+
   game_gen:
     build: ./game_gen
     links:
       - router
-    volumes:
-      - $PWD/game_gen:/app/game_gen
- 
-
-docker run -v $PWD/game_gen:/app -e CBURL="ws://crossbar:80/ws" -e CBREALM="realm1" 
---rm  -it -d 
-python /app/game_gen.py 1 2
-
-
-docker run -v  
-$PWD:/node -u 0 --rm --name=crossbar -it -d -p 80:80 
