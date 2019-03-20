@@ -8,4 +8,6 @@ COPY . /app
 ENV CBURL ws://crossbar:80/ws
 ENV CBREALM realm1
 
-CMD ["python", "adjudicator.py",]
+# both these parameters are currenty hardcoded but they are will be application generated
+# in future
+CMD ["python", "game_gen.py", "1", "6"]
