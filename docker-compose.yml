@@ -1,17 +1,26 @@
 version: "3"
 services:
-  router:
+  crossbar:
     build: ./router
     container_name: crossbar
     ports:
       - "80:80"
+    # volumes:
+    #    - type: volume
+    #     source: react-build
+    #     target: ./
 
   adjudicator:
     build: ./adjudicator
     links:
-      - router
+      - "crossbar"
+    command: ["python", "adjudicator.py"]
 
   game_gen:
     build: ./game_gen
     links:
-      - router
+      - "crossbar"
+  # react-build:
+  #   build: ./web-ui
+# volumes:
+#   react-build:
