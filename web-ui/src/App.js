@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import 'bootstrap/dist/css/bootstrap.css';
 import Board from "./Board";
-// import TurnChooser from "./TurnChooser";
 import "./App.css";
 
 class App extends Component {
@@ -13,10 +12,21 @@ class App extends Component {
     this.agent_id = 1;
     this.gameStarted = false;
 
+    this.buttonSwitches = {
+      startTurn: false,
+      buyProperty: false,
+      auctionProperty: false,
+      BSMDecision: false,
+      tradeDecision: false,
+      jailDecision: false
+    };
+
+    this.logMessages = [];
+
     // starting Autobahn connection
     //hardcoded for now
     //this.connection = new autobahn.Connection({url: 'ws://127.0.0.1:9000/', realm: 'crossbardemo'});
-    //this.connection.onopen = openHander;
+    //this.connection.onopen = openHandler;
   }
 
   didGameEnd = () => {};
@@ -39,15 +49,16 @@ class App extends Component {
     this.session.subscribe(res["endgame"],this.endGame);
 
     // Successfully Registered. Invoke confirm_register
-    this.session.call(res['confirm_register']).then(
-       function(res){
-          console.log("Result of calling confirm_register: ");
-          console.log(res);
-       }
-    );
+    this.session.call(res['confirm_register']).then(this.confirmRegisterCallback);
   }
 
-  openHander(session, details){
+  //could we use the return value here for something?
+  confirmRegisterCallback(res){
+    console.log("Result of calling confirm_register: ");
+    console.log(res);
+  }
+
+  openHandler(session, details){
     console.log("Human Player with id: "+this.agent_id+" connected");
     this.session = session
     let join_game_uri = 'com.game{}.joingame'.replace('{}',this.game_id)
@@ -62,32 +73,64 @@ class App extends Component {
   getBSMTDecision(state){
     console.log("Inside getBSMTDecision");
     console.log(state);
+
+    return null;
     //TODO
   }
 
   respondTrade(state){
     console.log("Inside respondTrade");
     console.log(state);
+    return false;
   }
 
   buyProperty(state){
     console.log("Inside buyProperty");
     console.log(state);
+
+    this.buttonSwitches.buyProperty = true;
   }
 
   auctionProperty(state){
     console.log("Inside auctionProperty");
     console.log(state);
+
+    this.buttonSwitches.auctionProperty = true;
+
+    return 0;
   }
 
   jailDecision(state){
     console.log("Inside jailDecision");
     console.log(state);
+
+    this.buttonSwitches.jailDecision = true;
   }
 
   receiveState(state){
     //very important. update UI
+    //we need to record all actions since the last time the human player had a turn.
+    //we also need to log actions the human player takes in the current turn.
+    //at the start of the human player's turn, he/she should first receive a dice roll receivestate call.
+    //we will use this to give a prompt to the user to start their turn.
     console.log("Inside receiveState");
+    let jsonState = JSON.parse(state);
+    let phase = jsonState.current_phase_number;
+    let payload = jsonState.phase_payload;
+    if (phase == Phase.DICE_ROLL && payload) {
+      this.logMessages.push("Dice roll was a "+payload[0]+" and a "+payload[1]+".");
+    }
+    else if (phase == Phase.JAIL){
+      if (payload == undefined) {
+        this.logMessages.push("This player has been sent to Jail.");  
+      }
+      else if(payload) {
+        this.logMessages.push("The player is out of Jail.");
+      }
+      else {
+        this.logMessages.push("The player remains in Jail."); 
+      }
+    }
     console.log(state);
   }
 
