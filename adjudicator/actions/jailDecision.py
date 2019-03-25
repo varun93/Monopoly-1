@@ -20,7 +20,7 @@ class JailDecision(Action):
 	
 	def subscribe(self,agentId,response):
 		outOfJail,diceThrown = self.handle_in_jail_state(response)
-			
+		
 		#let the player know if he is out of jail or not
 		self.state.setPhasePayload(outOfJail)
 		#Only for receiveState calls

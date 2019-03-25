@@ -5,15 +5,17 @@ class StartTurn(Action):
 	
 	def publish(self):
 		#turnNo starts from -1
-		if (self.state.getTurn()+1 >= self.TOTAL_NO_OF_TURNS):
+		if self.state.getTurn()+1 >= self.TOTAL_NO_OF_TURNS:
 			#skip this turn.
-			pass
+			self.context.endTurn.setContext(self.context)
+			self.context.endTurn.publish()
 		self.state.updateTurn()
 		
 		playerId = self.state.getCurrentPlayerId()
 		if self.state.hasPlayerLost(playerId):
 			#skip this turn.
-			pass
+			self.context.endTurn.setContext(self.context)
+			self.context.endTurn.publish()
 		
 		self.dice.reset()
 			
