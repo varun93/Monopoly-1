@@ -1,7 +1,14 @@
 from functools import partial
 
+import constants
 from dice import Dice
+from cards import Cards
+from state import State
 from utils import TimeoutBehaviour,Timer
+
+from actions.startTurn import StartTurn
+from actions.jailDecision import JailDecision
+from actions.receiveState import ReceiveState
 
 # autobahn imports
 from os import environ
@@ -13,13 +20,6 @@ class Adjudicator(ApplicationSession):
 	
 	@inlineCallbacks
 	def onJoin(self, details):
-		"""CONFIGURATION SETTINGS"""
-		self.BOARD_SIZE = 40
-		self.PASSING_GO_MONEY = 200
-		self.TOTAL_NO_OF_TURNS = 100
-		self.INITIAL_CASH = 1500
-		self.NO_OF_GAMES = 10
-		
 		#extra stuff
 		#TODO: Configuration for these
 		#TODO: The  agentCounter used in the URI needs to be hashed to prevent impersonation (Or some other solution)
@@ -46,14 +46,6 @@ class Adjudicator(ApplicationSession):
 		timer = Timer()
 		timer.setTimeout(self.timeoutHandler, self.timeout)
 		
-		#Constants
-		self.CHANCE_GET_OUT_OF_JAIL_FREE = 40
-		self.COMMUNITY_GET_OUT_OF_JAIL_FREE = 41
-		self.JUST_VISTING = 10
-		self.JAIL = -1
-		
-		self.dice = Dice()
-		
 				
 	#Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
 	#TODO: Should we verify if these connections are active?
@@ -66,7 +58,7 @@ class Adjudicator(ApplicationSession):
 		
 		# enough people have joined. start the game.
 		if self.current_no_players == self.expected_no_players:
-			self.startGame(self.agents)
+			self.startGame()
 		
 		return True
 	   
@@ -75,7 +67,7 @@ class Adjudicator(ApplicationSession):
 		if not self.gameStarted:
 			if self.current_no_players < self.expected_no_players:
 				if self.timeout_behaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
-					self.startGame(self.agents)
+					self.startGame()
 				else:
 					#only one player joined or not enough people joined and game is set to exit in
 					#such a case.
@@ -105,11 +97,47 @@ class Adjudicator(ApplicationSession):
 	
 	#TODO: loop here using self.NO_OF_GAMES
 	@inlineCallbacks
-	def startGame(self,agents, end_game_uri):
-		result = yield self.runGame(agents)
-		print(result)
-		# the reason for not notifying the agent
-		# directly is to make sure that message is sent via game gen
-		for agent in agents:
-			print(end_game_uri)
-			yield self.publish(end_game_uri,agent,result)
+	def startGame(self):
+		"""CONFIGURATION SETTINGS"""
+		self.PASSING_GO_MONEY = 200
+		self.TOTAL_NO_OF_TURNS = 100
+		self.INITIAL_CASH = 1500
+		self.NO_OF_GAMES = 10
+		
+		self.winCount = {}
+		for agentId in self.agents:
+			self.winCount[agentId] = 0
+		
+		for i in range(self.NO_OF_GAMES):
+			
+			#self.agents contains id's of agents in the current game
+			PLAY_ORDER = agents #Stores the id's of all the players in the order of play
+			TOTAL_NO_OF_PLAYERS = len(self.agents)
+			staticContext = {
+				"BOARD_SIZE": 40,
+				"CHANCE_GET_OUT_OF_JAIL_FREE": 40,
+				"COMMUNITY_GET_OUT_OF_JAIL_FREE": 41,
+				"JUST_VISTING": 10,
+				"JAIL": -1,
+				"PLAY_ORDER": PLAY_ORDER,
+				"TOTAL_NO_OF_PLAYERS": TOTAL_NO_OF_PLAYERS
+			}
+			
+			#These will be initialized in the action
+			self.dice = Dice()
+			self.chest = Cards(constants.communityChestCards)
+			self.chance = Cards(constants.chanceCards)
+			self.state =  State(PLAY_ORDER)
+			self.mortgagedDuringTrade = []
+			self.winner = None
+
+			#singleton classes for each action
+			self.startTurn = StartTurn(self,staticContext)
+			self.jailDecision = JailDecision(self,staticContext)
+			self.receiveState = ReceiveState(self,staticContext)
+			
+			self.startTurn.setContext(self)
+			self.startTurn.publish()
+			
+			
+		 

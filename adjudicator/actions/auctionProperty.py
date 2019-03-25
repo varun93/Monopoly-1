@@ -3,30 +3,41 @@ from action import Action
 class JailDecision(Action):
 	
 	def publish(self):
-		currentPlayerId = self.context.state.getCurrentPlayerId()
-		playerPosition = self.context.state.getPosition(currentPlayerId)
+		currentPlayerId = self.state.getCurrentPlayerId()
+		playerPosition = self.state.getPosition(currentPlayerId)
 		if playerPosition != self.JAIL:
 			#player is not in jail. bypass and call subscribe
-			pass
+			self.subscribe(None)
 		else:
 			#InJail
-			self.context.state.setPhase(Phase.JAIL)
-			self.context.state.setPhasePayload(None)
+			self.state.setPhase(Phase.JAIL)
+			self.state.setPhasePayload(None)
 			self.context.publish("com.game{}.agent{}.jail"
-				.format(self.context.gameId,self.context.agentId),
-				self.context.state.toJson())
+				.format(self.context.gameId,currentPlayerId),
+				self.state.toJson())
 	
 	def subscribe(self,response):
-		
-		outOfJail,diceThrown = self.handle_in_jail_state(response)
-		
-		self.context.state.setPhasePayload(outOfJail)
-		
-		#Only for receiveState calls
-		self.context.receiveState.previousAction = "jailDecision.JailDecision"
-		self.context.receiveState.nextAction = "diceRoll.DiceRoll"
-		
-		self.context.receiveState.publish()
+		if response==None:
+			#if player was not in jail, there is no need for receiveState call
+			#send the player directly to diceRoll
+			self.context.diceRoll.setContext(self.context)
+			self.context.diceRoll.publish()
+		else:
+			outOfJail,diceThrown = self.handle_in_jail_state(response)
+			
+			#let the player know if he is out of jail or not
+			self.state.setPhasePayload(outOfJail)
+			#Only for receiveState calls
+			self.context.receiveState.previousAction = "jailDecision"
+			if outOfJail:
+				self.context.diceRoll.diceThrown = diceThrown
+				self.context.receiveState.nextAction = "diceRoll"
+			else:
+				#player is still in jail. skip this turn. TODO
+				pass
+			
+			self.context.receiveState.setContext(self.context)
+			self.context.receiveState.publish()
 	
 	"""
 	Incoming action format:
