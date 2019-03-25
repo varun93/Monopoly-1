@@ -7,7 +7,9 @@ class JailDecision(Action):
 		playerPosition = self.state.getPosition(currentPlayerId)
 		if playerPosition != self.JAIL:
 			#player is not in jail. bypass and call subscribe
-			self.subscribe(None)
+			#send the player directly to diceRoll
+			self.context.diceRoll.setContext(self.context)
+			self.context.diceRoll.publish()
 		else:
 			#InJail
 			self.state.setPhase(Phase.JAIL)
@@ -17,27 +19,21 @@ class JailDecision(Action):
 				self.state.toJson())
 	
 	def subscribe(self,response):
-		if response==None:
-			#if player was not in jail, there is no need for receiveState call
-			#send the player directly to diceRoll
-			self.context.diceRoll.setContext(self.context)
-			self.context.diceRoll.publish()
+		outOfJail,diceThrown = self.handle_in_jail_state(response)
+			
+		#let the player know if he is out of jail or not
+		self.state.setPhasePayload(outOfJail)
+		#Only for receiveState calls
+		self.context.receiveState.previousAction = "jailDecision"
+		if outOfJail:
+			self.context.diceRoll.diceThrown = diceThrown
+			self.context.receiveState.nextAction = "diceRoll"
 		else:
-			outOfJail,diceThrown = self.handle_in_jail_state(response)
-			
-			#let the player know if he is out of jail or not
-			self.state.setPhasePayload(outOfJail)
-			#Only for receiveState calls
-			self.context.receiveState.previousAction = "jailDecision"
-			if outOfJail:
-				self.context.diceRoll.diceThrown = diceThrown
-				self.context.receiveState.nextAction = "diceRoll"
-			else:
-				#player is still in jail. skip this turn.
-				self.context.receiveState.nextAction = "endTurn"
-			
-			self.context.receiveState.setContext(self.context)
-			self.context.receiveState.publish()
+			#player is still in jail. skip this turn.
+			self.context.receiveState.nextAction = "endTurn"
+		
+		self.context.receiveState.setContext(self.context)
+		self.context.receiveState.publish()
 	
 	"""
 	Incoming action format:
