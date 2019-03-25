@@ -12,6 +12,8 @@ class HandleCards(Action):
 		
 		if phase == Phase.COMMUNITY_CHEST_CARD:
 			card = communityChestCards[cardId]
+			log("cards","Agent "+currentPlayerId+" has drawn the Community Chest card \""+
+			str(card['content'])+"\"")
 			#previous phase may have been payment from jailDecision
 			if self.state.getDebtToBank(currentPlayerId)>0:
 				self.state.setPhase(Phase.PAYMENT)
@@ -21,6 +23,8 @@ class HandleCards(Action):
 			self.handle_cards_pre_turn(card,'Chest')
 		elif phase == Phase.CHANCE_CARD:
 			card = chanceCards[cardId]
+			log("cards","Agent "+currentPlayerId+" has drawn the Chance card \""+
+			str(card['content'])+"\"")
 			#previous phase may have been payment from jailDecision
 			if self.state.getDebtToBank(currentPlayerId)>0:
 				self.state.setPhase(Phase.PAYMENT)

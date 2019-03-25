@@ -80,14 +80,10 @@ class DiceRoll(Action):
 			
 		elif propertyClass == 'Chance' or propertyClass == 'Chest':
 			if propertyClass == 'Chance':
-				#Chance
 				card = self.chance.draw_card()
-				log("cards","Chance card \""+str(card['content'])+"\" has been drawn")
 				self.state.setPhase(Phase.CHANCE_CARD)
 			elif propertyClass == 'Chest':
-				#Community
 				card = self.chest.draw_card()
-				log("cards","Community Chest card \""+str(card['content'])+"\" has been drawn")
 				self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
 			
 			self.state.setPhasePayload(card['id'])
@@ -99,7 +95,6 @@ class DiceRoll(Action):
 			self.context.receiveState.publish()
 		   
 		elif propertyClass == 'Tax':
-			#Tax
 			tax = board[playerPosition]['tax']
 			self.state.setPhase(Phase.PAYMENT)
 			self.state.setPhasePayload(None)

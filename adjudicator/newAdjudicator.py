@@ -47,13 +47,13 @@ class Adjudicator(ApplicationSession):
             "BUY_IN" : "monopoly.game{}.agent{}.buy.in",
             "BUY_OUT" : "monopoly.game{}.agent{}.buy.out",
             "AUCTION_IN" : "monopoly.game{}.auction.in",
-            "AUCTION_OUT" : "monopoly.game{}.auction.out",
+            "AUCTION_OUT" : "monopoly.game{}.agent{}.auction.out",
             "JAIL_IN" : "monopoly.game{}.agent{}.jail.in",
             "JAIL_OUT" : "monopoly.game{}.agent{}.jail.out",
             "TRADE_IN" : "monopoly.game{}.agent{}.trade.in",
             "TRADE_OUT" : "monopoly.game{}.agent{}.trade.out",
             "BROADCAST_IN" : "monopoly.game{}.receivestate.in",
-            "BROADCAST_OUT" : "monopoly.game{}.receivestate.out",
+            "BROADCAST_OUT" : "monopoly.game{}.agent{}.receivestate.out",
             "RESPOND_TRADE_IN" : "monopoly.game{}.agent{}.respondtrade.in",
 			"RESPOND_TRADE_OUT" : "monopoly.game{}.agent{}.respondtrade.out",
 			"CONFIRM_REGISTER" : "monopoly.game{}.agent{}.confirmregister"
@@ -112,18 +112,18 @@ class Adjudicator(ApplicationSession):
 		if requiredChannel == None:
 			for channel,value in self.agent_info.items():
 				if channel == 'agent_id':
-					agent_attributes[agentId] = value.format(agentId)
-				elif channel == "AUCTION_IN" or channel == "AUCTION_OUT" or channel == "BROADCAST_IN" or channel == "BROADCAST_OUT":
-					agent_attributes[agentId] = value.format(self.game_id)
+					agent_attributes[channel] = value.format(agentId)
+				elif channel == "AUCTION_IN" or channel == "BROADCAST_IN":
+					agent_attributes[channel] = value.format(self.game_id)
 				else:
-					agent_attributes[agentId] = value.format(self.game_id,agentId)
+					agent_attributes[channel] = value.format(self.game_id,agentId)
 		else:
 			if requiredChannel == 'agent_id':
-				agent_attributes[agentId] = self.agent_info[requiredChannel].format(agentId)
-			elif requiredChannel == "AUCTION_IN" or requiredChannel == "AUCTION_OUT" or requiredChannel == "BROADCAST_IN" or requiredChannel == "BROADCAST_OUT":
-				agent_attributes[agentId] = self.agent_info[requiredChannel].format(self.game_id)
+				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(agentId)
+			elif requiredChannel == "AUCTION_IN" or requiredChannel == "BROADCAST_IN":
+				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.game_id)
 			else:
-				agent_attributes[agentId] = self.agent_info[requiredChannel].format(self.game_id,agentId)
+				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.game_id,agentId)
 		return agent_attributes
 	
 	#TODO: loop here using self.NO_OF_GAMES

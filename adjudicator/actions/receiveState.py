@@ -2,12 +2,12 @@ class ReceiveState(Action):
 	
 	#TODO: publish to all agents
 	def publish(self):
-		self.context.session.publish("com.game{}.agent{}.receivestate"
-			.format(self.context.gameId,self.context.agentId),
-			self.state.toJson())
+		currentPlayerId = self.state.getCurrentPlayerId()
+		agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "BROADCAST_IN")
+		self.context.publish(agent_attributes["BROADCAST_IN"], self.state.toJson())
 	
 	def subscribe(self,agentId):
-		#TODO: Error checking
+		#TODO: Error checking and timeout ahndling
 		
 		nextAction = getattr(self.context, self.nextAction)
 		
