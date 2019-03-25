@@ -1,4 +1,5 @@
 from action import Action
+from ..state import Phase
 
 class JailDecision(Action):
 	

@@ -1,6 +1,7 @@
 from action import Action
 from ..config import log
 from ..constants import board
+from ..state import Phase
 
 class DiceRoll(Action):
 	
@@ -50,7 +51,6 @@ class DiceRoll(Action):
 	Performed after dice is rolled and the player is moved to a new position.
 	Determines the effect of the position and action required from the player.
 	"""	 
-	@inlineCallbacks
 	def determine_position_effect(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
@@ -116,7 +116,6 @@ class DiceRoll(Action):
 			self.context.conductBSM.setContext(self.context)
 			self.context.conductBSM.publish()
 			pass
-
 	
 	def calculateRent(self):
 		"""
