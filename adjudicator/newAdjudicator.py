@@ -42,8 +42,21 @@ class Adjudicator(ApplicationSession):
 		self.agentCounter = 0
 		self.agent_info = {
 			'agent_id':'{}',
-			"inchannel" : "com.game{}.agent{}.inchannel",
-			"outchannel" : "com.game{}.agent{}.outchannel",
+			"BSM_IN" : "monopoly.game{}.agent{}.bsm.in",
+			"BSM_OUT" : "monopoly.game{}.agent{}.bsm.out",
+            "BUY_IN" : "monopoly.game{}.agent{}.buy.in",
+            "BUY_OUT" : "monopoly.game{}.agent{}.buy.out",
+            "AUCTION_IN" : "monopoly.game{}.auction.in",
+            "AUCTION_OUT" : "monopoly.game{}.auction.out",
+            "JAIL_IN" : "monopoly.game{}.agent{}.jail.in",
+            "JAIL_OUT" : "monopoly.game{}.agent{}.jail.out",
+            "TRADE_IN" : "monopoly.game{}.agent{}.trade.in",
+            "TRADE_OUT" : "monopoly.game{}.agent{}.trade.out",
+            "BROADCAST_IN" : "monopoly.game{}.receivestate.in",
+            "BROADCAST_OUT" : "monopoly.game{}.receivestate.out",
+            "RESPOND_TRADE_IN" : "monopoly.game{}.agent{}.respondtrade.in",
+			"RESPOND_TRADE_OUT" : "monopoly.game{}.agent{}.respondtrade.out",
+			"CONFIRM_REGISTER" : "monopoly.game{}.agent{}.confirmregister"
 		}
 		
 		#after timeout, don't wait for new players anymore
@@ -54,7 +67,7 @@ class Adjudicator(ApplicationSession):
 				
 	#Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
 	#TODO: Should we verify if these connections are active?
-	def outchannelListener(self,agentId):
+	def confirmRegisterListener(self,agentId):
 		if self.current_no_players >= self.expected_no_players or self.gameStarted:
 			return False
 		
@@ -85,19 +98,32 @@ class Adjudicator(ApplicationSession):
 	@inlineCallbacks
 	def generateAgentDetails(self):
 		self.agentCounter += 1
-		
-		agent_attributes = {}
-		for agentId,value in self.agent_info.items():
-			if agentId == 'agent_id':
-				agent_attributes[agentId] = value.format(self.agentCounter)
-			else:
-				agent_attributes[agentId] = value.format(self.game_id,self.agentCounter)
+		agent_attributes = self.genAgentChannels(self.agentCounter)
 				
 		#Create channel where the agent can confirm  his registration
-		subId = yield self.subscribe(partial(self.outchannelListener,str(self.agentCounter)),
-			agent_attributes['outchannel'])
+		subId = yield self.subscribe(partial(self.confirmRegisterListener,str(self.agentCounter)),
+			agent_attributes['CONFIRM_REGISTER'])
 			   
 		print("Agent with id "+str(self.agentCounter)+" initialized.")
+		return agent_attributes
+	
+	def genAgentChannels(self,agentId,requiredChannel = None):
+		agent_attributes = {}
+		if requiredChannel == None:
+			for channel,value in self.agent_info.items():
+				if channel == 'agent_id':
+					agent_attributes[agentId] = value.format(agentId)
+				elif channel == "AUCTION_IN" or channel == "AUCTION_OUT" or channel == "BROADCAST_IN" or channel == "BROADCAST_OUT":
+					agent_attributes[agentId] = value.format(self.game_id)
+				else:
+					agent_attributes[agentId] = value.format(self.game_id,agentId)
+		else:
+			if requiredChannel == 'agent_id':
+				agent_attributes[agentId] = self.agent_info[requiredChannel].format(agentId)
+			elif requiredChannel == "AUCTION_IN" or requiredChannel == "AUCTION_OUT" or requiredChannel == "BROADCAST_IN" or requiredChannel == "BROADCAST_OUT":
+				agent_attributes[agentId] = self.agent_info[requiredChannel].format(self.game_id)
+			else:
+				agent_attributes[agentId] = self.agent_info[requiredChannel].format(self.game_id,agentId)
 		return agent_attributes
 	
 	#TODO: loop here using self.NO_OF_GAMES
@@ -105,61 +131,65 @@ class Adjudicator(ApplicationSession):
 	def startGame(self):
 		"""CONFIGURATION SETTINGS"""
 		self.PASSING_GO_MONEY = 200
-		self.TOTAL_NO_OF_TURNS = 100
+		self.TOTAL_NO_OF_TURNS = 5
 		self.INITIAL_CASH = 1500
-		self.NO_OF_GAMES = 10
+		self.NO_OF_GAMES = 1
+		self.gamesCompleted = 0
 		
 		self.winCount = {}
 		for agentId in self.agents:
 			self.winCount[agentId] = 0
+			
+		#self.agents contains id's of agents in the current game
+		PLAY_ORDER = agents #Stores the id's of all the players in the order of play
+		TOTAL_NO_OF_PLAYERS = len(self.agents)
+		staticContext = {
+			"BOARD_SIZE": 40,
+			"CHANCE_GET_OUT_OF_JAIL_FREE": 40,
+			"COMMUNITY_GET_OUT_OF_JAIL_FREE": 41,
+			"JUST_VISTING": 10,
+			"JAIL": -1,
+			"PLAY_ORDER": PLAY_ORDER,
+			"TOTAL_NO_OF_PLAYERS": TOTAL_NO_OF_PLAYERS,
+			"PASSING_GO_MONEY": self.PASSING_GO_MONEY,
+			"TOTAL_NO_OF_TURNS": self.TOTAL_NO_OF_TURNS,
+			"INITIAL_CASH": self.INITIAL_CASH,
+			"NO_OF_GAMES": self.NO_OF_GAMES
+		}
 		
-		for i in range(self.NO_OF_GAMES):
-			
-			#self.agents contains id's of agents in the current game
-			PLAY_ORDER = agents #Stores the id's of all the players in the order of play
-			TOTAL_NO_OF_PLAYERS = len(self.agents)
-			staticContext = {
-				"BOARD_SIZE": 40,
-				"CHANCE_GET_OUT_OF_JAIL_FREE": 40,
-				"COMMUNITY_GET_OUT_OF_JAIL_FREE": 41,
-				"JUST_VISTING": 10,
-				"JAIL": -1,
-				"PLAY_ORDER": PLAY_ORDER,
-				"TOTAL_NO_OF_PLAYERS": TOTAL_NO_OF_PLAYERS
-			}
-			
-			#These will be initialized in the action
-			self.dice = Dice()
-			self.chest = Cards(constants.communityChestCards)
-			self.chance = Cards(constants.chanceCards)
-			self.state =  State(PLAY_ORDER)
-			self.mortgagedDuringTrade = []
-			self.winner = None
+		#These will be initialized in the action
+		self.dice = Dice()
+		self.chest = Cards(constants.communityChestCards)
+		self.chance = Cards(constants.chanceCards)
+		self.state =  State(PLAY_ORDER)
+		self.mortgagedDuringTrade = []
+		self.winner = None
 
-			#singleton classes for each action
-			self.startTurn = StartTurn(self,staticContext)
-			self.jailDecision = JailDecision(self,staticContext)
-			self.receiveState = ReceiveState(self,staticContext)
-			self.diceRoll = DiceRoll(self,staticContext)
-			self.handleCards = HandleCards(self,staticContext)
-			self.buyProperty = BuyProperty(self,staticContext)
-			self.auctionProperty = AuctionProperty(self,staticContext)
-			self.conductBSM = ConductBSM(self,staticContext)
-			#self.trade = Trade(self,staticContext)
-			#self.endTurn = EndTurn(self,staticContext)
-			
-			for agentId in PLAY_ORDER:
-				yield self.subscribe(partial(self.jailDecision.subscribe,agentId),
-				agent_attributes['outchannel'])
-				yield self.subscribe(partial(self.receiveState.subscribe,agentId),
-				agent_attributes['outchannel'])
-				yield self.subscribe(partial(self.buyProperty.subscribe,agentId),
-				agent_attributes['outchannel'])
-				yield self.subscribe(partial(self.auctionProperty.subscribe,agentId),
-				agent_attributes['outchannel'])
-			
-			self.startTurn.setContext(self)
-			self.startTurn.publish()
+		#singleton classes for each action
+		self.startTurn = StartTurn(self,staticContext)
+		self.jailDecision = JailDecision(self,staticContext)
+		self.receiveState = ReceiveState(self,staticContext)
+		self.diceRoll = DiceRoll(self,staticContext)
+		self.handleCards = HandleCards(self,staticContext)
+		self.buyProperty = BuyProperty(self,staticContext)
+		self.auctionProperty = AuctionProperty(self,staticContext)
+		self.conductBSM = ConductBSM(self,staticContext)
+		#self.trade = Trade(self,staticContext)
+		#self.endTurn = EndTurn(self,staticContext)
+		
+		for agentId in PLAY_ORDER:
+			agent_attributes = self.genAgentChannels(agentId)
+			yield self.subscribe(partial(self.jailDecision.subscribe,agentId),
+			agent_attributes['JAIL_OUT'])
+			yield self.subscribe(partial(self.receiveState.subscribe,agentId),
+			agent_attributes['BROADCAST_OUT'])
+			yield self.subscribe(partial(self.buyProperty.subscribe,agentId),
+			agent_attributes['BUY_OUT'])
+			yield self.subscribe(partial(self.auctionProperty.subscribe,agentId),
+			agent_attributes['AUCTION_OUT'])
+		
+		self.startTurn.setContext(self)
+		self.startTurn.publish()
 			
 			
 		 

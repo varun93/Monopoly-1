@@ -17,15 +17,13 @@ class Action:
 		self.JAIL = staticContext["JAIL"]
 		self.PLAY_ORDER = staticContext["PLAY_ORDER"]
 		self.TOTAL_NO_OF_PLAYERS = staticContext["TOTAL_NO_OF_PLAYERS"]
-		
-		
+		self.PASSING_GO_MONEY = staticContext["PASSING_GO_MONEY"]
+		self.TOTAL_NO_OF_TURNS = staticContext["TOTAL_NO_OF_TURNS"]
+		self.INITIAL_CASH = staticContext["INITIAL_CASH"],
+		self.NO_OF_GAMES = staticContext["NO_OF_GAMES"]
 	
 	def setContext(self,context):
 		self.context = context
-		
-		self.PASSING_GO_MONEY = context.PASSING_GO_MONEY
-		self.TOTAL_NO_OF_TURNS = context.TOTAL_NO_OF_TURNS
-		self.INITIAL_CASH = context.INITIAL_CASH
 		
 		self.dice = context.dice
 		self.chest = context.chest

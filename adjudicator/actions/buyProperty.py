@@ -6,9 +6,8 @@ class BuyProperty(Action):
 	
 	def publish(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
-		self.context.publish("com.game{}.agent{}.buy"
-				.format(self.context.gameId,currentPlayerId),
-				self.state.toJson())
+		agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "BUY_IN")
+		self.context.publish(agent_attributes["BUY_IN"], self.state.toJson())
 	
 	def subscribe(self,agentId,response):
 		response = self.typecast(response, bool, False)

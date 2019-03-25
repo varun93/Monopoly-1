@@ -15,9 +15,8 @@ class JailDecision(Action):
 			#InJail
 			self.state.setPhase(Phase.JAIL)
 			self.state.setPhasePayload(None)
-			self.context.publish("com.game{}.agent{}.jail"
-				.format(self.context.gameId,currentPlayerId),
-				self.state.toJson())
+			agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "JAIL_IN")
+			self.context.publish(agent_attributes["JAIL_IN"], self.state.toJson())
 	
 	def subscribe(self,agentId,response):
 		outOfJail,diceThrown = self.handle_in_jail_state(response)
