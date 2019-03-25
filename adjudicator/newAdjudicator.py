@@ -9,6 +9,11 @@ from utils import TimeoutBehaviour,Timer
 from actions.startTurn import StartTurn
 from actions.jailDecision import JailDecision
 from actions.receiveState import ReceiveState
+from actions.diceRoll import DiceRoll
+from actions.handleCards import HandleCards
+from actions.buyProperty import BuyProperty
+from actions.auctionProperty import AuctionProperty
+from actions.conductBSM import ConductBSM
 
 # autobahn imports
 from os import environ
@@ -135,6 +140,23 @@ class Adjudicator(ApplicationSession):
 			self.startTurn = StartTurn(self,staticContext)
 			self.jailDecision = JailDecision(self,staticContext)
 			self.receiveState = ReceiveState(self,staticContext)
+			self.diceRoll = DiceRoll(self,staticContext)
+			self.handleCards = HandleCards(self,staticContext)
+			self.buyProperty = BuyProperty(self,staticContext)
+			self.auctionProperty = AuctionProperty(self,staticContext)
+			self.conductBSM = ConductBSM(self,staticContext)
+			#self.trade = Trade(self,staticContext)
+			#self.endTurn = EndTurn(self,staticContext)
+			
+			for agentId in PLAY_ORDER:
+				yield self.subscribe(partial(self.jailDecision.subscribe,agentId),
+				agent_attributes['outchannel'])
+				yield self.subscribe(partial(self.receiveState.subscribe,agentId),
+				agent_attributes['outchannel'])
+				yield self.subscribe(partial(self.buyProperty.subscribe,agentId),
+				agent_attributes['outchannel'])
+				yield self.subscribe(partial(self.auctionProperty.subscribe,agentId),
+				agent_attributes['outchannel'])
 			
 			self.startTurn.setContext(self)
 			self.startTurn.publish()

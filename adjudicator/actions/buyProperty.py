@@ -10,7 +10,7 @@ class BuyProperty(Action):
 				.format(self.context.gameId,currentPlayerId),
 				self.state.toJson())
 	
-	def subscribe(self,response):
+	def subscribe(self,agentId,response):
 		response = self.typecast(response, bool, False)
 		if not response:
 			self.state.setPhase(Phase.AUCTION)

@@ -19,7 +19,7 @@ class JailDecision(Action):
 				.format(self.context.gameId,currentPlayerId),
 				self.state.toJson())
 	
-	def subscribe(self,response):
+	def subscribe(self,agentId,response):
 		outOfJail,diceThrown = self.handle_in_jail_state(response)
 			
 		#let the player know if he is out of jail or not

@@ -6,7 +6,7 @@ class ReceiveState(Action):
 			.format(self.context.gameId,self.context.agentId),
 			self.state.toJson())
 	
-	def subscribe(self):
+	def subscribe(self,agentId):
 		#TODO: Error checking
 		
 		nextAction = getattr(self.context, self.nextAction)
