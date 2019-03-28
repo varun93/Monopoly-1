@@ -1,3 +1,4 @@
+import sys
 from functools import partial
 
 import constants
@@ -13,7 +14,9 @@ from actions.diceRoll import DiceRoll
 from actions.handleCards import HandleCards
 from actions.buyProperty import BuyProperty
 from actions.auctionProperty import AuctionProperty
+from actions.handlePayment import HandlePayment
 from actions.conductBSM import ConductBSM
+from actions.endTurn import EndTurn
 
 # autobahn imports
 from os import environ
@@ -28,8 +31,11 @@ class Adjudicator(ApplicationSession):
 		#extra stuff
 		#TODO: Configuration for these
 		#TODO: The  agentCounter used in the URI needs to be hashed to prevent impersonation (Or some other solution)
-		self.gameId = int(sys.argv[1])
-		self.expectedPlayerCount = int(sys.argv[2])
+		#self.gameId = int(sys.argv[1])
+		#self.expectedPlayerCount = int(sys.argv[2])
+		self.gameId = 1
+		self.expectedPlayerCount = 2
+		
 		self.timeout = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
 		
@@ -62,21 +68,26 @@ class Adjudicator(ApplicationSession):
 		
 		#after timeout, don't wait for new players anymore
 		#if enough players haven't joined, either start the game or stop it
-		timer = Timer()
-		timer.setTimeout(self.timeoutHandler, self.timeout)
+		self.timer = Timer()
+		self.timer.setTimeout(self.timeoutHandler, self.timeout)
+		
+		yield self.register(self.generateAgentDetails,'com.game{}.joingame'.format(self.gameId))
 		
 				
 	#Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
 	#TODO: Should we verify if these connections are active?
 	def confirmRegisterListener(self,agentId):
-		if self.current_no_players >= self.expected_no_players or self.gameStarted:
+		if self.currentPlayerCount >= self.expectedPlayerCount or self.gameStarted:
 			return False
 		
-		self.current_no_players+=1
+		self.currentPlayerCount+=1
 		self.agents.append(agentId)
+		print("Current Player Count: {}".format(self.currentPlayerCount))
 		
 		# enough people have joined. start the game.
-		if self.current_no_players == self.expected_no_players:
+		if self.currentPlayerCount == self.expectedPlayerCount:
+			self.gameStarted = True
+			self.timer.setClearTimer()
 			self.startGame()
 		
 		return True
@@ -84,7 +95,7 @@ class Adjudicator(ApplicationSession):
 	def timeoutHandler(self):
 		print('In timeoutHandler')
 		if not self.gameStarted:
-			if self.current_no_players < self.expected_no_players:
+			if self.currentPlayerCount < self.expectedPlayerCount:
 				if self.timeout_behaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
 					self.startGame()
 				else:
@@ -95,14 +106,13 @@ class Adjudicator(ApplicationSession):
 				self.startGame(agents)
 	
 	#TODO: Synchronization
-	@wamp.register('com.game{}.joingame'.format(sys.argv[1]))
 	@inlineCallbacks
 	def generateAgentDetails(self):
 		self.agentCounter += 1
 		agent_attributes = self.genAgentChannels(self.agentCounter)
 				
 		#Create channel where the agent can confirm  his registration
-		subId = yield self.subscribe(partial(self.confirmRegisterListener,str(self.agentCounter)),
+		self.confirmReg = yield self.register(partial(self.confirmRegisterListener,str(self.agentCounter)),
 			agent_attributes['CONFIRM_REGISTER'])
 			   
 		print("Agent with id "+str(self.agentCounter)+" initialized.")
@@ -115,24 +125,30 @@ class Adjudicator(ApplicationSession):
 				if channel == 'agent_id':
 					agent_attributes[channel] = value.format(agentId)
 				elif channel == "AUCTION_IN" or channel == "BROADCAST_IN":
-					agent_attributes[channel] = value.format(self.game_id)
+					agent_attributes[channel] = value.format(self.gameId)
 				else:
-					agent_attributes[channel] = value.format(self.game_id,agentId)
+					agent_attributes[channel] = value.format(self.gameId,agentId)
 		else:
 			if requiredChannel == 'agent_id':
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(agentId)
-			elif requiredChannel == "AUCTION_IN" or requiredChannel == "BROADCAST_IN":
-				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.game_id)
+			elif requiredChannel == "AUCTION_IN" or requiredChannel == "BROADCAST_IN" or requiredChannel == "END_GAME":
+				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.gameId)
 			else:
-				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.game_id,agentId)
+				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.gameId,agentId)
 		return agent_attributes
+	
+	def shutDown(self):
+		self.confirmReg.unregister()
+		for subscribeKey in self.subscribeKeys:
+			subscribeKey.unsubscribe()
+		self.leave()
 	
 	#TODO: loop here using self.NO_OF_GAMES
 	@inlineCallbacks
 	def startGame(self):
 		"""CONFIGURATION SETTINGS"""
 		self.PASSING_GO_MONEY = 200
-		self.TOTAL_NO_OF_TURNS = 5
+		self.TOTAL_NO_OF_TURNS = 100
 		self.INITIAL_CASH = 1500
 		self.NO_OF_GAMES = 1
 		self.gamesCompleted = 0
@@ -142,7 +158,7 @@ class Adjudicator(ApplicationSession):
 			self.winCount[agentId] = 0
 			
 		#self.agents contains id's of agents in the current game
-		PLAY_ORDER = agents #Stores the id's of all the players in the order of play
+		PLAY_ORDER = self.agents #Stores the id's of all the players in the order of play
 		TOTAL_NO_OF_PLAYERS = len(self.agents)
 		staticContext = {
 			"BOARD_SIZE": 40,
@@ -167,30 +183,45 @@ class Adjudicator(ApplicationSession):
 		self.winner = None
 
 		#singleton classes for each action
-		self.startTurn = StartTurn(self,staticContext)
-		self.jailDecision = JailDecision(self,staticContext)
-		self.receiveState = ReceiveState(self,staticContext)
-		self.diceRoll = DiceRoll(self,staticContext)
-		self.handleCards = HandleCards(self,staticContext)
-		self.buyProperty = BuyProperty(self,staticContext)
-		self.auctionProperty = AuctionProperty(self,staticContext)
+		self.startTurn = StartTurn(staticContext)
+		self.jailDecision = JailDecision(staticContext)
+		self.receiveState = ReceiveState(staticContext)
+		self.diceRoll = DiceRoll(staticContext)
+		self.handleCards = HandleCards(staticContext)
+		self.buyProperty = BuyProperty(staticContext)
+		self.auctionProperty = AuctionProperty(staticContext)
+		self.handlePayment = HandlePayment(staticContext)
 		#self.conductBSM = ConductBSM(self,staticContext)
 		#self.trade = Trade(self,staticContext)
-		self.endTurn = EndTurn(self,staticContext)
+		self.endTurn = EndTurn(staticContext)
+		self.subscribeKeys = []
 		
 		for agentId in PLAY_ORDER:
 			agent_attributes = self.genAgentChannels(agentId)
-			yield self.subscribe(partial(self.jailDecision.subscribe,agentId),
+			sub = yield self.subscribe(partial(self.jailDecision.subscribe,agentId),
 			agent_attributes['JAIL_OUT'])
-			yield self.subscribe(partial(self.receiveState.subscribe,agentId),
+			self.subscribeKeys.append(sub)
+			sub = yield self.subscribe(partial(self.receiveState.subscribe,agentId),
 			agent_attributes['BROADCAST_OUT'])
-			yield self.subscribe(partial(self.buyProperty.subscribe,agentId),
+			self.subscribeKeys.append(sub)
+			sub = yield self.subscribe(partial(self.buyProperty.subscribe,agentId),
 			agent_attributes['BUY_OUT'])
-			yield self.subscribe(partial(self.auctionProperty.subscribe,agentId),
+			self.subscribeKeys.append(sub)
+			sub = yield self.subscribe(partial(self.auctionProperty.subscribe,agentId),
 			agent_attributes['AUCTION_OUT'])
+			self.subscribeKeys.append(sub)
 		
 		self.startTurn.setContext(self)
 		self.startTurn.publish()
+	
+if __name__ == '__main__':
+	import six
+	url = environ.get("CBURL", u"ws://127.0.0.1:3000/ws")
+	if six.PY2 and type(url) == six.binary_type:
+		url = url.decode('utf8')
+	realm = environ.get('CBREALM', u'realm1')
+	runner = ApplicationRunner(url, realm)
+	runner.run(Adjudicator)
 			
 			
 		 

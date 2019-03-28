@@ -1,3 +1,5 @@
+from actions.action import Action
+
 class ReceiveState(Action):
 	
 	#TODO: publish to all agents

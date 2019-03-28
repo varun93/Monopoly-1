@@ -152,7 +152,7 @@ board = {
 "monopoly_size":2,
 "price":150,
 "build_cost":0,
-"rent":[4,0,0,0,0,0],
+"rent":[4,10,0,0,0,0],
 "tax":0,
 "monopoly_group_elements":[28],
 "monopoly_group_id": 4
@@ -338,7 +338,7 @@ board = {
 "monopoly_size":2,
 "price":150,
 "build_cost":0,
-"rent":[4,0,0,0,0,0],
+"rent":[4,10,0,0,0,0],
 "tax":0,
 "monopoly_group_elements":[12],
 "monopoly_group_id": 4

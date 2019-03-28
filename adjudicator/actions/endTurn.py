@@ -1,6 +1,6 @@
-from action import Action
-from ..config import log
-from ..constants import board
+from actions.action import Action
+from config import log
+from constants import board
 
 class EndTurn(Action):
 	
@@ -15,18 +15,21 @@ class EndTurn(Action):
 		if (lossCount>=self.TOTAL_NO_OF_PLAYERS-1) or (self.state.getTurn()+1 >= self.TOTAL_NO_OF_TURNS):
 			#Only one player left or last turn is completed. Winner can be decided.
 			resultsArray = self.final_winning_condition()
-			winner = resultsArray
 			if len(resultsArray)>1:
 				log("win","Agent "+str(resultsArray[0])+" won the Game.")
-				winner = resultsArray[0]
 			else:
 				log("win","Agents "+str(resultsArray)+" won the Game.")
 	
 			self.state.setPhasePayload(None)
 			
 			#TODO: convey endGame results to players
-			agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "END_GAME")
+			winner = resultsArray[0]
+			agent_attributes = self.context.genAgentChannels("",requiredChannel = "END_GAME")
 			self.context.publish(agent_attributes["END_GAME"], winner)
+			
+			#TODO: could be done more gracefully?
+			self.context.shutDown()
+			
 		else:
 			self.context.startTurn.setContext(self.context)
 			self.context.startTurn.publish()
@@ -67,4 +70,23 @@ class EndTurn(Action):
 			ownerId = self.state.getPropertyOwner(propertyId)
 			if isPropertyOwned:
 				agentPropertyWorth[ownerId] += 50
+		
+		#Using an array here to handle ties
+		winners = []
+		highestAssets = 0
+		for playerId in self.PLAY_ORDER:
+			turn_of_loss = self.state.getTurnOfLoss(playerId)
+			if turn_of_loss==-1:
+				log("win_condition","Agent "+str(playerId)+" Cash: "+str(agentCash[playerId]))
+				log("win_condition","Agent "+str(playerId)+" Property Value: "+str(agentPropertyWorth[playerId]))
+				playerAssets = agentCash[playerId]+agentPropertyWorth[playerId]
+				if playerAssets > highestAssets:
+					winners = [playerId]
+					highestAssets = playerAssets
+				elif playerAssets == highestAssets:
+					winners.append(playerId)
+			else:
+				log("win_condition","Agent "+str(playerId)+" had lost in the turn: "+str(turn_of_loss))
+		
+		return winners
 	

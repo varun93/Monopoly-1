@@ -1,15 +1,14 @@
-from action import Action
-from ..config import log
-from ..utils import typecast
-from ..state import Phase
-from ..constants import board
+from actions.action import Action
+from config import log
+from utils import typecast
+from state import Phase
+from constants import board
 
 class BuyProperty(Action):
 	
 	def publish(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
-		log("buy","Agent "+str(currentPlayerId)+" has landed on the unowned property "+
-		self.state.getPhasePayload())
+		log("buy","Agent "+str(currentPlayerId)+" has landed on the unowned property "+str(self.state.getPhasePayload()))
 		agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "BUY_IN")
 		self.context.publish(agent_attributes["BUY_IN"], self.state.toJson())
 	

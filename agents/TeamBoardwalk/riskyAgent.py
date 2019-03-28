@@ -6,7 +6,7 @@ from baseAgent import BaseAgent
 
 class RiskyAgent(BaseAgent):
 
-    def getBSMTDecision(self, state):
+    def getBSMDecision(self, state):
         state = State(state)
         if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
             pos = state.positions[self.pid]

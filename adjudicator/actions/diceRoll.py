@@ -1,7 +1,7 @@
-from action import Action
-from ..config import log
-from ..constants import board
-from ..state import Phase
+from actions.action import Action
+from config import log
+from constants import board
+from state import Phase
 
 class DiceRoll(Action):
 	
@@ -34,6 +34,7 @@ class DiceRoll(Action):
 		pass
 	
 	def send_player_to_jail(self):
+		currentPlayerId = self.state.getCurrentPlayerId()
 		#send the player to jail and end the turn
 		#Disable double
 		self.dice.double = False
@@ -55,8 +56,7 @@ class DiceRoll(Action):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		playerPosition = self.state.getPosition(currentPlayerId)
 		playerCash = self.state.getCash(currentPlayerId)
-		turn_number = self.state.getTurn()
-		propertyClass = board[position]['class']
+		propertyClass = board[playerPosition]['class']
 		
 		if propertyClass == 'Street' or propertyClass == 'Railroad' or propertyClass == 'Utility':
 			isPropertyOwned = self.state.isPropertyOwned(playerPosition)
@@ -64,29 +64,29 @@ class DiceRoll(Action):
 			isPropertyMortgaged = self.state.isPropertyMortgaged(playerPosition)
 			if not isPropertyOwned:
 				#Unowned
-				phase = Phase.BUYING
-				phasePayload = playerPosition
+				self.state.setPhase(Phase.BUYING)
+				self.state.setPhasePayload(playerPosition)
 				self.context.buyProperty.setContext(self.context)
 				self.context.buyProperty.publish()
 			else:
 				if ownerId!=currentPlayerId and not isPropertyMortgaged:
 					rent = self.calculateRent()
-					phase = Phase.PAYMENT
-					phasePayload = playerPosition
+					self.state.setPhase(Phase.PAYMENT)
+					self.state.setPhasePayload(playerPosition)
 					self.state.setDebtToPlayer(currentPlayerId,ownerId,rent)
 				
-				self.context.conductBSM.setContext(self.context)
-				self.context.conductBSM.publish()
+				self.context.handlePayment.setContext(self.context)
+				self.context.handlePayment.publish()
 			
 		elif propertyClass == 'Chance' or propertyClass == 'Chest':
 			if propertyClass == 'Chance':
 				card = self.chance.draw_card()
 				self.state.setPhase(Phase.CHANCE_CARD)
+				self.state.setPhasePayload(card['id'])
 			elif propertyClass == 'Chest':
 				card = self.chest.draw_card()
 				self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
-			
-			self.state.setPhasePayload(card['id'])
+				self.state.setPhasePayload(card['id'])
 			
 			#ReceiveState
 			self.context.receiveState.previousAction = "diceRoll"
@@ -100,17 +100,16 @@ class DiceRoll(Action):
 			self.state.setPhasePayload(None)
 			self.state.addDebtToBank(currentPlayerId,tax)
 			
-			self.context.conductBSM.setContext(self.context)
-			self.context.conductBSM.publish()
+			self.context.handlePayment.setContext(self.context)
+			self.context.handlePayment.publish()
 		
 		elif propertyClass == 'GoToJail':
 			self.send_player_to_jail()
 		
 		elif propertyClass == 'Idle':
 			#Represents Go,Jail(Visiting),Free Parking
-			self.context.conductBSM.setContext(self.context)
-			self.context.conductBSM.publish()
-			pass
+			self.context.handlePayment.setContext(self.context)
+			self.context.handlePayment.publish()
 	
 	def calculateRent(self):
 		"""
@@ -136,8 +135,7 @@ class DiceRoll(Action):
 		elif (space['class'] == 'Railroad'):
 			rent = space['rent'][counter]
 		elif (space['class'] == 'Utility'):
-			if counter==len(monopolies):
-				rent = 10
+			rent = space['rent'][counter]
 			rent = rent * (self.dice.die_1 + self.dice.die_2)
 		
 		return rent

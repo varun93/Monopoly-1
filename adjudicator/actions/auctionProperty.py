@@ -1,7 +1,7 @@
-from action import Action
-from ..config import log
-from ..state import Phase
-from ..utils import check_valid_cash
+from actions.action import Action
+from config import log
+from state import Phase
+from utils import check_valid_cash
 
 class AuctionProperty(Action):
 	
@@ -14,8 +14,7 @@ class AuctionProperty(Action):
 		self.bidsReceived = 0
 		self.livePlayers = self.state.getLivePlayers()
 		
-		log("buy","Agent "+str(currentPlayerId)+" has started an auction on the property "+
-		self.state.getPhasePayload())
+		log("auction","Agent "+str(currentPlayerId)+" has decided to auction the property "+str(self.state.getPhasePayload()))
 		agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "AUCTION_IN")
 		self.context.publish(agent_attributes["AUCTION_IN"], self.state.toJson())
 	
@@ -30,8 +29,7 @@ class AuctionProperty(Action):
 		
 		self.bidsReceived+=1
 		if self.bidsReceived >= len(self.livePlayers):
-			log("auction","Agent "+self.auctionWinner+" won the Auction with a bid of "+
-			str(self.winningBid))
+			log("auction","Agent "+self.auctionWinner+" won the Auction with a bid of "+str(self.winningBid))
 			
 			auctionedProperty = self.state.getPhasePayload()
 			playerCash = self.state.getCash(self.auctionWinner)

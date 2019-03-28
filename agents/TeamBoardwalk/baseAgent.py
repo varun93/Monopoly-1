@@ -3,9 +3,6 @@ import six
 import abc
 from os import environ
 
-from board import Type, Group
-from state import State
-
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
@@ -19,7 +16,7 @@ class BaseAgent(ApplicationSession):
 		
 		#TODO: Configuration for these
 		#Command line args
-		self.game_id = int(sys.argv[1])
+		self.game_id = 1
 		
 		#URIs
 		join_game_uri = 'com.game{}.joingame'.format(self.game_id)
@@ -68,8 +65,8 @@ class BaseAgent(ApplicationSession):
 		self.publish(self.endpoints['TRADE_OUT'],result)
 	
 	def broadcastListener(self,state):
-		result = self.receiveState(state)
-		self.publish(self.endpoints['BROADCAST_OUT'],result)
+		self.receiveState(state)
+		self.publish(self.endpoints['BROADCAST_OUT'])
 	
 	def respondTradeListener(self,state):
 		result = self.respondTrade(state)
@@ -83,14 +80,14 @@ class BaseAgent(ApplicationSession):
 	def endGame(self,result):
 		# do some cleanup stuff if you have any
 		print("************* The winner is player {} *************".format(result))
-		self.bsmIn.unregister()
-		self.buyIn.unregister()
-		self.auctionIn.unregister()
-		self.jailIn.unregister()
-		self.tradeIn.unregister()
-		self.broadcastIn.unregister()
-		self.respondTradeIn.unregister()
-		self.endGameIn.unregister()
+		self.bsmIn.unsubscribe()
+		self.buyIn.unsubscribe()
+		self.auctionIn.unsubscribe()
+		self.jailIn.unsubscribe()
+		self.tradeIn.unsubscribe()
+		self.broadcastIn.unsubscribe()
+		self.respondTradeIn.unsubscribe()
+		self.endGameIn.unsubscribe()
 
 		self.leave()
 	

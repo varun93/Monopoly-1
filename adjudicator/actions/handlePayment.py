@@ -1,5 +1,5 @@
-from action import Action
-from ..config import log
+from actions.action import Action
+from config import log
 
 class HandlePayment(Action):
 	

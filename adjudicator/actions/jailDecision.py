@@ -1,5 +1,5 @@
-from action import Action
-from ..state import Phase
+from actions.action import Action
+from state import Phase
 
 class JailDecision(Action):
 	
@@ -9,6 +9,7 @@ class JailDecision(Action):
 		if playerPosition != self.JAIL:
 			#player is not in jail. bypass and call subscribe
 			#send the player directly to diceRoll
+			self.context.diceRoll.diceThrown = False
 			self.context.diceRoll.setContext(self.context)
 			self.context.diceRoll.publish()
 		else:
