@@ -32,13 +32,13 @@ class BaseAgent(ApplicationSession):
 		self.minMoney = 200
 		self.stealing = False
 		
-		self.bsmIn = yield self.subscribe(self.getBSMTDecision,res['BSM_IN'])
-		self.buyIn = yield self.subscribe(self.buyProperty,res['BUY_IN'])
-		self.auctionIn = yield self.subscribe(self.auctionProperty,res['AUCTION_IN'])
-		self.jailIn = yield self.subscribe(self.jailDecision,res['JAIL_IN'])
-		self.tradeIn = yield self.subscribe(self.getTradeDecision,res['TRADE_IN'])
-		self.broadcastIn = yield self.subscribe(self.receiveState,res['BROADCAST_IN'])
-		self.respondTradeIn = yield self.subscribe(self.respondTrade,res['RESPOND_TRADE_IN'])
+		self.bsmIn = yield self.subscribe(self.bsmListener,res['BSM_IN'])
+		self.buyIn = yield self.subscribe(self.buyListener,res['BUY_IN'])
+		self.auctionIn = yield self.subscribe(self.auctionListener,res['AUCTION_IN'])
+		self.jailIn = yield self.subscribe(self.jailListener,res['JAIL_IN'])
+		self.tradeIn = yield self.subscribe(self.tradeListener,res['TRADE_IN'])
+		self.broadcastIn = yield self.subscribe(self.broadcastListener,res['BROADCAST_IN'])
+		self.respondTradeIn = yield self.subscribe(self.respondTradeListener,res['RESPOND_TRADE_IN'])
 		self.endGameIn = yield self.subscribe(self.endGame,res['END_GAME'])
 		
 		self.endpoints = res

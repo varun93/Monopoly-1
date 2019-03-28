@@ -140,3 +140,5 @@ class RiskyAgent(BaseAgent):
             groupProps = state.getGroupProperties(group)
             if groupProps[0].houses > 0:
                 return "S", [(prop.id, 1) for prop in groupProps]
+
+	
