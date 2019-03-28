@@ -56,7 +56,8 @@ class Adjudicator(ApplicationSession):
             "BROADCAST_OUT" : "monopoly.game{}.agent{}.receivestate.out",
             "RESPOND_TRADE_IN" : "monopoly.game{}.agent{}.respondtrade.in",
 			"RESPOND_TRADE_OUT" : "monopoly.game{}.agent{}.respondtrade.out",
-			"CONFIRM_REGISTER" : "monopoly.game{}.agent{}.confirmregister"
+			"CONFIRM_REGISTER" : "monopoly.game{}.agent{}.confirmregister",
+			"END_GAME" : "monopoly.game{}.endgame"
 		}
 		
 		#after timeout, don't wait for new players anymore
@@ -173,9 +174,9 @@ class Adjudicator(ApplicationSession):
 		self.handleCards = HandleCards(self,staticContext)
 		self.buyProperty = BuyProperty(self,staticContext)
 		self.auctionProperty = AuctionProperty(self,staticContext)
-		self.conductBSM = ConductBSM(self,staticContext)
+		#self.conductBSM = ConductBSM(self,staticContext)
 		#self.trade = Trade(self,staticContext)
-		#self.endTurn = EndTurn(self,staticContext)
+		self.endTurn = EndTurn(self,staticContext)
 		
 		for agentId in PLAY_ORDER:
 			agent_attributes = self.genAgentChannels(agentId)
