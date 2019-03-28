@@ -421,7 +421,8 @@ class Reason:
 	BANKRUPT = "Bankruptcy"
 	
 #state = State([1,2,3,4])
-#print(json.loads(state.toJson()))
+#print(state.phasePayload)
+#print(state.toJson())
 #for value in json.loads(state.toJson()):
 #	print(value)
 #	print(value)

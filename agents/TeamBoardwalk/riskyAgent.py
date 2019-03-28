@@ -2,71 +2,11 @@ import sys
 from os import environ
 from board import Type, Group
 from state import State
+from baseAgent import BaseAgent
 
-from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks
-from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
+class RiskyAgent(BaseAgent):
 
-class Component(ApplicationSession):
-    """
-    An application component calling the different backend procedures.
-    """
-
-    @inlineCallbacks
-    def onJoin(self, details):
-        print("Session attached!")
-        
-        #TODO: Configuration for these
-        #Command line args
-        self.game_id = int(sys.argv[1])
-        
-        #URIs
-        join_game_uri = 'com.game{}.joingame'.format(self.game_id)
-        
-        # call a remote procedure.
-        res = yield self.call(join_game_uri)
-        print("The agent was assigned id: {}".format(res['agent_id']))
-        
-        self.id = res['agent_id']
-        self.pid = self.id
-        self.minMoney = 200
-        self.stealing = False
-        
-        self.bsmRegistration = yield self.register(self.getBSMTDecision,res['bsm'])
-        self.respondTradeRegistration = yield self.register(self.respondTrade,res['respondtrade'])
-        self.buyRegistration = yield self.register(self.buyProperty,res['buy'])
-        self.auctionRegistration = yield self.register(self.auctionProperty,res['auction'])
-        self.jailRegistration = yield self.register(self.jailDecision,res['jail'])
-        self.receiveStateRegistration = yield self.register(self.receiveState,res['receivestate'])
-        self.tradeRegistration = yield self.register(self.getTradeDecision,res['trade'])
-        
-        # subsribe for end game results
-        yield self.subscribe(self.endGame,res["endgame"])
-
-        #Successfully Registered. Invoke confirm_register
-        res = yield self.call(res['confirm_register'],self.id)
-        print("Result of calling confirm_register: "+str(res))
-
-
-    def onDisconnect(self):
-        print("disconnected")
-        if reactor.running:
-            reactor.stop()
-
-    def endGame(self,result):
-        # do some cleanup stuff if you have any
-        print("************* The winner is player {} *************".format(result[0][0]))
-        self.bsmRegistration.unregister()
-        self.respondTradeRegistration.unregister()
-        self.buyRegistration.unregister()
-        self.auctionRegistration.unregister()
-        self.jailRegistration.unregister()
-        self.receiveStateRegistration.unregister()
-        self.tradeRegistration.unregister()
-        # 
-        self.leave()
-
-    def getBSMTDecision(self, state):
+    def getBSMDecision(self, state):
         state = State(state)
         if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
             pos = state.positions[self.pid]
@@ -200,3 +140,5 @@ class Component(ApplicationSession):
             groupProps = state.getGroupProperties(group)
             if groupProps[0].houses > 0:
                 return "S", [(prop.id, 1) for prop in groupProps]
+
+	

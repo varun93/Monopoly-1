@@ -25,6 +25,7 @@ const GameInfo = () => {
         <Button variant="danger">Trade</Button>
         <Button variant="info">Get out of Jail?</Button>
         <Button variant="dark">Bid for Auction</Button>
+        <Button variant="primary">Start Turn</Button>
       </div>
     </div>
   );
