@@ -15,10 +15,7 @@ class EndTurn(Action):
 		if (lossCount>=self.TOTAL_NO_OF_PLAYERS-1) or (self.state.getTurn()+1 >= self.TOTAL_NO_OF_TURNS):
 			#Only one player left or last turn is completed. Winner can be decided.
 			resultsArray = self.final_winning_condition()
-			if len(resultsArray)>1:
-				log("win","Agent "+str(resultsArray[0])+" won the Game.")
-			else:
-				log("win","Agents "+str(resultsArray)+" won the Game.")
+			log("win","Agent "+str(resultsArray[0])+" won the Game.")
 	
 			self.state.setPhasePayload(None)
 			

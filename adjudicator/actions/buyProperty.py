@@ -8,24 +8,35 @@ class BuyProperty(Action):
 	
 	def publish(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
+		self.agentsYetToRespond = [currentPlayerId]
+		
 		log("buy","Agent "+str(currentPlayerId)+" has landed on the unowned property "+str(self.state.getPhasePayload()))
-		agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "BUY_IN")
-		self.context.publish(agent_attributes["BUY_IN"], self.state.toJson())
+		self.publishAction(currentPlayerId,"BUY_IN")
 	
-	def subscribe(self,agentId,response):
-		response = typecast(response, bool, False)
-		if not response:
-			self.state.setPhase(Phase.AUCTION)
-			self.context.auctionProperty.setContext(self.context)
-			self.context.auctionProperty.publish()
-		else:
-			if self.handle_buy_property():
-				#The property was successfully bought TODO
-				self.context.endTurn.setContext(self.context)
-				self.context.endTurn.publish()
-			else:
+	def subscribe(self,*args):
+		agentId = None
+		response = None
+		if len(args)>0:
+			agentId = args[0]
+		if len(args)>1:
+			response = args[1]
+		
+		if agentId and self.canAccessSubscribe(agentId):
+			response = typecast(response, bool, False)
+			if not response:
+				self.state.setPhase(Phase.AUCTION)
 				self.context.auctionProperty.setContext(self.context)
 				self.context.auctionProperty.publish()
+			else:
+				if self.handle_buy_property():
+					#The property was successfully bought TODO
+					self.context.endTurn.setContext(self.context)
+					self.context.endTurn.publish()
+				else:
+					self.context.auctionProperty.setContext(self.context)
+					self.context.auctionProperty.publish()
+		else:
+			print("Agent "+str(agentId)+" was not supposed to respond to buyProperty here.")
 	
 	def handle_buy_property(self):
 		"""

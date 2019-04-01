@@ -60,3 +60,14 @@ def check_valid_cash(cash):
 	if cash < 0:
 		return 0
 	return cash
+
+#Generator for circular range
+def crange(self,start, end, modulo):
+    if start > end:
+        while start < modulo:
+            yield start
+            start += 1
+        start = 0   
+    while start <= end:
+        yield start
+        start += 1

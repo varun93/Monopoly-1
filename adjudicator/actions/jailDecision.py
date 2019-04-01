@@ -5,6 +5,7 @@ class JailDecision(Action):
 	
 	def publish(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
+		self.agentsYetToRespond = [currentPlayerId]
 		playerPosition = self.state.getPosition(currentPlayerId)
 		if playerPosition != self.JAIL:
 			#player is not in jail. bypass and call subscribe
@@ -16,25 +17,34 @@ class JailDecision(Action):
 			#InJail
 			self.state.setPhase(Phase.JAIL)
 			self.state.setPhasePayload(None)
-			agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "JAIL_IN")
-			self.context.publish(agent_attributes["JAIL_IN"], self.state.toJson())
+			self.publishAction(currentPlayerId,"JAIL_IN")
 	
-	def subscribe(self,agentId,response):
-		outOfJail,diceThrown = self.handle_in_jail_state(response)
+	def subscribe(self,*args):
+		agentId = None
+		response = None
+		if len(args)>0:
+			agentId = args[0]
+		if len(args)>1:
+			response = args[1]
 		
-		#let the player know if he is out of jail or not
-		self.state.setPhasePayload(outOfJail)
-		#Only for receiveState calls
-		self.context.receiveState.previousAction = "jailDecision"
-		if outOfJail:
-			self.context.diceRoll.diceThrown = diceThrown
-			self.context.receiveState.nextAction = "diceRoll"
+		if agentId and self.canAccessSubscribe(agentId):
+			outOfJail,diceThrown = self.handle_in_jail_state(response)
+			
+			#let the player know if he is out of jail or not
+			self.state.setPhasePayload(outOfJail)
+			#Only for receiveState calls
+			self.context.receiveState.previousAction = "jailDecision"
+			if outOfJail:
+				self.context.diceRoll.diceThrown = diceThrown
+				self.context.receiveState.nextAction = "diceRoll"
+			else:
+				#player is still in jail. skip this turn.
+				self.context.receiveState.nextAction = "endTurn"
+			
+			self.context.receiveState.setContext(self.context)
+			self.context.receiveState.publish()
 		else:
-			#player is still in jail. skip this turn.
-			self.context.receiveState.nextAction = "endTurn"
-		
-		self.context.receiveState.setContext(self.context)
-		self.context.receiveState.publish()
+			print("Agent "+str(agentId)+" was not supposed to respond to jailDecision here.")
 	
 	"""
 	Incoming action format:

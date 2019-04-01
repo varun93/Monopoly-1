@@ -33,6 +33,7 @@ class RiskyAgent(BaseAgent):
     def buyProperty(self, state):
         state = State(state)
         prop = state.properties[state.phaseData]
+        print("Inside buyListener for "+str(self.pid)+" with prop id: "+str(prop))
         opponents = state.getOpponents(self.pid)
         bestGroup = self.getBestGroupToImprove(state)
         if bestGroup: return False
@@ -45,6 +46,7 @@ class RiskyAgent(BaseAgent):
 
     def auctionProperty(self, state):
         state = State(state)
+        print("Inside auctionListener for "+str(self.pid)+" with prop id: "+str(state.phaseData))
         data = None 
         if type(state.phaseData) is int:
             data = state.phaseData

@@ -4,14 +4,20 @@ class ReceiveState(Action):
 	
 	#TODO: publish to all agents
 	def publish(self):
+		self.agentsYetToRespond = self.state.getLivePlayers()
 		currentPlayerId = self.state.getCurrentPlayerId()
-		agent_attributes = self.context.genAgentChannels(currentPlayerId,requiredChannel = "BROADCAST_IN")
-		self.context.publish(agent_attributes["BROADCAST_IN"], self.state.toJson())
+		self.publishAction(currentPlayerId,"BROADCAST_IN")
 	
-	def subscribe(self,agentId):
-		#TODO: Error checking and timeout ahndling
+	def subscribe(self,*args):
+		#TODO: Error checking and timeout handling
+		agentId = None
+		if len(args)>0:
+			agentId = args[0]
 		
-		nextAction = getattr(self.context, self.nextAction)
+		print("Agent "+str(agentId)+" accessed the subscribe of ReceiveState.")
 		
-		nextAction.setContext(self.context)
-		nextAction.publish()
+		if agentId and self.canAccessSubscribe(agentId):
+			nextAction = getattr(self.context, self.nextAction)
+			
+			nextAction.setContext(self.context)
+			nextAction.publish()
