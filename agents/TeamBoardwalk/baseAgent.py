@@ -45,7 +45,7 @@ class BaseAgent(ApplicationSession):
 		print("Result of calling confirm_register: "+str(response))
 	
 	def bsmListener(self,state):
-		result = self.getBSMTDecision(state)
+		result = self.getBSMDecision(state)
 		self.publish(self.endpoints['BSM_OUT'],result)
 	
 	def buyListener(self,state):

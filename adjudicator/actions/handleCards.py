@@ -162,11 +162,9 @@ class HandleCards(Action):
 			if updateState:
 				self.determine_position_effect()
 			elif phaseNumber == Phase.BUYING:
-				self.context.buyProperty.setContext(self.context)
-				self.context.buyProperty.publish()
+				self.publishBSM("buyProperty")
 			else:
-				self.context.handlePayment.setContext(self.context)
-				self.context.handlePayment.publish()
+				self.publishBSM("handlePayment")
 			
 	def send_player_to_jail(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
@@ -201,8 +199,8 @@ class HandleCards(Action):
 				#Unowned
 				self.state.setPhase(Phase.BUYING)
 				self.state.setPhasePayload(playerPosition)
-				self.context.buyProperty.setContext(self.context)
-				self.context.buyProperty.publish()
+				
+				self.publishBSM("buyProperty")
 			else:
 				if ownerId!=currentPlayerId and not isPropertyMortgaged:
 					rent = self.calculateRent()
@@ -210,8 +208,7 @@ class HandleCards(Action):
 					self.state.setPhasePayload(playerPosition)
 					self.state.setDebtToPlayer(currentPlayerId,ownerId,rent)
 				
-				self.context.handlePayment.setContext(self.context)
-				self.context.handlePayment.publish()
+				self.publishBSM("handlePayment")
 			
 		elif propertyClass == 'Chance' or propertyClass == 'Chest':
 			if propertyClass == 'Chance':
@@ -235,16 +232,21 @@ class HandleCards(Action):
 			self.state.setPhasePayload(None)
 			self.state.addDebtToBank(currentPlayerId,tax)
 			
-			self.context.handlePayment.setContext(self.context)
-			self.context.handlePayment.publish()
+			self.publishBSM("handlePayment")
 		
 		elif propertyClass == 'GoToJail':
 			self.send_player_to_jail()
 		
 		elif propertyClass == 'Idle':
 			#Represents Go,Jail(Visiting),Free Parking
-			self.context.handlePayment.setContext(self.context)
-			self.context.handlePayment.publish()
+			self.publishBSM("handlePayment")
+	
+	def publishBSM(self,nextAction):
+		self.context.conductBSM.previousAction = "diceRoll"
+		self.context.conductBSM.nextAction = nextAction
+		self.context.conductBSM.BSMCount = 0
+		self.context.conductBSM.setContext(self.context)
+		self.context.conductBSM.publish()
 	
 	def calculateRent(self):
 		"""

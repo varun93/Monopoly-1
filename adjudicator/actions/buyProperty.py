@@ -29,7 +29,7 @@ class BuyProperty(Action):
 				self.context.auctionProperty.publish()
 			else:
 				if self.handle_buy_property():
-					#The property was successfully bought TODO
+					#The property was successfully bought
 					self.context.endTurn.setContext(self.context)
 					self.context.endTurn.publish()
 				else:

@@ -10,7 +10,7 @@ class ConductBSM(Action):
 		for i in crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
 				playerId = self.PLAY_ORDER[i]
 				if not self.state.hasPlayerLost(playerId):
-					self.publishAction(currentPlayerId,"BSM_IN")
+					self.publishAction(playerId,"BSM_IN")
 		
 		self.actionCount = 0
 		self.mortgageRequests = []
@@ -18,12 +18,19 @@ class ConductBSM(Action):
 		self.buyingHotelsRequests = []
 		self.sellingRequests = []
 		
-	def subscribe(self,action):
+	def subscribe(self,*args):
 		"""
 		Stopping conditions for BSM:
 		1. If during a given turn no player gave a valid BSM, BSM ends.
 		2. A player can only make MAX_BSM_REQUESTS number of requests in a given BSM.
 		"""
+		agentId = None
+		action = None
+		if len(args)>0:
+			agentId = args[0]
+		if len(args)>1:
+			action = args[1]
+		
 		if self.canAccessSubscribe(agentId):
 			actionType = self.checkActionType(action) #Some basic validation like syntax,type checking and value range.
 			if actionType=="M":
@@ -49,10 +56,92 @@ class ConductBSM(Action):
 					self.actionCount+=1
 			
 			if len(self.agentsYetToRespond)==0:
+				"""All agents have responded or have timed out"""
 				if self.actionCount == 0:
-					pass
+					#end bsm and go to the next action
+					nextAction = getattr(self.context, self.nextAction)
+					nextAction.setContext(self.context)
+					nextAction.publish()
 				else:
-					pass
+					currentPlayerIndex = self.state.getCurrentPlayerIndex()
+					numPlayers = len(self.PLAY_ORDER)
+					def sortKey(request):
+						return (request[0]-currentPlayerIndex)%numPlayers
+					
+					self.mortgageRequests = sorted(self.mortgageRequests,key=sortKey)
+					self.buyingHousesRequests = sorted(self.buyingHousesRequests,key=sortKey)
+					self.buyingHotelsRequests = sorted(self.buyingHotelsRequests,key=sortKey)
+					self.sellingRequests = sorted(self.sellingRequests,key=sortKey)
+					
+					"""Selling Requests"""
+					"""First the requests which don't need extra houses or hotels"""
+					finishedSellingRequests = []
+					for playerId,request in self.sellingRequests:
+						housesNeeded,hotelsNeeded = self.state.evaluateSellingSequence(request)
+						if housesNeeded<=0 and hotelsNeeded<=0:
+							"""
+							The houses or hotels needed to satisfy this request are <=0
+							<0 means the no of free houses/hotels increases.
+							All the other selling requests and buying requests should be processed
+							after this to satisfy the maximum number of requests.
+							"""
+							self.handleSell(playerId, request)
+							finishedSellingRequests.append(playerId)
+					self.sellingRequests = [entry for entry in self.sellingRequests if entry[0] not in finishedSellingRequests]
+					
+					"""Calculate houses needed for Buying Houses Requests"""
+					housesRemaining = self.state.getHousesRemaining()
+					housesNeededForBHS = 0
+					for _,request in self.buyingHousesRequests:
+						housesNeededForBHS += self.state.evaluateBuyingHousesSequence(request)
+					housesRemaining -= housesNeededForBHS
+					
+					"""If there are houses left over, process the remaining selling requests"""
+					for playerId,request in self.sellingRequests:
+						housesNeeded,hotelsNeeded = self.state.evaluateSellingSequence(request)
+						if housesNeeded<=housesRemaining:
+							self.handleSell(playerId, request)
+							housesRemaining-=housesNeeded
+						else: break
+					
+					"""Mortgage/Unmortgage requests"""
+					for playerId,mortgageRequest in self.mortgageRequests:
+						self.handleMortgage(playerId,mortgageRequest)
+					
+					isThereAnAuctionInBSM = False
+					
+					"""Buying Hotels Requests"""
+					hotelsRemaining = self.state.getHotelsRemaining()
+					hotelsForBHT = 0
+					for _,request in self.buyingHotelsRequests:
+						hotelsForBHT += len(request)
+					if hotelsRemaining-hotelsForBHT>=0:
+						for playerId,request in self.buyingHotelsRequests:
+							self.state.buyHotelSequence(playerId,request)
+					else:
+						#TODO: AUCTION FOR HOTELS
+						#All the hotel requests are in: buyingHotelsRequests
+						isThereAnAuctionInBSM = True
+						print("auction in BSM")
+						self.auctionInBSM(buyingHotelsRequests,"hotels")
+					
+					"""Buying Houses Requests"""
+					housesRemaining = self.state.getHousesRemaining()
+					if housesRemaining-housesNeededForBHS>=0:
+						for playerId,request in self.buyingHousesRequests:
+							self.handleBuyHouses(playerId,request)
+					else:
+						#TODO: AUCTION FOR HOUSES
+						#All the hotel requests are in: buyingHousesRequests
+						isThereAnAuctionInBSM = True
+						print("auction in BSM")
+						self.auctionInBSM(buyingHousesRequests)
+					
+					if not isThereAnAuctionInBSM:
+						self.context.conductBSM.BSMCount+=1
+						self.context.conductBSM.setContext(self.context)
+						self.context.conductBSM.publish()
+					
 	
 	"""Returns the type of action. Also checks if the action is valid."""
 	def checkActionType(self,action):
@@ -186,3 +275,53 @@ class ConductBSM(Action):
 		for propertyId in properties:
 			self.state.setPropertyMortgaged(propertyId,not self.state.isPropertyMortgaged(propertyId))
 		self.state.setCash(playerId,playerCash)
+		
+	# [(1,4,2),(2,6,1),(3,8,1),(4,9,1)]
+	# Triple of playerId, propertyId, numberOfConstructions
+	def auctionInBSM(self,buyingDecisions,auctionEntity = "houses"):
+		"""
+		Bunch of small utilities
+		""" 
+		def updateBuyingDecisions(buyingDecisions,auctionWinner,propertySite):
+
+			def mapper(triple):
+				(playerId,propertyId,constructions) = triple
+				if playerId == auctionWinner and propertyId == propertySite:
+					return (playerId,propertyId,constructions - 1)
+							
+				return (playerId,propertyId,constructions)
+
+			buyingDecisions = list(map(mapper, buyingDecisions))
+			return list(filter(lambda triple :  triple[2] > 0,buyingDecisions)) 
+
+		def updateWinnerCash(auctionWinner, bidValue):
+			auctionWinnerCurrentCash = self.state.getCash(auctionWinner)
+			self.state.setCash(auctionWinner,auctionWinnerCurrentCash - bidValue)
+
+		def updateWinnerProperty(auctionedProperty):
+			currentConstructions = 4
+			if auctionEntity == "houses":
+				currentConstructions = self.state.getNumberOfHouses(auctionedProperty)
+			
+			self.state.setNumberOfHouses(auctionedProperty, currentConstructions + 1)
+		
+		def getConstructionsRemaining():
+			if auctionEntity == "houses":
+				return self.state.getHousesRemaining()
+			
+			return self.state.getHotelsRemaining()
+
+		def transformBuyingDecisions():
+			# not doing any checks; to check if the the list is valid 
+			def mapper(buyingDecision):
+				if auctionEntity == "houses":
+					return (buyingDecision[0],buyingDecision[1][0],buyingDecision[1][1])
+				return (buyingDecision[0], buyingDecision[1][0],1)
+
+			return list(map(mapper,buyingDecisions))
+
+		"""
+		End of Utilities;
+		Start of auction logic 
+		"""
+		pass

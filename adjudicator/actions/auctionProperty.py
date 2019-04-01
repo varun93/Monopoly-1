@@ -48,7 +48,7 @@ class AuctionProperty(Action):
 				phasePayload = [auctionedProperty,self.auctionWinner,self.winningBid]
 				self.state.setPhasePayload(phasePayload)
 				self.context.receiveState.previousAction = "auctionProperty"
-				self.context.receiveState.nextAction = "endTurn" #TODO
+				self.context.receiveState.nextAction = "endTurn"
 				
 				self.context.receiveState.setContext(self.context)
 				self.context.receiveState.publish()

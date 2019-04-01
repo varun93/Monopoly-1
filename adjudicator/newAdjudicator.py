@@ -191,8 +191,9 @@ class Adjudicator(ApplicationSession):
 		self.buyProperty = BuyProperty(staticContext)
 		self.auctionProperty = AuctionProperty(staticContext)
 		self.handlePayment = HandlePayment(staticContext)
-		#self.conductBSM = ConductBSM(self,staticContext)
-		#self.trade = Trade(self,staticContext)
+		self.conductBSM = ConductBSM(staticContext)
+		#self.trade = Trade(staticContext)
+		#self.respondTrade = RespondTrade(staticContext)
 		self.endTurn = EndTurn(staticContext)
 		self.subscribeKeys = []
 		
@@ -210,7 +211,17 @@ class Adjudicator(ApplicationSession):
 			sub = yield self.subscribe(partial(self.auctionProperty.subscribe,agentId),
 			agent_attributes['AUCTION_OUT'])
 			self.subscribeKeys.append(sub)
+			sub = yield self.subscribe(partial(self.conductBSM.subscribe,agentId),
+			agent_attributes['BSM_OUT'])
+			self.subscribeKeys.append(sub)
+			#sub = yield self.subscribe(partial(self.trade.subscribe,agentId),
+			#agent_attributes['TRADE_OUT'])
+			#self.subscribeKeys.append(sub)
+			#sub = yield self.subscribe(partial(self.respondTrade.subscribe,agentId),
+			#agent_attributes['RESPOND_TRADE_OUT'])
+			#self.subscribeKeys.append(sub)
 		
+		print("About to start the game")
 		self.startTurn.setContext(self)
 		self.startTurn.publish()
 	

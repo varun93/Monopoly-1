@@ -69,6 +69,10 @@ class Action:
 			self.subscribe(agentId,self.DEFAULT_ACTIONS[actionClass])
 	
 	def canAccessSubscribe(self,agentId):
+		"""
+		Check if the agent can access the current subscribe method at the time of invocation
+		The game might have progressed to another ActionClass or another Player's turn.
+		"""
 		#f = open("currentMethod.txt", "r")
 		#currentMethod = f.read()
 		#f.close()

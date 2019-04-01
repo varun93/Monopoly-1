@@ -62,7 +62,7 @@ def check_valid_cash(cash):
 	return cash
 
 #Generator for circular range
-def crange(self,start, end, modulo):
+def crange(start, end, modulo):
     if start > end:
         while start < modulo:
             yield start
