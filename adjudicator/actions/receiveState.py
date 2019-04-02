@@ -16,7 +16,7 @@ class ReceiveState(Action):
 		
 		print("Agent "+str(agentId)+" accessed the subscribe of ReceiveState.")
 		
-		if agentId and self.canAccessSubscribe(agentId):
+		if agentId and self.canAccessSubscribe(agentId) and self.validSubs>=len(self.state.getLivePlayers()):
 			nextAction = getattr(self.context, self.nextAction)
 			
 			nextAction.setContext(self.context)

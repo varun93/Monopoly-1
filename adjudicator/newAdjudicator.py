@@ -147,6 +147,11 @@ class Adjudicator(ApplicationSession):
 			subscribeKey.unsubscribe()
 		self.leave()
 	
+	#Supposedly called after we call self.leave()
+	def onDisconnect(self):
+		if reactor.running:
+			reactor.stop()
+	
 	#TODO: loop here using self.NO_OF_GAMES
 	@inlineCallbacks
 	def startGame(self):
