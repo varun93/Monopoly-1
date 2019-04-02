@@ -13,10 +13,7 @@ class RiskyAgent(BaseAgent):
 	def getBSMDecision(self, state):
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
-			pos = state.positions[self.pid]
-			prop = state.properties[pos]
-			if pos == -1 or not (prop.data.price == state.debt[self.pid * 2 + 1] and prop.owner == -1):
-				return self.getBestActionForMoney(state)
+			return self.getBestActionForMoney(state)
 		if state.money[self.pid] < self.getSafeMoney(state):
 			return self.getBestMortgageAction(state, state.getOwnedGroupProperties(self.pid))
 		bestGroup = self.getBestGroupToImprove(state)
