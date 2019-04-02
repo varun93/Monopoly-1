@@ -159,7 +159,7 @@ class Adjudicator(ApplicationSession):
 		self.PASSING_GO_MONEY = 200
 		self.TOTAL_NO_OF_TURNS = 100
 		self.INITIAL_CASH = 1500
-		self.NO_OF_GAMES =100
+		self.NO_OF_GAMES =2
 		self.gamesCompleted = 0
 		
 		self.winCount = {}

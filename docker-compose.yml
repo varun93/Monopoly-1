@@ -14,13 +14,12 @@ services:
     build: ./adjudicator
     links:
       - "crossbar"
-    command: ["python", "adjudicator.py"]
-
-  game_gen:
-    build: ./game_gen
-    links:
-      - "crossbar"
-    command: ["python", "game_gen.py", "1", "6"]
+    command: ["python", "invoke.py"]
+  # game_gen:
+  #   build: ./game_gen
+  #   links:
+  #     - "crossbar"
+  #   command: ["python", "game_gen.py", "1", "6"]
   # react-build:
   #   build: ./web-ui
 # volumes:
