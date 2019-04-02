@@ -1,12 +1,9 @@
 import sys
 from functools import partial
 
-import constants
-from dice import Dice
-from cards import Cards
-from state import State
 from utils import TimeoutBehaviour,Timer
-
+from actions.startGame import StartGame
+from actions.endGame import EndGame
 from actions.startTurn import StartTurn
 from actions.jailDecision import JailDecision
 from actions.receiveState import ReceiveState
@@ -63,7 +60,10 @@ class Adjudicator(ApplicationSession):
             "RESPOND_TRADE_IN" : "monopoly.game{}.agent{}.respondtrade.in",
 			"RESPOND_TRADE_OUT" : "monopoly.game{}.agent{}.respondtrade.out",
 			"CONFIRM_REGISTER" : "monopoly.game{}.agent{}.confirmregister",
-			"END_GAME" : "monopoly.game{}.endgame"
+			"START_GAME_IN": "monopoly.game{}.startgame.in",
+			"START_GAME_OUT": "monopoly.game{}.agent{}.startgame.out",
+			"END_GAME_IN" : "monopoly.game{}.endgame.in",
+			"END_GAME_OUT" : "monopoly.game{}.agent{}.endgame.out",
 		}
 		
 		#after timeout, don't wait for new players anymore
@@ -131,7 +131,7 @@ class Adjudicator(ApplicationSession):
 		else:
 			if requiredChannel == 'agent_id':
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(agentId)
-			elif requiredChannel == "AUCTION_IN" or requiredChannel == "BROADCAST_IN" or requiredChannel == "END_GAME":
+			elif requiredChannel == "AUCTION_IN" or requiredChannel == "BROADCAST_IN" or requiredChannel == "START_GAME_IN" or requiredChannel == "END_GAME_IN":
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.gameId)
 			else:
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.gameId,agentId)
@@ -150,7 +150,7 @@ class Adjudicator(ApplicationSession):
 		self.PASSING_GO_MONEY = 200
 		self.TOTAL_NO_OF_TURNS = 100
 		self.INITIAL_CASH = 1500
-		self.NO_OF_GAMES = 1
+		self.NO_OF_GAMES = 2
 		self.gamesCompleted = 0
 		
 		self.winCount = {}
@@ -174,15 +174,16 @@ class Adjudicator(ApplicationSession):
 			"NO_OF_GAMES": self.NO_OF_GAMES
 		}
 		
-		#These will be initialized in the action
 		self.dice = Dice()
-		self.chest = Cards(constants.communityChestCards)
-		self.chance = Cards(constants.chanceCards)
-		self.state =  State(PLAY_ORDER)
+		self.chest = Cards(communityChestCards)
+		self.chance = Cards(chanceCards)
+		self.state =  State(self.PLAY_ORDER)
 		self.mortgagedDuringTrade = []
 		self.winner = None
 
 		#singleton classes for each action
+		self.startGame = StartGame(staticContext)
+		self.endGame = EndGame(staticContext)
 		self.startTurn = StartTurn(staticContext)
 		self.jailDecision = JailDecision(staticContext)
 		self.receiveState = ReceiveState(staticContext)
@@ -199,6 +200,12 @@ class Adjudicator(ApplicationSession):
 		
 		for agentId in PLAY_ORDER:
 			agent_attributes = self.genAgentChannels(agentId)
+			sub = yield self.subscribe(partial(self.startGame.subscribe,agentId),
+			agent_attributes['START_GAME_OUT'])
+			self.subscribeKeys.append(sub)
+			sub = yield self.subscribe(partial(self.endGame.subscribe,agentId),
+			agent_attributes['END_GAME_OUT'])
+			self.subscribeKeys.append(sub)
 			sub = yield self.subscribe(partial(self.jailDecision.subscribe,agentId),
 			agent_attributes['JAIL_OUT'])
 			self.subscribeKeys.append(sub)
@@ -221,9 +228,8 @@ class Adjudicator(ApplicationSession):
 			#agent_attributes['RESPOND_TRADE_OUT'])
 			#self.subscribeKeys.append(sub)
 		
-		print("About to start the game")
-		self.startTurn.setContext(self)
-		self.startTurn.publish()
+		self.startGame.setContext(self.context)
+		self.startGame.publish()
 	
 if __name__ == '__main__':
 	import six

@@ -25,10 +25,6 @@ class BaseAgent(ApplicationSession):
 		res = yield self.call(join_game_uri)
 		print("The agent was assigned id: {}".format(res['agent_id']))
 		
-		self.pid = res['agent_id']
-		self.minMoney = 200
-		self.stealing = False
-		
 		self.bsmIn = yield self.subscribe(self.bsmListener,res['BSM_IN'])
 		self.buyIn = yield self.subscribe(self.buyListener,res['BUY_IN'])
 		self.auctionIn = yield self.subscribe(self.auctionListener,res['AUCTION_IN'])
@@ -36,13 +32,25 @@ class BaseAgent(ApplicationSession):
 		self.tradeIn = yield self.subscribe(self.tradeListener,res['TRADE_IN'])
 		self.broadcastIn = yield self.subscribe(self.broadcastListener,res['BROADCAST_IN'])
 		self.respondTradeIn = yield self.subscribe(self.respondTradeListener,res['RESPOND_TRADE_IN'])
-		self.endGameIn = yield self.subscribe(self.endGame,res['END_GAME'])
+		self.startGameIn = yield self.subscribe(self.startGameListener,res['START_GAME_IN'])
+		self.endGameIn = yield self.subscribe(self.endGameListener,res['END_GAME_IN'])
 		
 		self.endpoints = res
 
 		#Successfully Registered. Invoke confirm_register
 		response = yield self.call(res['CONFIRM_REGISTER'])
 		print("Result of calling confirm_register: "+str(response))
+	
+	def startGameListener(self,state):
+		result = self.startGame(state)
+		self.publish(self.endpoints['START_GAME_OUT'],result)
+	
+	def endGameListener(self,winner):
+		result = self.endGame(winner)
+		self.publish(self.endpoints['END_GAME_OUT'],result)
+		if isinstance(winner, dict):
+			#The last game has completed
+			self.teardownAgent()
 	
 	def bsmListener(self,state):
 		result = self.getBSMDecision(state)
@@ -77,9 +85,8 @@ class BaseAgent(ApplicationSession):
 		if reactor.running:
 			reactor.stop()
 
-	def endGame(self,result):
-		# do some cleanup stuff if you have any
-		print("************* The winner is player {} *************".format(result))
+	def teardownAgent(self):
+		# cleanup
 		self.bsmIn.unsubscribe()
 		self.buyIn.unsubscribe()
 		self.auctionIn.unsubscribe()
@@ -87,9 +94,16 @@ class BaseAgent(ApplicationSession):
 		self.tradeIn.unsubscribe()
 		self.broadcastIn.unsubscribe()
 		self.respondTradeIn.unsubscribe()
+		self.startGameIn.unsubscribe()
 		self.endGameIn.unsubscribe()
 
 		self.leave()
+	
+	@abc.abstractmethod
+	def startGame(self, state):
+		"""
+		Prepare for a new game.
+		"""
 	
 	@abc.abstractmethod
 	def getBSMDecision(self, state):
@@ -132,3 +146,12 @@ class BaseAgent(ApplicationSession):
 		"""
 		Function returns several info messages. You can process them here.
 		"""
+	
+	@abc.abstractmethod
+	def endGame(self, winner):
+		"""
+		Process the results of a completed game.
+		The very last game would be a dictionary containing the agentId's and the 
+		corresponding number of wins for each of them.
+		"""
+	
