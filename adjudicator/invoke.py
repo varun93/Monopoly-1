@@ -2,6 +2,7 @@
 from os import environ
 from twisted.internet import reactor
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
+from twisted.internet.defer import inlineCallbacks
 # subprocess
 from subprocess import call
     
@@ -11,10 +12,10 @@ class Component(ApplicationSession):
         print("Invoked Start Game")
         call(["python", "newAdjudicator.py"])
 
-    
+    @inlineCallbacks
     def onJoin(self, details):
         print("session attached")
-        self.subscribe(self.startGame, "com.monopoly.start")
+        yield self.subscribe(self.startGame, "com.monopoly.start")
         
     def onDisconnect(self):
         print("disconnected")
