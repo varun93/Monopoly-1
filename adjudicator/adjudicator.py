@@ -1202,6 +1202,7 @@ class Component(ApplicationSession):
         #        return self.TOTAL_NO_OF_TURNS+agentCash[playerId]+agentPropertyWorth[playerId]
         #    else:
         #        return self.state.getTurnOfLoss(playerId)
+        #SHOULD CREATE A COPY OF self.PLAY_ORDER before sorting it here
         #return sorted(self.PLAY_ORDER,key=winnerSorting,reverse=True)
         
         #Using an array here to handle ties

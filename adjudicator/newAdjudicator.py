@@ -1,7 +1,12 @@
 import sys
 from functools import partial
 
-from utils import TimeoutBehaviour,Timer
+from dice import Dice
+from cards import Cards
+from state import State
+from constants import communityChestCards,chanceCards
+from utils import TimeoutBehaviour
+
 from actions.startGame import StartGame
 from actions.endGame import EndGame
 from actions.startTurn import StartTurn
@@ -33,7 +38,7 @@ class Adjudicator(ApplicationSession):
 		self.gameId = 1
 		self.expectedPlayerCount = 2
 		
-		self.timeout = 300 #will wait 5 min for all players to join
+		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
 		
 		self.currentPlayerCount = 0
@@ -68,8 +73,7 @@ class Adjudicator(ApplicationSession):
 		
 		#after timeout, don't wait for new players anymore
 		#if enough players haven't joined, either start the game or stop it
-		self.timer = Timer()
-		self.timer.setTimeout(self.timeoutHandler, self.timeout)
+		self.timeoutId = reactor.callLater(self.TIMEOUT, self.timeoutHandler)
 		
 		yield self.register(self.generateAgentDetails,'com.game{}.joingame'.format(self.gameId))
 		
@@ -87,7 +91,7 @@ class Adjudicator(ApplicationSession):
 		# enough people have joined. start the game.
 		if self.currentPlayerCount == self.expectedPlayerCount:
 			self.gameStarted = True
-			self.timer.setClearTimer()
+			self.timeoutId.cancel()
 			self.startGame()
 		
 		return True
@@ -96,7 +100,7 @@ class Adjudicator(ApplicationSession):
 		print('In timeoutHandler')
 		if not self.gameStarted:
 			if self.currentPlayerCount < self.expectedPlayerCount:
-				if self.timeout_behaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
+				if self.timeoutBehaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
 					self.startGame()
 				else:
 					#only one player joined or not enough people joined and game is set to exit in
@@ -158,16 +162,13 @@ class Adjudicator(ApplicationSession):
 			self.winCount[agentId] = 0
 			
 		#self.agents contains id's of agents in the current game
-		PLAY_ORDER = self.agents #Stores the id's of all the players in the order of play
-		TOTAL_NO_OF_PLAYERS = len(self.agents)
+		PLAY_ORDER = [agentId for agentId in self.agents] #Stores the id's of all the players in the order of play
+		#There is a wierd error where if I use the shallow copy of self.agents, it could later have at first all the agent ids but later lose some of the ids.
+		#So, need to do a deep copy here, in action and in state. When I did a deep copy just here and in action, it caused an error in state
+		#which should never have happened but did.
+		#Lesson: do deep copy of arrays when dealing with multiple threads?
 		staticContext = {
-			"BOARD_SIZE": 40,
-			"CHANCE_GET_OUT_OF_JAIL_FREE": 40,
-			"COMMUNITY_GET_OUT_OF_JAIL_FREE": 41,
-			"JUST_VISTING": 10,
-			"JAIL": -1,
 			"PLAY_ORDER": PLAY_ORDER,
-			"TOTAL_NO_OF_PLAYERS": TOTAL_NO_OF_PLAYERS,
 			"PASSING_GO_MONEY": self.PASSING_GO_MONEY,
 			"TOTAL_NO_OF_TURNS": self.TOTAL_NO_OF_TURNS,
 			"INITIAL_CASH": self.INITIAL_CASH,
@@ -177,7 +178,7 @@ class Adjudicator(ApplicationSession):
 		self.dice = Dice()
 		self.chest = Cards(communityChestCards)
 		self.chance = Cards(chanceCards)
-		self.state =  State(self.PLAY_ORDER)
+		self.state =  State(PLAY_ORDER)
 		self.mortgagedDuringTrade = []
 		self.winner = None
 
@@ -228,7 +229,7 @@ class Adjudicator(ApplicationSession):
 			#agent_attributes['RESPOND_TRADE_OUT'])
 			#self.subscribeKeys.append(sub)
 		
-		self.startGame.setContext(self.context)
+		self.startGame.setContext(self)
 		self.startGame.publish()
 	
 if __name__ == '__main__':

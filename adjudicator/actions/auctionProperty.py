@@ -10,9 +10,8 @@ class AuctionProperty(Action):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		self.auctionWinner = currentPlayerId
 		self.winningBid = 1
-		self.bidsReceived = 0
 		self.livePlayers = self.state.getLivePlayers()
-		self.agentsYetToRespond = self.livePlayers
+		self.agentsYetToRespond = list(self.livePlayers)
 		
 		log("auction","Agent "+str(currentPlayerId)+" has decided to auction the property "+str(self.state.getPhasePayload()))
 		self.publishAction(currentPlayerId,"AUCTION_IN")
@@ -34,8 +33,8 @@ class AuctionProperty(Action):
 				self.auctionWinner = agentId
 				self.winningBid = bid
 			
-			self.bidsReceived+=1
-			if self.bidsReceived >= len(self.livePlayers):
+			#self.validSubs is updated in self.canAccessSubscribe
+			if self.validSubs >= len(self.livePlayers):
 				log("auction","Agent "+self.auctionWinner+" won the Auction with a bid of "+str(self.winningBid))
 				
 				auctionedProperty = self.state.getPhasePayload()

@@ -1,7 +1,7 @@
 from actions.action import Action
 from config import log
 
-class StartGame(Action):
+class StartTurn(Action):
 	
 	def publish(self):
 		#turnNo starts from -1

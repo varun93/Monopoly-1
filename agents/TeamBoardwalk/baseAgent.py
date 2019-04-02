@@ -24,6 +24,7 @@ class BaseAgent(ApplicationSession):
 		# call a remote procedure.
 		res = yield self.call(join_game_uri)
 		print("The agent was assigned id: {}".format(res['agent_id']))
+		self.id = res['agent_id']
 		
 		self.bsmIn = yield self.subscribe(self.bsmListener,res['BSM_IN'])
 		self.buyIn = yield self.subscribe(self.buyListener,res['BUY_IN'])
@@ -40,6 +41,9 @@ class BaseAgent(ApplicationSession):
 		#Successfully Registered. Invoke confirm_register
 		response = yield self.call(res['CONFIRM_REGISTER'])
 		print("Result of calling confirm_register: "+str(response))
+	
+	def getId(self):
+		return self.id
 	
 	def startGameListener(self,state):
 		result = self.startGame(state)

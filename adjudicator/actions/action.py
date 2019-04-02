@@ -1,24 +1,18 @@
 import six
 import abc
 from functools import partial
+from twisted.internet import reactor
 
 import constants
 from dice import Dice
 from state import State
 from cards import Cards
-from utils import Timer
 
 @six.add_metaclass(abc.ABCMeta)
 class Action:
 	
 	def __init__(self,staticContext):
-		self.BOARD_SIZE = staticContext["BOARD_SIZE"]
-		self.CHANCE_GET_OUT_OF_JAIL_FREE = staticContext["CHANCE_GET_OUT_OF_JAIL_FREE"]
-		self.COMMUNITY_GET_OUT_OF_JAIL_FREE = staticContext["COMMUNITY_GET_OUT_OF_JAIL_FREE"]
-		self.JUST_VISTING = staticContext["JUST_VISTING"]
-		self.JAIL = staticContext["JAIL"]
 		self.PLAY_ORDER = staticContext["PLAY_ORDER"]
-		self.TOTAL_NO_OF_PLAYERS = staticContext["TOTAL_NO_OF_PLAYERS"]
 		self.PASSING_GO_MONEY = staticContext["PASSING_GO_MONEY"]
 		self.TOTAL_NO_OF_TURNS = staticContext["TOTAL_NO_OF_TURNS"]
 		self.INITIAL_CASH = staticContext["INITIAL_CASH"]
@@ -27,18 +21,26 @@ class Action:
 		#self.MAX_TRADE_REQUESTS = staticContext["MAX_TRADE_REQUESTS"]
 		#self.ACTION_TIMEOUT = staticContext["ACTION_TIMEOUT"]
 		
+		self.TOTAL_NO_OF_PLAYERS = len(self.PLAY_ORDER)
+		self.BOARD_SIZE = 40
+		self.CHANCE_GET_OUT_OF_JAIL_FREE = 40
+		self.COMMUNITY_GET_OUT_OF_JAIL_FREE = 41
+		self.JUST_VISTING = 10
+		self.JAIL = -1
 		#Maximum number of BSM requests a player can send in a BSM in a given turn
 		self.MAX_BSM_REQUESTS = 10
 		self.MAX_TRADE_REQUESTS = 10
 		self.ACTION_TIMEOUT = 30
 		self.DEFAULT_ACTIONS = {
+			"START_GAME_IN": None,
 			"JAIL_IN": ("P",),
 			"BUY_IN": False,
 			"AUCTION_IN": 0,
 			"BSM_IN": None,
 			"TRADE_IN": None,
 			"RESPOND_TRADE_IN": False,
-			"BROADCAST_IN": None
+			"BROADCAST_IN": None,
+			"END_GAME_IN": None
 		}
 	
 	def setContext(self,context):
@@ -55,10 +57,10 @@ class Action:
 		self.state = context.state
 		self.mortgagedDuringTrade = context.mortgagedDuringTrade
 		self.winner = context.winner
+		self.validSubs = 0
 	
 	def publishAction(self,agentId,actionClass):
-		self.timer = Timer()
-		self.timer.setTimeout(partial(self.timeoutHandler,actionClass), self.ACTION_TIMEOUT)
+		self.timeoutId = reactor.callLater(self.ACTION_TIMEOUT, partial(self.timeoutHandler,actionClass))
 		agent_attributes = self.context.genAgentChannels(agentId,requiredChannel = actionClass)
 		self.context.publish(agent_attributes[actionClass], self.state.toJson())
 	
@@ -66,6 +68,7 @@ class Action:
 		for agentId in self.agentsYetToRespond:
 			#These agents have timed out. Use default actions for them.
 			#TODO: Lock subscribe so that these agents can't invoke it in between
+			print("Agent "+str(agentId)+" has timed out in class "+str(actionClass))
 			self.subscribe(agentId,self.DEFAULT_ACTIONS[actionClass])
 	
 	def canAccessSubscribe(self,agentId):
@@ -80,10 +83,11 @@ class Action:
 		if agentId in self.agentsYetToRespond and self.context.currentClass == self.__class__.__name__:
 			#we are expecting this agent to respond to this action
 			#indicate that the agent has responded to this action
+			self.validSubs += 1
 			self.agentsYetToRespond.remove(agentId)
 			if len(self.agentsYetToRespond)==0:
 				#no more agents left to respond. The timeoutHandler is not required any longer.
-				self.timer.setClearTimer()
+				self.timeoutId.cancel()
 			return True
 		else:
 			print("Agent "+str(agentId)+" can't access the subscribe of "+self.__class__.__name__+" in "+str(self.context.currentClass))

@@ -15,11 +15,18 @@ class StartGame(Action):
 		self.context.mortgagedDuringTrade = []
 		self.context.winner = None
 			
-		log("game","Game #"+str(self.context.gamesCompleted)+" started.")
+		log("game","Game #"+str(self.context.gamesCompleted+1)+" started.")
 		
 		#Allow the agent to initialize state for a new game
-		self.publishAction(currentPlayerId,"START_GAME_IN")
+		self.agentsYetToRespond = list(self.PLAY_ORDER)
+		self.publishAction(None,"START_GAME_IN")
 	
-	def subscribe(self):
-		self.context.startTurn.setContext(self.context)
-		self.context.startTurn.publish()
+	def subscribe(self,*args):
+		agentId = None
+		if len(args)>0:
+			agentId = args[0]
+		
+		#self.validSubs is updated in self.canAccessSubscribe
+		if agentId and self.canAccessSubscribe(agentId) and self.validSubs>=len(self.PLAY_ORDER):
+			self.context.startTurn.setContext(self.context)
+			self.context.startTurn.publish()

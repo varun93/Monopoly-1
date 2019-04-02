@@ -6,7 +6,7 @@ from baseAgent import BaseAgent
 
 class RiskyAgent(BaseAgent):
 	def startGame(self,state):
-		self.pid = res['agent_id']
+		self.pid = self.id
 		self.minMoney = 200
 		self.stealing = False
 	
@@ -137,7 +137,10 @@ class RiskyAgent(BaseAgent):
 				if prop.data.type == Type.PROPERTY:
 					rent = prop.data.rents[prop.houses]
 				if prop.data.type == Type.RAILROAD:
-					rent = 25 * 2 ** state.getRailroadCount((self.pid + 1) % 2)
+					railroadCount = 0
+					for opponent in state.getOpponents(self.pid):
+						railroadCount += state.getRailroadCount(opponent)
+					rent = 25 * 2 ** railroadCount
 				ratio = (prop.data.price // 2) / rent
 				if ratio > maxRatio:
 					maxRatio = ratio

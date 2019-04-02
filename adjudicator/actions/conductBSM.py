@@ -1,6 +1,7 @@
 from actions.action import Action
 from utils import crange,typecast
 from constants import board
+from config import log
 
 class ConductBSM(Action):
 	
@@ -34,30 +35,30 @@ class ConductBSM(Action):
 		if self.canAccessSubscribe(agentId):
 			actionType = self.checkActionType(action) #Some basic validation like syntax,type checking and value range.
 			if actionType=="M":
-				self.mortgageRequests.append((playerId,action[1]))
+				self.mortgageRequests.append((agentId,action[1]))
 				self.actionCount+=1
 			elif actionType=="BHS":
-				if self.state.isBuyingHousesSequenceValid(playerId,action[1]) and hasBuyingCapability(playerId,action[1]):
-					self.buyingHousesRequests.append((playerId,action[1]))
-					log("bsm","Player "+str(playerId)+" wants to buy houses.")
+				if self.state.isBuyingHousesSequenceValid(agentId,action[1]) and hasBuyingCapability(agentId,action[1]):
+					self.buyingHousesRequests.append((agentId,action[1]))
+					log("bsm","Player "+str(agentId)+" wants to buy houses.")
 					log("bsm",str(action[1]))
 					self.actionCount+=1
 			elif actionType=="BHT":
-				if self.state.isBuyingHotelSequenceValid(playerId,action[1]):
-					self.buyingHotelsRequests.append((playerId,action[1]))
-					log("bsm","Player "+str(playerId)+" wants to buy hotels.")
+				if self.state.isBuyingHotelSequenceValid(agentId,action[1]):
+					self.buyingHotelsRequests.append((agentId,action[1]))
+					log("bsm","Player "+str(agentId)+" wants to buy hotels.")
 					log("bsm",str(action[1]))
 					self.actionCount+=1
 			elif actionType=="S":
-				if self.state.isSellingSequenceValid(playerId,action[1]):
-					self.sellingRequests.append((playerId,action[1]))
-					log("bsm","Player "+str(playerId)+" wants to sell houses/hotels.")
+				if self.state.isSellingSequenceValid(agentId,action[1]):
+					self.sellingRequests.append((agentId,action[1]))
+					log("bsm","Player "+str(agentId)+" wants to sell houses/hotels.")
 					log("bsm",str(action[1]))
 					self.actionCount+=1
 			
 			if len(self.agentsYetToRespond)==0:
 				"""All agents have responded or have timed out"""
-				if self.actionCount == 0:
+				if self.actionCount == 0 or self.BSMCount>=10:
 					#end bsm and go to the next action
 					nextAction = getattr(self.context, self.nextAction)
 					nextAction.setContext(self.context)
@@ -66,7 +67,7 @@ class ConductBSM(Action):
 					currentPlayerIndex = self.state.getCurrentPlayerIndex()
 					numPlayers = len(self.PLAY_ORDER)
 					def sortKey(request):
-						return (request[0]-currentPlayerIndex)%numPlayers
+						return (self.state.getPlayerIndex(request[0])-currentPlayerIndex)%numPlayers
 					
 					self.mortgageRequests = sorted(self.mortgageRequests,key=sortKey)
 					self.buyingHousesRequests = sorted(self.buyingHousesRequests,key=sortKey)
@@ -137,10 +138,10 @@ class ConductBSM(Action):
 						print("auction in BSM")
 						self.auctionInBSM(buyingHousesRequests)
 					
-					if not isThereAnAuctionInBSM:
-						self.context.conductBSM.BSMCount+=1
-						self.context.conductBSM.setContext(self.context)
-						self.context.conductBSM.publish()
+					if not isThereAnAuctionInBSM or isThereAnAuctionInBSM: #TODO
+						self.BSMCount+=1
+						self.setContext(self.context)
+						self.publish()
 					
 	
 	"""Returns the type of action. Also checks if the action is valid."""
@@ -247,17 +248,17 @@ class ConductBSM(Action):
 			#There should be no houses on a property to be mortgaged or in any other property in the monopoly.
 			if self.state.getNumberOfHouses(propertyId)>0:
 				return False
-			space = constants.board[propertyId]
+			space = board[propertyId]
 			for monopolyPropertyId in space["monopoly_group_elements"]:
 				if self.state.getNumberOfHouses(propertyId)>0:
 					return False
 			
 			mortagePrice = int(board[propertyId]['price']/2)
 			playerCash += mortagePrice
-			log("bsm","Player "+str(playerId)+" wants to mortgage.")
+			log("bsm","Agent "+str(playerId)+" wants to mortgage "+str(propertyId))
 			
 		for propertyId in unmortgageRequests:
-			unmortgagePrice = int(constants.board[propertyId]['price']/2)   
+			unmortgagePrice = int(board[propertyId]['price']/2)   
 
 			if propertyId in self.mortgagedDuringTrade:
 				self.mortgagedDuringTrade.remove(propertyId)
@@ -269,9 +270,8 @@ class ConductBSM(Action):
 			else:
 				return False
 			
-			log("bsm","Player "+str(playerId)+" wants to unmortgage.")
+			log("bsm","Agent "+str(playerId)+" wants to unmortgage "+str(propertyId))
 		
-		log("bsm",str(properties))  
 		for propertyId in properties:
 			self.state.setPropertyMortgaged(propertyId,not self.state.isPropertyMortgaged(propertyId))
 		self.state.setCash(playerId,playerCash)

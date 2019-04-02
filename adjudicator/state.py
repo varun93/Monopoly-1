@@ -37,7 +37,7 @@ class Debt:
 class State:
 	def __init__(self, playerIds):		
 		#List of id's of all the agents in the order in which the game will take place.
-		self.players = playerIds
+		self.players = list(playerIds)
 		self.TOTAL_NO_OF_PLAYERS = len(playerIds)
 		
 		self.turnNumber = -1
@@ -82,7 +82,17 @@ class State:
 		return self.players[self.getCurrentPlayerIndex()]
 	
 	def getPlayerId(self,playerIndex):
-		return self.players[playerIndex]
+		if isinstance(playerIndex,int) and playerIndex>=0 and playerIndex<len(self.players):
+			return self.players[playerIndex]
+		else:
+			return None
+	
+	def getPlayerIndex(self,playerId):
+		try:
+			return self.players.index(playerId)
+		except:
+			print(str(playerId)+" is not a valid agentId.")
+			return -1
 	
 	"""TURN"""
 	def getTurn(self):

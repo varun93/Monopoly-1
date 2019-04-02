@@ -1,30 +1,5 @@
 import threading
 from functools import wraps
-
-def delay(delay=0.):
-	"""
-	Decorator emulating setTimeout method in JavaScript
-	"""
-	def wrap(f):
-		@wraps(f)
-		def delayed(*args, **kwargs):
-			timer = threading.Timer(delay, f, args=args, kwargs=kwargs)
-			timer.start()
-		return delayed
-	return wrap
-
-class Timer:
-	toClearTimer = False
-	def setTimeout(self, fn, time):
-		@delay(time)
-		def some_fn():
-			if (self.toClearTimer is False):
-				fn()
-			else:
-				print('Invocation is cleared!')		
-		some_fn()
-	def setClearTimer(self):
-		self.toClearTimer = True
 		
 class TimeoutBehaviour:
 	"""
