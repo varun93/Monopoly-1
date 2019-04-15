@@ -11,7 +11,7 @@ import "./App.css";
 class App extends Component {
   constructor(props, context) {
     super(props, context);
-    this.session = null;
+    window.session = null;
     // currently hardcoding game id
     this.gameId = 1;
   }
@@ -26,7 +26,7 @@ class App extends Component {
     });
 
     connection.onopen = session => {
-      this.session = session;
+      window.session = session;
       const joinGameUri = substituteEndpoint(
         constants.JOIN_GAME_ENDPOINT,
         null,

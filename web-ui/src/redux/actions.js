@@ -23,3 +23,7 @@ export const setCandidates = candidates => {
 export const setFormData = (propertyId, formData) => {
   return { type: actionTypes.SET_FORM_DATA, propertyId, formData };
 };
+
+export const publishAction = () => {
+  return { type: actionTypes.PUBLISH_ACTION };
+};

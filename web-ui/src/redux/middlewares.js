@@ -2,7 +2,7 @@ import * as actionTypes from "./actionTypes";
 import { setCandidates } from "./actions";
 const middleware = store => next => async action => {
   const dispatch = store.dispatch;
-  //   const state = store.getState();
+  const state = store.getState();
   let candidates = [];
   if (action.type === actionTypes.SET_PLAYER_ACTION) {
     const { playerAction } = action;
@@ -17,6 +17,15 @@ const middleware = store => next => async action => {
     }
 
     dispatch(setCandidates(candidates));
+  }
+
+  if (action.type === actionTypes.PUBLISH_ACTION) {
+    console.log("Finally commit the action to the server");
+    console.log(state.formData);
+    // window.session.publish(relevantAction, payload)
+    // make sure you clear the previous form
+    // reset form
+    return;
   }
 
   next(action);
