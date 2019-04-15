@@ -37,5 +37,6 @@ export const RESPOND_TRADE_PUBLISHER =
 export const CONFIRM_REGISTER =
   "monopoly.game{%game_id%}.agent{%agent_id%}.confirmregister";
 export const END_GAME = "monopoly.game{%game_id%}.endgame.in";
-// export const END_GAME_OUT =
-//   "monopoly.game{%game_id%}.agent{%agent_id%}.endgame.out";
+export const END_GAME_OUT =
+  "monopoly.game{%game_id%}.agent{%agent_id%}.endgame.out";
+export const JOIN_GAME_ENDPOINT = "com.game{%game_id%}.joingame";

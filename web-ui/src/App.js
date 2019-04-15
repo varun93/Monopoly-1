@@ -1,28 +1,19 @@
 import React, { Component } from "react";
+import { connect } from "react-redux";
 import "bootstrap/dist/css/bootstrap.css";
-// import Board from "./Board";
+import Board from "./Board";
 import Autobahn from "autobahn";
 import * as constants from "./constants";
 import { substituteEndpoint } from "./utils";
-import Card from "react-bootstrap/Card";
-import Button from "react-bootstrap/Button";
-
-// import TurnChooser from "./TurnChooser";
+import { receieveMessage, setMyId, setEndpoints } from "./redux/actions";
 import "./App.css";
-
-// const autobahn = require("autobahn");
 
 class App extends Component {
   constructor(props, context) {
     super(props, context);
     this.session = null;
-    // currently hardcoding game id and agent id
+    // currently hardcoding game id
     this.gameId = 1;
-    this.agentId = 1;
-    this.state = {
-      actionButton: "",
-      winners: []
-    };
   }
 
   componentWillMount() {
@@ -36,86 +27,71 @@ class App extends Component {
 
     connection.onopen = session => {
       this.session = session;
-      this.subscribeToEvents();
+      const joinGameUri = substituteEndpoint(
+        constants.JOIN_GAME_ENDPOINT,
+        null,
+        this.gameId
+      );
+
+      session.call(joinGameUri).then(response => {
+        const { setMyId, setEndpoints } = this.props;
+        const myId = response["agent_id"];
+        setMyId(myId);
+        delete response["agent_id"];
+        setEndpoints(response);
+        this.subscribeToEvents(response);
+      });
     };
 
     connection.open();
   }
 
   /* Receivers  */
-  receiveTradeRequest = state => {
-    this.setState({ actionButton: constants.TRADE_ACTION });
+  receiveRequest = (phase, state) => {
+    console.log(phase);
+    const { receieveMessage } = this.props;
+    receieveMessage(state, phase);
+  };
+
+  receiveBroadcast = state => {
     console.log(state);
   };
 
-  receiveAuctionRequest = state => {
-    this.setState({ actionButton: constants.AUCTION_ACTION });
-    console.log(state);
-  };
+  subscribeToEvents = response => {
+    this.session.subscribe(response["BROADCAST_IN"], this.receiveBroadcast);
 
-  receiveBSMRequest = state => {
-    this.setState({ actionButton: constants.BSM_ACTION });
-    console.log(state);
-  };
-
-  receiveJailDecisionRequest = state => {
-    this.setState({ actionButton: constants.JAIL_DECISION_ACTION });
-    console.log(state);
-  };
-
-  receiveEndGameResult = state => {
-    // this.setState({ actionButton: constants.JAIL_DECISION_ACTION });
-    const result = state[0];
-    if (typeof result === "object") {
-      //aggregate the results
-      // this.setState({ winners: [] });
-    } else {
-      const winners = this.state.winners.concat(
-        JSON.stringify(parseInt(result))
-      );
-      this.setState({ winners });
-    }
-  };
-
-  /* Send Response; action listners  */
-
-  sendTradeResponse = event => {
-    this.session.publish(substituteEndpoint(constants.TRADE_PUBLISHER));
-  };
-
-  sendAuctionResponse = event => {
-    this.session.publish(substituteEndpoint(constants.AUCTION_PUBLISHER));
-  };
-
-  sendBSMResponse = event => {
-    this.session.publish(substituteEndpoint(constants.BSM_PUBLISH));
-  };
-
-  sendJailDecisionResponse = event => {
-    this.session.publish(substituteEndpoint(constants.JAIL_PUBLISHER));
-  };
-
-  subscribeToEvents = () => {
-    const { gameId, agentId } = this;
-    // this.session.subscribe(
-    //   substituteEndpoint(constants.TRADE_RECEIVER, agentId, gameId),
-    //   this.receiveTradeRequest
-    // );
-    // this.session.subscribe(
-    //   substituteEndpoint(constants.AUCTION_RECEIVER, agentId, gameId),
-    //   this.receiveAuctionRequest
-    // );
-    // this.session.subscribe(
-    //   substituteEndpoint(constants.BSM_RECEIVER, agentId, gameId),
-    //   this.receiveBSMRequest
-    // );
-    // this.session.subscribe(
-    //   substituteEndpoint(constants.JAIL_RECEIVER, agentId, gameId),
-    //   this.receiveJailDecisionRequest
-    // );
     this.session.subscribe(
-      substituteEndpoint(constants.END_GAME, agentId, gameId),
-      this.receiveEndGameResult
+      response["BUY_IN"],
+      this.receiveRequest.bind(this, "buy_property")
+    );
+
+    this.session.subscribe(
+      response["RESPOND_TRADE_IN"],
+      this.receiveRequest.bind(this, "trade")
+    );
+    this.session.subscribe(
+      response["AUCTION_IN"],
+      this.receiveRequest.bind(this, "auction")
+    );
+    this.session.subscribe(
+      response["BSM_IN"],
+      this.receiveRequest.bind(this, "bsm")
+    );
+    this.session.subscribe(
+      response["JAIL_IN"],
+      this.receiveRequest.bind(this, "jail_decision")
+    );
+    this.session.subscribe(
+      response["END_GAME_IN"],
+      this.receiveRequest.bind(this, "end_game")
+    );
+    this.session.subscribe(
+      response["START_GAME_IN"],
+      this.receiveRequest.bind(this, "start_game")
+    );
+    this.session.subscribe(
+      response["END_GAME_IN"],
+      this.receiveRequest.bind(this, "end_game")
     );
   };
 
@@ -124,64 +100,38 @@ class App extends Component {
   };
 
   render() {
-    // const { actionButton } = this.state;
-    const { startGame } = this;
-    const { winners } = this.state;
-    // const {
-    //   sendAuctionResponse,
-    //   sendBSMResponse,
-    //   sendJailDecisionResponse,
-    //   sendTradeResponse
-    // } = this;
     return (
       <div className="App">
-        <h1>Monopoly Stats </h1>
-        {/* <button
-          onClick={sendTradeResponse}
-          className="trade"
-          disabled={actionButton === "trade" ? "" : "disabled"}
-        >
-          Trade
-        </button>
-        <button
-          onClick={sendAuctionResponse}
-          className="auction"
-          disabled={actionButton === "auction" ? "" : "disabled"}
-        >
-          Auction
-        </button>
-        <button
-          onClick={sendBSMResponse}
-          className="bsm"
-          disabled={actionButton === "bsm" ? "" : "disabled"}
-        >
-          BSM
-        </button>
-        <button
-          className="jail-decision"
-          disabled={actionButton === "jail-decision" ? "" : "disabled"}
-          onClick={sendJailDecisionResponse}
-        >
-          Jail Decision
-        </button> */}
-        {/* <Board /> */}
-
-        <Button onClick={startGame} variant="primary">
-          Start Game
-        </Button>
-
-        <Card>
-          {winners.map((winner, index) => {
-            return (
-              <Card body key={index}>
-                Winner of game {index + 1} is agent {winner}
-              </Card>
-            );
-          })}
-        </Card>
+        <Board />
       </div>
     );
   }
 }
 
-export default App;
+const mapDispatchToProps = dispatch => ({
+  receieveMessage: (rawState, phase) =>
+    dispatch(receieveMessage(rawState, phase)),
+  setMyId: id => dispatch(setMyId(id)),
+  setEndpoints: endpoints => dispatch(setEndpoints(endpoints))
+});
+
+export default connect(
+  null,
+  mapDispatchToProps
+)(App);
+
+// // #URIs
+// join_game_uri = 'com.game{}.joingame'.format(self.game_id)
+
+// 4) call a remote procedure
+// );
+
+// // # call a remote procedure.
+// res = yield self.call(join_game_uri)
+// print("The agent was assigned id: {}".format(res['agent_id']))
+// self.id = res['agent_id']
+
+// self.endpoints = res
+
+// // #Successfully Registered. Invoke confirm_register
+// response = yield self.call(res['CONFIRM_REGISTER'])

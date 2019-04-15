@@ -1,0 +1,5 @@
+export const RECEIVE_MESSAGE = "RECEIVE_MESSAGE";
+export const SET_MY_ID = "SET_MY_ID";
+export const SET_ENDPOINTS = "SET_ENDPOINTS";
+export const SET_PLAYER_ACTION = "SET_USER_ACTION";
+export const SET_CANDIDATES = "SET_CANDIDATES";
