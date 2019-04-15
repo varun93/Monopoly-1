@@ -5,6 +5,7 @@ import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 
 class Space extends Component {
   state = {
@@ -20,16 +21,15 @@ class Space extends Component {
   };
 
   render() {
-    const { index, properties, candidates } = this.props;
+    const { index, properties, candidates, playerAction } = this.props;
     const space = properties[index];
     const { monopoly, class: category, name, price } = space;
     const { handleClose, handleShow } = this;
+    const highlighted = candidates.indexOf(space.id) !== -1 ? true : false;
 
     return (
       <div
-        className={`space ${category}  ${
-          candidates.indexOf(space.id) !== -1 ? "highlight" : ""
-        }
+        className={`space ${category}  ${highlighted ? "highlight" : ""}
       `}
       >
         <div onClick={handleShow} className="monopoly-box">
@@ -81,6 +81,36 @@ class Space extends Component {
                   Rent House 4 : {space.rent_house_4}
                 </Col>
               </Row>
+              {highlighted && playerAction === "buy-constructions" && (
+                <Form.Group controlId="formBuyConstructions">
+                  <Form.Label>Buy Constructions</Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="Constructions to Buy"
+                  />
+                </Form.Group>
+              )}
+
+              {highlighted && playerAction === "sell-constructions" && (
+                <Form.Group controlId="formSellConstructions">
+                  <Form.Label>Sell Constructions</Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="Constructions to Sell"
+                  />
+                </Form.Group>
+              )}
+
+              {highlighted && playerAction === "mortage-unmortgage" && (
+                <Form.Group controlId="formMortgageProperty">
+                  <Form.Check type="checkbox" label="Mortgage Property" />
+                </Form.Group>
+              )}
+              {highlighted && playerAction === "buy-property" && (
+                <Form.Group controlId="formBuyProperty">
+                  <Form.Check type="checkbox" label="Buy Property" />
+                </Form.Group>
+              )}
             </Container>
           </Modal.Body>
           <Modal.Footer>
@@ -100,7 +130,8 @@ class Space extends Component {
 const mapStateToProps = state => {
   return {
     properties: state.properties,
-    candidates: state.candidates || []
+    candidates: state.candidates || [],
+    playerAction: state.playerAction
   };
 };
 
