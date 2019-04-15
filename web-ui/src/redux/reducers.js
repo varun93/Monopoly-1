@@ -38,7 +38,8 @@ const initialState = {
   candidates: [],
   properties: {},
   playerCash: {},
-  playerBoardPositions: {}
+  playerBoardPositions: {},
+  formData: {}
 };
 
 const reducer = (state = initialState, action) => {
@@ -79,6 +80,16 @@ const reducer = (state = initialState, action) => {
       return {
         ...state,
         candidates
+      };
+
+    case actionTypes.SET_FORM_DATA:
+      const { formData, propertyId } = action;
+      return {
+        ...state,
+        formData: {
+          ...state.formData,
+          [propertyId]: formData
+        }
       };
 
     default:

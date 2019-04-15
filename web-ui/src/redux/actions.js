@@ -19,3 +19,7 @@ export const setPlayerAction = playerAction => {
 export const setCandidates = candidates => {
   return { type: actionTypes.SET_CANDIDATES, candidates };
 };
+
+export const setFormData = (propertyId, formData) => {
+  return { type: actionTypes.SET_FORM_DATA, propertyId, formData };
+};

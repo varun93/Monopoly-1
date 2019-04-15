@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
+import { setFormData } from "redux/actions";
 import Modal from "react-bootstrap/Modal";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
@@ -24,9 +25,14 @@ class Space extends Component {
     this.setState({ show: true });
   };
 
-  saveChanges = () => {
+  saveChanges = propertyId => {
     const { housesBought, housesSold, mortaged, propertyBrought } = this.state;
-    console.log(housesBought, housesSold, mortaged, propertyBrought);
+    this.props.setFormData(propertyId, {
+      housesBought,
+      housesSold,
+      mortaged,
+      propertyBrought
+    });
     //now dispatch an action against a property id
     this.setState({ show: false });
   };
@@ -167,7 +173,7 @@ class Space extends Component {
             <Button variant="secondary" onClick={handleClose}>
               Close
             </Button>
-            <Button variant="primary" onClick={saveChanges}>
+            <Button variant="primary" onClick={() => saveChanges(index)}>
               Save Changes
             </Button>
           </Modal.Footer>
@@ -177,6 +183,13 @@ class Space extends Component {
   }
 }
 
+const mapDispatchToProps = dispatch => {
+  return {
+    setFormData: (propertyId, formData) =>
+      dispatch(setFormData(propertyId, formData))
+  };
+};
+
 const mapStateToProps = state => {
   return {
     properties: state.properties,
@@ -185,4 +198,7 @@ const mapStateToProps = state => {
   };
 };
 
-export default connect(mapStateToProps)(Space);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Space);
