@@ -58,45 +58,45 @@ class App extends Component {
   };
 
   subscribeToEvents = response => {
-    this.session.subscribe(response["BROADCAST_IN"], this.receiveBroadcast);
+    window.session.subscribe(response["BROADCAST_IN"], this.receiveBroadcast);
 
-    this.session.subscribe(
+    window.session.subscribe(
       response["BUY_IN"],
       this.receiveRequest.bind(this, "buy_property")
     );
 
-    this.session.subscribe(
+    window.session.subscribe(
       response["RESPOND_TRADE_IN"],
       this.receiveRequest.bind(this, "trade")
     );
-    this.session.subscribe(
+    window.session.subscribe(
       response["AUCTION_IN"],
       this.receiveRequest.bind(this, "auction")
     );
-    this.session.subscribe(
+    window.session.subscribe(
       response["BSM_IN"],
       this.receiveRequest.bind(this, "bsm")
     );
-    this.session.subscribe(
+    window.session.subscribe(
       response["JAIL_IN"],
       this.receiveRequest.bind(this, "jail_decision")
     );
-    this.session.subscribe(
+    window.session.subscribe(
       response["END_GAME_IN"],
       this.receiveRequest.bind(this, "end_game")
     );
-    this.session.subscribe(
+    window.session.subscribe(
       response["START_GAME_IN"],
       this.receiveRequest.bind(this, "start_game")
     );
-    this.session.subscribe(
+    window.session.subscribe(
       response["END_GAME_IN"],
       this.receiveRequest.bind(this, "end_game")
     );
   };
 
   startGame = () => {
-    this.session.publish("com.monopoly.start");
+    window.session.publish("com.monopoly.start");
   };
 
   render() {

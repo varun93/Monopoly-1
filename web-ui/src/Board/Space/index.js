@@ -14,7 +14,7 @@ class Space extends Component {
     housesBought: 0,
     housesSold: 0,
     mortaged: false,
-    propertyBrought: false
+    propertyBought: false
   };
 
   handleClose = () => {
@@ -26,12 +26,12 @@ class Space extends Component {
   };
 
   saveChanges = propertyId => {
-    const { housesBought, housesSold, mortaged, propertyBrought } = this.state;
+    const { housesBought, housesSold, mortaged, propertyBought } = this.state;
     this.props.setFormData(propertyId, {
       housesBought,
       housesSold,
       mortaged,
-      propertyBrought
+      propertyBought
     });
     //now dispatch an action against a property id
     this.setState({ show: false });
@@ -66,7 +66,7 @@ class Space extends Component {
       onMortgaged,
       onPropertyBrought
     } = this;
-    const { housesBought, housesSold, propertyBrought, mortaged } = this.state;
+    const { housesBought, housesSold, propertyBought, mortaged } = this.state;
     const highlighted = candidates.indexOf(space.id) !== -1 ? true : false;
 
     return (
@@ -127,6 +127,8 @@ class Space extends Component {
                 <Form.Group controlId="formBuyConstructions">
                   <Form.Label>Buy Constructions</Form.Label>
                   <Form.Control
+                    min={0}
+                    max={4}
                     onChange={onHousesBrought}
                     type="number"
                     value={housesBought || ""}
@@ -141,6 +143,8 @@ class Space extends Component {
                   <Form.Control
                     onChange={onHousesSold}
                     type="number"
+                    min={0}
+                    max={4}
                     value={housesSold || ""}
                     placeholder="Constructions to Sell"
                   />
@@ -161,7 +165,7 @@ class Space extends Component {
                 <Form.Group controlId="formBuyProperty">
                   <Form.Check
                     onChange={onPropertyBrought}
-                    checked={propertyBrought}
+                    checked={propertyBought}
                     type="checkbox"
                     label="Buy Property"
                   />

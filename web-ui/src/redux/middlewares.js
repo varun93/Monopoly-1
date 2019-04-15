@@ -20,9 +20,41 @@ const middleware = store => next => async action => {
   }
 
   if (action.type === actionTypes.PUBLISH_ACTION) {
-    console.log("Finally commit the action to the server");
-    console.log(state.formData);
-    // window.session.publish(relevantAction, payload)
+    const { formData, playerAction, endpoints } = state;
+    const payload = [];
+    let keyToExtract = "",
+      endpoint = "";
+
+    if (formData === null || !Object.keys(formData)) {
+      return;
+    }
+
+    if (playerAction === "buy-property") {
+      keyToExtract = "propertyBought";
+      endpoint = endpoints.BUY_OUT;
+      payload[0] = true;
+    } else if (playerAction === "buy-constructions") {
+      keyToExtract = "housesBought";
+      payload[0] = "B";
+      endpoint = endpoints.BSM_OUT;
+    } else if (playerAction === "sell-constructions") {
+      keyToExtract = "housesSold";
+      payload[0] = "S";
+      endpoint = endpoints.BSM_OUT;
+    } else if (playerAction === "mortage-unmortgage") {
+      keyToExtract = "mortgage";
+      payload[0] = "M";
+      endpoint = endpoints.BSM_OUT;
+    }
+    payload[1] = Object.keys(formData).map(key => {
+      return [key, formData[key][keyToExtract]];
+    });
+
+    console.log([payload, endpoint]);
+
+    //prepare form data
+    // buy-property
+    // window.session.publish(endpoint, payload)
     // make sure you clear the previous form
     // reset form
     return;

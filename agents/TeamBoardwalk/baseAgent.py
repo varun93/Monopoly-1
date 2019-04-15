@@ -20,6 +20,7 @@ class BaseAgent(ApplicationSession):
 		
 		#URIs
 		join_game_uri = 'com.game{}.joingame'.format(self.game_id)
+		print(join_game_uri)
 		
 		# call a remote procedure.
 		res = yield self.call(join_game_uri)
