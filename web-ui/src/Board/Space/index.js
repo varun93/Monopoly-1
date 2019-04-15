@@ -9,7 +9,11 @@ import Form from "react-bootstrap/Form";
 
 class Space extends Component {
   state = {
-    show: false
+    show: false,
+    housesBought: 0,
+    housesSold: 0,
+    mortaged: false,
+    propertyBrought: false
   };
 
   handleClose = () => {
@@ -20,11 +24,43 @@ class Space extends Component {
     this.setState({ show: true });
   };
 
+  saveChanges = () => {
+    const { housesBought, housesSold, mortaged, propertyBrought } = this.state;
+    console.log(housesBought, housesSold, mortaged, propertyBrought);
+    //now dispatch an action against a property id
+    this.setState({ show: false });
+  };
+
+  onHousesBrought = event => {
+    this.setState({ housesBought: event.target.value });
+  };
+
+  onHousesSold = event => {
+    this.setState({ housesSold: event.target.value });
+  };
+
+  onMortgaged = event => {
+    this.setState({ mortaged: event.target.checked });
+  };
+
+  onPropertyBrought = event => {
+    this.setState({ propertyBrought: event.target.checked });
+  };
+
   render() {
     const { index, properties, candidates, playerAction } = this.props;
     const space = properties[index];
     const { monopoly, class: category, name, price } = space;
-    const { handleClose, handleShow } = this;
+    const {
+      handleClose,
+      handleShow,
+      saveChanges,
+      onHousesBrought,
+      onHousesSold,
+      onMortgaged,
+      onPropertyBrought
+    } = this;
+    const { housesBought, housesSold, propertyBrought, mortaged } = this.state;
     const highlighted = candidates.indexOf(space.id) !== -1 ? true : false;
 
     return (
@@ -85,7 +121,9 @@ class Space extends Component {
                 <Form.Group controlId="formBuyConstructions">
                   <Form.Label>Buy Constructions</Form.Label>
                   <Form.Control
+                    onChange={onHousesBrought}
                     type="number"
+                    value={housesBought || ""}
                     placeholder="Constructions to Buy"
                   />
                 </Form.Group>
@@ -95,7 +133,9 @@ class Space extends Component {
                 <Form.Group controlId="formSellConstructions">
                   <Form.Label>Sell Constructions</Form.Label>
                   <Form.Control
+                    onChange={onHousesSold}
                     type="number"
+                    value={housesSold || ""}
                     placeholder="Constructions to Sell"
                   />
                 </Form.Group>
@@ -103,12 +143,22 @@ class Space extends Component {
 
               {highlighted && playerAction === "mortage-unmortgage" && (
                 <Form.Group controlId="formMortgageProperty">
-                  <Form.Check type="checkbox" label="Mortgage Property" />
+                  <Form.Check
+                    onChange={onMortgaged}
+                    checked={mortaged}
+                    type="checkbox"
+                    label="Mortgage Property"
+                  />
                 </Form.Group>
               )}
               {highlighted && playerAction === "buy-property" && (
                 <Form.Group controlId="formBuyProperty">
-                  <Form.Check type="checkbox" label="Buy Property" />
+                  <Form.Check
+                    onChange={onPropertyBrought}
+                    checked={propertyBrought}
+                    type="checkbox"
+                    label="Buy Property"
+                  />
                 </Form.Group>
               )}
             </Container>
@@ -117,7 +167,7 @@ class Space extends Component {
             <Button variant="secondary" onClick={handleClose}>
               Close
             </Button>
-            <Button variant="primary" onClick={handleClose}>
+            <Button variant="primary" onClick={saveChanges}>
               Save Changes
             </Button>
           </Modal.Footer>

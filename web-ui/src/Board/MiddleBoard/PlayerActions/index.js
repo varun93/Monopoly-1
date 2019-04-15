@@ -35,6 +35,9 @@ const PlayerActions = props => {
           Start Turn
         </Button>
       </div>
+      <Button variant="success" size="lg">
+        Commit Changes
+      </Button>
     </div>
   );
 };
