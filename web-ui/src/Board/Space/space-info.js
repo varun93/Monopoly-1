@@ -3,6 +3,8 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 
 const SpaceInfo = ({ space }) => {
+  let { rent } = space;
+  rent = rent || [];
   return (
     <div>
       <Row className="show-grid">
@@ -22,26 +24,15 @@ const SpaceInfo = ({ space }) => {
         <Col xs={6} md={6}>
           Price : {space.price}
         </Col>
-        <Col xs={6} md={6}>
-          Rent : {space.rent}
-        </Col>
       </Row>
       <Row className="show-grid">
-        <Col xs={6} md={6}>
-          Rent Hotel : {space.rent_hotel}
-        </Col>
-        <Col xs={6} md={6}>
-          Rent House 1 : {space.rent_house_1}
-        </Col>
-        <Col xs={6} md={6}>
-          Rent House 2 : {space.rent_house_2}
-        </Col>
-        <Col xs={6} md={6}>
-          Rent House 3 : {space.rent_house_3}
-        </Col>
-        <Col xs={6} md={6}>
-          Rent House 4 : {space.rent_house_4}
-        </Col>
+        {rent.map((item, index) => {
+          return (
+            <Col key={index} xs={6} md={6}>
+              Rent {index < 4 ? `House ${index + 1}` : "Rent Hotel"} : {item}
+            </Col>
+          );
+        })}
       </Row>
     </div>
   );

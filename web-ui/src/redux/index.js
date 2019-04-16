@@ -8,14 +8,14 @@ const initialState = {
   players: [],
   currentPlayer: -1,
   myId: -1,
-  currentPhase: -1,
+  currentPhase: "",
   playerAction: "",
   endpoints: {},
   rawState: {},
   candidates: [],
   properties,
-  playerCash: {},
-  playerBoardPositions: {},
+  playersCash: {},
+  playersPositions: {},
   formData: {}
 };
 

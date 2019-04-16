@@ -3,13 +3,30 @@ import { connect } from "react-redux";
 import { setPlayerAction, publishAction } from "redux/actions";
 import GameInfo from "./GameInfo";
 import PlayerActions from "./PlayerActions";
+import MessageBox from "./MessageBox";
 
 const MiddleBoard = props => {
-  const { setPlayerAction, publishAction } = props;
+  const {
+    setPlayerAction,
+    publishAction,
+    phase,
+    myId,
+    phasePayload,
+    playersCash,
+    properties,
+    buyOutEndpoint
+  } = props;
   return (
     <div className="middle-board">
-      <GameInfo />
+      <GameInfo playersCash={playersCash} myId={myId} />
+      <MessageBox
+        phase={phase}
+        phasePayload={phasePayload}
+        properties={properties}
+      />
       <PlayerActions
+        phase={phase}
+        buyOutEndpoint={buyOutEndpoint}
         publishAction={publishAction}
         setPlayerAction={setPlayerAction}
       />
@@ -27,7 +44,12 @@ const mapDispatchToProps = dispatch => {
 const mapStateToProps = state => {
   return {
     playersCash: state.rawState.player_cash || {},
-    myId: state.myId
+    myId: state.myId,
+    playerAction: state.playerAction,
+    phase: state.phase,
+    properties: state.properties,
+    phasePayload: state.rawState.phase_payload,
+    buyOutEndpoint: state.endpoints.BUY_OUT
   };
 };
 

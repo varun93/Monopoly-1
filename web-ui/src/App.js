@@ -5,7 +5,12 @@ import Board from "./Board";
 import Autobahn from "autobahn";
 import * as constants from "./constants";
 import { substituteEndpoint } from "./utils";
-import { receieveMessage, setMyId, setEndpoints } from "./redux/actions";
+import {
+  receieveMessage,
+  setMyId,
+  setEndpoints,
+  setCandidates
+} from "./redux/actions";
 import "./App.css";
 
 class App extends Component {
@@ -49,55 +54,71 @@ class App extends Component {
 
   /* Receivers  */
   receiveRequest = (phase, state) => {
-    console.log(phase);
     const { receieveMessage } = this.props;
+    state = JSON.parse(state[0]);
     receieveMessage(state, phase);
   };
 
-  receiveBroadcast = state => {
-    console.log(state);
-  };
-
   subscribeToEvents = response => {
-    window.session.subscribe(response["BROADCAST_IN"], this.receiveBroadcast);
+    //default responses
+    window.session.subscribe(response["RESPOND_TRADE_IN"], state => {
+      window.session.publish(response["RESPOND_TRADE_OUT"], [false]);
+    });
+    window.session.subscribe(response["TRADE_IN"], state => {
+      window.session.publish(response["TRADE_OUT"], [false]);
+    });
+    window.session.subscribe(response["AUCTION_IN"], state => {
+      window.session.publish(response["AUCTION_OUT"], [0]);
+    });
+    window.session.subscribe(response["JAIL_IN"], state => {
+      window.session.publish(response["JAIL_OUT"], ["P"]);
+    });
 
-    window.session.subscribe(
-      response["BUY_IN"],
-      this.receiveRequest.bind(this, "buy_property")
-    );
+    //generic receive state
+    window.session.subscribe(response["BROADCAST_IN"], state => {
+      const { receieveMessage } = this.props;
+      state = JSON.parse(state[0]);
+      let phase = state.current_phase_number;
+      if (phase === 2) {
+        phase = "dice_roll";
+      }
+      if (phase === 6) {
+        phase = "jail_decision";
+      }
 
-    window.session.subscribe(
-      response["RESPOND_TRADE_IN"],
-      this.receiveRequest.bind(this, "trade")
-    );
-    window.session.subscribe(
-      response["AUCTION_IN"],
-      this.receiveRequest.bind(this, "auction")
-    );
+      receieveMessage(state, phase);
+      window.session.publish(response["BROADCAST_OUT"], []);
+    });
+
+    //buy property
+    window.session.subscribe(response["BUY_IN"], state => {
+      const { receieveMessage, setCandidates } = this.props;
+      state = JSON.parse(state[0]);
+      const propertyToBuy = state.phase_payload;
+      setCandidates([propertyToBuy]);
+      receieveMessage(state, "buy_property");
+    });
+
+    //do you want to do bsm
     window.session.subscribe(
       response["BSM_IN"],
-      this.receiveRequest.bind(this, "bsm")
+      state => {
+        window.session.publish(response["BSM_OUT"], []);
+      }
+      // this.receiveRequest.bind(this, "bsm")
     );
-    window.session.subscribe(
-      response["JAIL_IN"],
-      this.receiveRequest.bind(this, "jail_decision")
-    );
-    window.session.subscribe(
-      response["END_GAME_IN"],
-      this.receiveRequest.bind(this, "end_game")
-    );
-    window.session.subscribe(
-      response["START_GAME_IN"],
-      this.receiveRequest.bind(this, "start_game")
-    );
-    window.session.subscribe(
-      response["END_GAME_IN"],
-      this.receiveRequest.bind(this, "end_game")
-    );
-  };
 
-  startGame = () => {
-    window.session.publish("com.monopoly.start");
+    //end game
+    window.session.subscribe(
+      response["END_GAME_IN"],
+      this.receiveRequest.bind(this, "end_game")
+    );
+
+    //start game
+    window.session.subscribe(response["START_GAME_IN"], state => {
+      this.receiveRequest.bind(this, "start_game");
+      window.session.publish(response["START_GAME_OUT"], []);
+    });
   };
 
   render() {
@@ -113,7 +134,8 @@ const mapDispatchToProps = dispatch => ({
   receieveMessage: (rawState, phase) =>
     dispatch(receieveMessage(rawState, phase)),
   setMyId: id => dispatch(setMyId(id)),
-  setEndpoints: endpoints => dispatch(setEndpoints(endpoints))
+  setEndpoints: endpoints => dispatch(setEndpoints(endpoints)),
+  setCandidates: candidates => dispatch(setCandidates(candidates))
 });
 
 export default connect(
