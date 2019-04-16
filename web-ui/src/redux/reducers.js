@@ -77,6 +77,12 @@ const reducer = (state, action) => {
         }
       };
 
+    case actionTypes.RESET_FORM:
+      return {
+        ...state,
+        formData: {}
+      };
+
     default:
       return state;
   }

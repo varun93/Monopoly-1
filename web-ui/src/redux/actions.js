@@ -24,6 +24,10 @@ export const setFormData = (propertyId, formData) => {
   return { type: actionTypes.SET_FORM_DATA, propertyId, formData };
 };
 
+export const resetForm = () => {
+  return { type: actionTypes.RESET_FORM };
+};
+
 export const publishAction = () => {
   return { type: actionTypes.PUBLISH_ACTION };
 };

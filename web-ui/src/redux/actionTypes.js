@@ -4,4 +4,5 @@ export const SET_ENDPOINTS = "SET_ENDPOINTS";
 export const SET_PLAYER_ACTION = "SET_USER_ACTION";
 export const SET_CANDIDATES = "SET_CANDIDATES";
 export const SET_FORM_DATA = "SET_FORM_DATA";
+export const RESET_FORM = "RESET_FORM";
 export const PUBLISH_ACTION = "PUBLISH_ACTION";
