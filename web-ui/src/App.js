@@ -79,9 +79,13 @@ class App extends Component {
       const { receieveMessage } = this.props;
       state = JSON.parse(state[0]);
       let phase = state.current_phase_number;
-      if (phase === 6) {
-        phase = "dice-roll";
+      if (phase === 2) {
+        phase = "dice_roll";
       }
+      if (phase === 6) {
+        phase = "jail_decision";
+      }
+
       receieveMessage(state, phase);
       window.session.publish(response["BROADCAST_OUT"], []);
     });
