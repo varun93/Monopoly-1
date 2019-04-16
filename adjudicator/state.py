@@ -12,7 +12,7 @@ MAX_HOTELS = 12
 NUMBER_OF_PROPERTIES = 42
 
 class Property:
-	def __init__(self,houses,mortgaged,owned,ownerId):
+	def __init__(self,houses,mortgaged,owned,ownerId,propertyId):
 		self.houses = houses #value in range 0-5
 		self.mortgaged = mortgaged #boolean
 		self.owned = owned #boolean

@@ -18,7 +18,6 @@ class EndGame(Action):
 		#inside self.canAccessSubscribe, we remove elements from agentsYetToRespond. So, make a new copy here
 			
 		winner = resultsArray[0]
-		print(winner)
 		self.context.winCount[winner]+=1
 		#Allow the agent to make changes based on current game results
 		self.context.gamesCompleted+=1

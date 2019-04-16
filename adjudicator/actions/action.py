@@ -87,7 +87,8 @@ class Action:
 			self.agentsYetToRespond.remove(agentId)
 			if len(self.agentsYetToRespond)==0:
 				#no more agents left to respond. The timeoutHandler is not required any longer.
-				self.timeoutId.cancel()
+				if self.timeoutId.active():
+					self.timeoutId.cancel()
 			return True
 		else:
 			print("Agent "+str(agentId)+" can't access the subscribe of "+self.__class__.__name__+" in "+str(self.context.currentClass))

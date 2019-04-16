@@ -36,6 +36,7 @@ class BaseAgent(ApplicationSession):
 		self.respondTradeIn = yield self.subscribe(self.respondTradeListener,res['RESPOND_TRADE_IN'])
 		self.startGameIn = yield self.subscribe(self.startGameListener,res['START_GAME_IN'])
 		self.endGameIn = yield self.subscribe(self.endGameListener,res['END_GAME_IN'])
+		self.startTurnIn = yield self.subscribe(self.startTurnListener,res['START_TURN_IN'])
 		
 		self.endpoints = res
 
@@ -45,6 +46,10 @@ class BaseAgent(ApplicationSession):
 	
 	def getId(self):
 		return self.id
+	
+	def startTurnListener(self,state):
+		result = self.startTurn(state)
+		self.publish(self.endpoints['START_TURN_OUT'],result)
 	
 	def startGameListener(self,state):
 		result = self.startGame(state)
@@ -101,6 +106,7 @@ class BaseAgent(ApplicationSession):
 		self.respondTradeIn.unsubscribe()
 		self.startGameIn.unsubscribe()
 		self.endGameIn.unsubscribe()
+		self.startTurnIn.unsubscribe()
 
 		self.leave()
 	
@@ -108,6 +114,12 @@ class BaseAgent(ApplicationSession):
 	def startGame(self, state):
 		"""
 		Prepare for a new game.
+		"""
+	
+	@abc.abstractmethod
+	def startTurn(self, state):
+		"""
+		Merely indicating the start of a turn. No other intended function.
 		"""
 	
 	@abc.abstractmethod
