@@ -15,6 +15,7 @@ class DiceRoll(Action):
 			self.dice.roll()
 		
 		if self.dice.double_counter == 3:
+			#calls endTurn action
 			self.send_player_to_jail()
 		else:
 			#Update player position
@@ -27,7 +28,16 @@ class DiceRoll(Action):
 			
 			self.state.setCash(currentPlayerId,playerCash)
 			self.state.setPosition(currentPlayerId,playerPosition)
-			self.determine_position_effect()
+			
+			#sending the dice roll values to the agent
+			self.state.setPhase(Phase.DICE_ROLL)
+			self.state.setPhasePayload([self.dice.die_1, self.dice.die_2])
+			
+			#ReceiveState
+			self.context.receiveState.previousAction = "diceRoll"
+			self.context.receiveState.nextAction = "turnEffect"
+			self.context.receiveState.setContext(self.context)
+			self.context.receiveState.publish()
 	
 	def subscribe(self,response):
 		#there is no user action here
@@ -47,99 +57,3 @@ class DiceRoll(Action):
 		self.context.receiveState.nextAction = "endTurn"
 		self.context.receiveState.setContext(self.context)
 		self.context.receiveState.publish()
-	
-	"""
-	Performed after dice is rolled and the player is moved to a new position.
-	Determines the effect of the position and action required from the player.
-	"""	 
-	def determine_position_effect(self):
-		currentPlayerId = self.state.getCurrentPlayerId()
-		playerPosition = self.state.getPosition(currentPlayerId)
-		playerCash = self.state.getCash(currentPlayerId)
-		propertyClass = board[playerPosition]['class']
-		
-		if propertyClass == 'Street' or propertyClass == 'Railroad' or propertyClass == 'Utility':
-			isPropertyOwned = self.state.isPropertyOwned(playerPosition)
-			ownerId = self.state.getPropertyOwner(playerPosition)
-			isPropertyMortgaged = self.state.isPropertyMortgaged(playerPosition)
-			if not isPropertyOwned:
-				#Unowned
-				self.state.setPhase(Phase.BUYING)
-				self.state.setPhasePayload(playerPosition)
-				
-				self.publishBSM("buyProperty")
-			else:
-				if ownerId!=currentPlayerId and not isPropertyMortgaged:
-					rent = self.calculateRent()
-					self.state.setPhase(Phase.PAYMENT)
-					self.state.setPhasePayload(playerPosition)
-					self.state.setDebtToPlayer(currentPlayerId,ownerId,rent)
-				
-				self.publishBSM("handlePayment")
-			
-		elif propertyClass == 'Chance' or propertyClass == 'Chest':
-			if propertyClass == 'Chance':
-				card = self.chance.draw_card()
-				self.state.setPhase(Phase.CHANCE_CARD)
-				self.state.setPhasePayload(card['id'])
-			elif propertyClass == 'Chest':
-				card = self.chest.draw_card()
-				self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
-				self.state.setPhasePayload(card['id'])
-			
-			#ReceiveState
-			self.context.receiveState.previousAction = "diceRoll"
-			self.context.receiveState.nextAction = "handleCards"
-			self.context.receiveState.setContext(self.context)
-			self.context.receiveState.publish()
-		   
-		elif propertyClass == 'Tax':
-			tax = board[playerPosition]['tax']
-			self.state.setPhase(Phase.PAYMENT)
-			self.state.setPhasePayload(None)
-			self.state.addDebtToBank(currentPlayerId,tax)
-			
-			self.publishBSM("handlePayment")
-		
-		elif propertyClass == 'GoToJail':
-			self.send_player_to_jail()
-		
-		elif propertyClass == 'Idle':
-			#Represents Go,Jail(Visiting),Free Parking
-			self.publishBSM("handlePayment")
-	
-	def publishBSM(self,nextAction):
-		self.context.conductBSM.previousAction = "diceRoll"
-		self.context.conductBSM.nextAction = nextAction
-		self.context.conductBSM.BSMCount = 0
-		self.context.conductBSM.setContext(self.context)
-		self.context.conductBSM.publish()
-	
-	def calculateRent(self):
-		"""
-		Property is not owned by current player. Calculate the rent he has to pay.
-		"""
-		currentPlayerId = self.state.getCurrentPlayerId()
-		playerPosition = self.state.getPosition(currentPlayerId)
-		ownerId = self.state.getPropertyOwner(playerPosition)
-		
-		space = board[playerPosition]
-		monopolies = space['monopoly_group_elements']
-		counter = 0
-		for monopoly in monopolies:
-			if self.state.rightOwner(ownerId,monopoly):
-				counter += 1
-		
-		if (space['class'] == 'Street'):
-			houseCount = self.state.getNumberOfHouses(playerPosition)
-			rent = space['rent'][houseCount]
-			if counter==len(monopolies) and houseCount==0:
-				rent = rent * 2
-		
-		elif (space['class'] == 'Railroad'):
-			rent = space['rent'][counter]
-		elif (space['class'] == 'Utility'):
-			rent = space['rent'][counter]
-			rent = rent * (self.dice.die_1 + self.dice.die_2)
-		
-		return rent

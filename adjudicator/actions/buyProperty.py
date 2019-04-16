@@ -33,6 +33,8 @@ class BuyProperty(Action):
 					self.context.endTurn.setContext(self.context)
 					self.context.endTurn.publish()
 				else:
+					#player didnt have enough cash
+					self.state.setPhase(Phase.AUCTION)
 					self.context.auctionProperty.setContext(self.context)
 					self.context.auctionProperty.publish()
 		else:

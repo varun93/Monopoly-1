@@ -6,18 +6,14 @@ from config import log
 class ConductBSM(Action):
 	
 	def publish(self):
-		self.agentsYetToRespond = self.state.getLivePlayers()
+		self.agentsYetToRespond = list(self.state.getLivePlayers())
 		currentPlayerIndex = self.state.getCurrentPlayerIndex()
 		for i in crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
 				playerId = self.PLAY_ORDER[i]
 				if not self.state.hasPlayerLost(playerId):
 					self.publishAction(playerId,"BSM_IN")
 		
-		self.actionCount = 0
-		self.mortgageRequests = []
-		self.buyingHousesRequests = []
-		self.buyingHotelsRequests = []
-		self.sellingRequests = []
+		self.bsmActions = []
 		
 	def subscribe(self,*args):
 		"""
@@ -26,39 +22,50 @@ class ConductBSM(Action):
 		2. A player can only make MAX_BSM_REQUESTS number of requests in a given BSM.
 		"""
 		agentId = None
-		action = None
+		bsmAction = None
 		if len(args)>0:
 			agentId = args[0]
 		if len(args)>1:
-			action = args[1]
+			bsmAction = args[1]
 		
 		if self.canAccessSubscribe(agentId):
-			actionType = self.checkActionType(action) #Some basic validation like syntax,type checking and value range.
-			if actionType=="M":
-				self.mortgageRequests.append((agentId,action[1]))
-				self.actionCount+=1
-			elif actionType=="BHS":
-				if self.state.isBuyingHousesSequenceValid(agentId,action[1]) and hasBuyingCapability(agentId,action[1]):
-					self.buyingHousesRequests.append((agentId,action[1]))
-					log("bsm","Player "+str(agentId)+" wants to buy houses.")
-					log("bsm",str(action[1]))
-					self.actionCount+=1
-			elif actionType=="BHT":
-				if self.state.isBuyingHotelSequenceValid(agentId,action[1]):
-					self.buyingHotelsRequests.append((agentId,action[1]))
-					log("bsm","Player "+str(agentId)+" wants to buy hotels.")
-					log("bsm",str(action[1]))
-					self.actionCount+=1
-			elif actionType=="S":
-				if self.state.isSellingSequenceValid(agentId,action[1]):
-					self.sellingRequests.append((agentId,action[1]))
-					log("bsm","Player "+str(agentId)+" wants to sell houses/hotels.")
-					log("bsm",str(action[1]))
-					self.actionCount+=1
+			#doing no processing here as not all agents have responded yet.
+			#want to make this critical section as small as possible.
+			self.bsmActions.append( (agentId,bsmAction) )
 			
-			if len(self.agentsYetToRespond)==0:
+			if self.validSubs>=len(self.state.getLivePlayers()):
+				#if all the bsm requests have been received
+				actionCount = 0
+				mortgageRequests = []
+				buyingHousesRequests = []
+				buyingHotelsRequests = []
+				sellingRequests = []
+				for agentId,action in self.bsmActions:
+					actionType = self.checkActionType(action) #Some basic validation like syntax,type checking and value range.
+					if actionType=="M":
+						mortgageRequests.append((agentId,action[1]))
+						actionCount+=1
+					elif actionType=="BHS":
+						if self.state.isBuyingHousesSequenceValid(agentId,action[1]) and hasBuyingCapability(agentId,action[1]):
+							buyingHousesRequests.append((agentId,action[1]))
+							log("bsm","Player "+str(agentId)+" wants to buy houses.")
+							log("bsm",str(action[1]))
+							actionCount+=1
+					elif actionType=="BHT":
+						if self.state.isBuyingHotelSequenceValid(agentId,action[1]):
+							buyingHotelsRequests.append((agentId,action[1]))
+							log("bsm","Player "+str(agentId)+" wants to buy hotels.")
+							log("bsm",str(action[1]))
+							actionCount+=1
+					elif actionType=="S":
+						if self.state.isSellingSequenceValid(agentId,action[1]):
+							sellingRequests.append((agentId,action[1]))
+							log("bsm","Player "+str(agentId)+" wants to sell houses/hotels.")
+							log("bsm",str(action[1]))
+							actionCount+=1
+					
 				"""All agents have responded or have timed out"""
-				if self.actionCount == 0 or self.BSMCount>=10:
+				if actionCount == 0 or self.BSMCount>=10:
 					#end bsm and go to the next action
 					nextAction = getattr(self.context, self.nextAction)
 					nextAction.setContext(self.context)
@@ -69,36 +76,36 @@ class ConductBSM(Action):
 					def sortKey(request):
 						return (self.state.getPlayerIndex(request[0])-currentPlayerIndex)%numPlayers
 					
-					self.mortgageRequests = sorted(self.mortgageRequests,key=sortKey)
-					self.buyingHousesRequests = sorted(self.buyingHousesRequests,key=sortKey)
-					self.buyingHotelsRequests = sorted(self.buyingHotelsRequests,key=sortKey)
-					self.sellingRequests = sorted(self.sellingRequests,key=sortKey)
+					mortgageRequests = sorted(mortgageRequests,key=sortKey)
+					buyingHousesRequests = sorted(buyingHousesRequests,key=sortKey)
+					buyingHotelsRequests = sorted(buyingHotelsRequests,key=sortKey)
+					sellingRequests = sorted(sellingRequests,key=sortKey)
 					
 					"""Selling Requests"""
 					"""First the requests which don't need extra houses or hotels"""
 					finishedSellingRequests = []
-					for playerId,request in self.sellingRequests:
+					for playerId,request in sellingRequests:
 						housesNeeded,hotelsNeeded = self.state.evaluateSellingSequence(request)
 						if housesNeeded<=0 and hotelsNeeded<=0:
 							"""
-							The houses or hotels needed to satisfy this request are <=0
-							<0 means the no of free houses/hotels increases.
+							Processing this request increases the no of free houses/hotels.
+							In other words, this request doesn't clash with any other request. 
 							All the other selling requests and buying requests should be processed
-							after this to satisfy the maximum number of requests.
+							after this to satisfy the maximum number of requests possible.
 							"""
 							self.handleSell(playerId, request)
 							finishedSellingRequests.append(playerId)
-					self.sellingRequests = [entry for entry in self.sellingRequests if entry[0] not in finishedSellingRequests]
+					sellingRequests = [entry for entry in sellingRequests if entry[0] not in finishedSellingRequests]
 					
 					"""Calculate houses needed for Buying Houses Requests"""
 					housesRemaining = self.state.getHousesRemaining()
 					housesNeededForBHS = 0
-					for _,request in self.buyingHousesRequests:
+					for _,request in buyingHousesRequests:
 						housesNeededForBHS += self.state.evaluateBuyingHousesSequence(request)
 					housesRemaining -= housesNeededForBHS
 					
 					"""If there are houses left over, process the remaining selling requests"""
-					for playerId,request in self.sellingRequests:
+					for playerId,request in sellingRequests:
 						housesNeeded,hotelsNeeded = self.state.evaluateSellingSequence(request)
 						if housesNeeded<=housesRemaining:
 							self.handleSell(playerId, request)
@@ -106,7 +113,7 @@ class ConductBSM(Action):
 						else: break
 					
 					"""Mortgage/Unmortgage requests"""
-					for playerId,mortgageRequest in self.mortgageRequests:
+					for playerId,mortgageRequest in mortgageRequests:
 						self.handleMortgage(playerId,mortgageRequest)
 					
 					isThereAnAuctionInBSM = False
@@ -114,10 +121,10 @@ class ConductBSM(Action):
 					"""Buying Hotels Requests"""
 					hotelsRemaining = self.state.getHotelsRemaining()
 					hotelsForBHT = 0
-					for _,request in self.buyingHotelsRequests:
+					for _,request in buyingHotelsRequests:
 						hotelsForBHT += len(request)
 					if hotelsRemaining-hotelsForBHT>=0:
-						for playerId,request in self.buyingHotelsRequests:
+						for playerId,request in buyingHotelsRequests:
 							self.state.buyHotelSequence(playerId,request)
 					else:
 						#TODO: AUCTION FOR HOTELS
@@ -129,7 +136,7 @@ class ConductBSM(Action):
 					"""Buying Houses Requests"""
 					housesRemaining = self.state.getHousesRemaining()
 					if housesRemaining-housesNeededForBHS>=0:
-						for playerId,request in self.buyingHousesRequests:
+						for playerId,request in buyingHousesRequests:
 							self.handleBuyHouses(playerId,request)
 					else:
 						#TODO: AUCTION FOR HOUSES
@@ -142,7 +149,7 @@ class ConductBSM(Action):
 						self.BSMCount+=1
 						self.setContext(self.context)
 						self.publish()
-					
+				
 	
 	"""Returns the type of action. Also checks if the action is valid."""
 	def checkActionType(self,action):
