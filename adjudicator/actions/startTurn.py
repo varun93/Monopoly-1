@@ -22,8 +22,17 @@ class StartTurn(Action):
 		log("turn","Turn "+str(self.state.getTurn())+" start")
 		
 		#no communication with the user here.
-		self.subscribe()
+		#self.subscribe()
+		currentPlayerId = self.state.getCurrentPlayerId()
+		self.agentsYetToRespond = [currentPlayerId]
+		
+		self.publishAction(currentPlayerId,"START_TURN_IN")
 	
-	def subscribe(self):
-		self.context.jailDecision.setContext(self.context)
-		self.context.jailDecision.publish()
+	def subscribe(self,*args):
+		agentId = None
+		if len(args)>0:
+			agentId = args[0]
+		
+		if agentId and self.canAccessSubscribe(agentId):
+			self.context.jailDecision.setContext(self.context)
+			self.context.jailDecision.publish()

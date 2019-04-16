@@ -10,8 +10,10 @@ class RiskyAgent(BaseAgent):
 		self.minMoney = 200
 		self.stealing = False
 	
+	def startTurn(self,state):
+		return None
+	
 	def getBSMDecision(self, state):
-		print(state)
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
 			return self.getBestActionForMoney(state)

@@ -68,6 +68,9 @@ class Adjudicator(ApplicationSession):
 			"START_GAME_OUT": "monopoly.game{}.agent{}.startgame.out",
 			"END_GAME_IN" : "monopoly.game{}.endgame.in",
 			"END_GAME_OUT" : "monopoly.game{}.agent{}.endgame.out",
+			"START_TURN_IN": "monopoly.game{}.agent{}.startturn.in",
+			"START_TURN_OUT": "monopoly.game{}.agent{}.startturn.out",
+			
 		}
 		
 		#after timeout, don't wait for new players anymore
@@ -90,7 +93,8 @@ class Adjudicator(ApplicationSession):
 		# enough people have joined. start the game.
 		if self.currentPlayerCount == self.expectedPlayerCount:
 			self.gameStarted = True
-			self.timeoutId.cancel()
+			if self.timeoutId.active():
+				self.timeoutId.cancel()
 			self.startGame()
 		
 		return True
@@ -225,6 +229,9 @@ class Adjudicator(ApplicationSession):
 			sub = yield self.subscribe(partial(self.conductBSM.subscribe,agentId),
 			agent_attributes['BSM_OUT'])
 			self.subscribeKeys.append(sub)
+			sub = yield self.subscribe(partial(self.startTurn.subscribe,agentId),
+			agent_attributes['START_TURN_OUT'])
+			self.subscribeKeys.append(sub)
 			#sub = yield self.subscribe(partial(self.trade.subscribe,agentId),
 			#agent_attributes['TRADE_OUT'])
 			#self.subscribeKeys.append(sub)
@@ -237,7 +244,7 @@ class Adjudicator(ApplicationSession):
 	
 if __name__ == '__main__':
 	import six
-	url = environ.get("CBURL", u"ws://127.0.0.1:3000/ws")
+	url = environ.get("CBURL", u"ws://127.0.0.1:80/ws")
 	if six.PY2 and type(url) == six.binary_type:
 		url = url.decode('utf8')
 	realm = environ.get('CBREALM', u'realm1')

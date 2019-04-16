@@ -7,13 +7,12 @@ class ConductBSM(Action):
 	
 	def publish(self):
 		self.agentsYetToRespond = list(self.state.getLivePlayers())
+		self.bsmActions = []
 		currentPlayerIndex = self.state.getCurrentPlayerIndex()
 		for i in crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
 				playerId = self.PLAY_ORDER[i]
 				if not self.state.hasPlayerLost(playerId):
 					self.publishAction(playerId,"BSM_IN")
-		
-		self.bsmActions = []
 		
 	def subscribe(self,*args):
 		"""
