@@ -54,7 +54,13 @@ class Space extends Component {
   };
 
   render() {
-    const { index, properties, candidates, playerAction } = this.props;
+    const {
+      index,
+      properties,
+      candidates,
+      playerAction,
+      playersPositions
+    } = this.props;
     const space = properties[index];
     const { monopoly, class: category, name } = space;
     const {
@@ -74,8 +80,12 @@ class Space extends Component {
         className={`space ${category}  ${highlighted ? "highlight" : ""}
       `}
       >
-        {" "}
-        <CardInfo space={space} handleShow={handleShow} />
+        <CardInfo
+          index={index}
+          playersPositons={playersPositions}
+          space={space}
+          handleShow={handleShow}
+        />
         <Modal show={this.state.show} onHide={handleClose}>
           <Modal.Header style={{ background: monopoly }} closeButton>
             <Modal.Title>{name}</Modal.Title>
@@ -160,7 +170,8 @@ const mapStateToProps = state => {
   return {
     properties: state.properties,
     candidates: state.candidates || [],
-    playerAction: state.playerAction
+    playerAction: state.playerAction,
+    playersPositions: state.playersPositions
   };
 };
 

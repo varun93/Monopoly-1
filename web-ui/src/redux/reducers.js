@@ -27,6 +27,17 @@ import * as actionTypes from "./actionTypes";
 // CHANCE_CARD = 7
 // COMMUNITY_CHEST_CARD = 8
 
+const mergeProperties = (current, incoming) => {
+  const merged = current.map((property, index) => {
+    return {
+      ...property,
+      ...incoming[index]
+    };
+  });
+
+  return merged;
+};
+
 const reducer = (state, action) => {
   switch (action.type) {
     case actionTypes.RECEIVE_MESSAGE:
@@ -35,8 +46,11 @@ const reducer = (state, action) => {
         ...state,
         rawState,
         phase,
+        properties: mergeProperties(state.properties, rawState.properties),
         players: rawState.player_ids,
-        currentPlayer: rawState.current_player_id
+        currentPlayer: rawState.current_player_id,
+        playersPositions: rawState.player_board_positions,
+        playersCash: rawState.player_cash
       };
 
     case actionTypes.SET_MY_ID:
