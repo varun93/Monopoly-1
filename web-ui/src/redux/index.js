@@ -14,8 +14,8 @@ const initialState = {
   rawState: {},
   candidates: [],
   properties,
-  playerCash: {},
-  playerBoardPositions: {},
+  playersCash: {},
+  playersPositions: {},
   formData: {}
 };
 

@@ -72,8 +72,6 @@ const middleware = store => next => async action => {
       candidates = getSellingCandidates(state);
     } else if (playerAction === "mortage-unmortgage") {
       candidates = getMortgageCandidates(state);
-    } else if (playerAction === "buy-property") {
-      candidates = [21];
     }
 
     dispatch(setCandidates(candidates));
