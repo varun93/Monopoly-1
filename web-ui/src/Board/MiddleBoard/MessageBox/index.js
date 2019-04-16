@@ -14,7 +14,7 @@ const MessageBox = ({ phase, properties, phasePayload }) => {
       <h2 className="label"> Message Box </h2>
       {phase === "dice_roll" && (
         <div>
-          `Dice rolled was ${phasePayload[0]} and ${phasePayload[1]} `
+          Dice rolled was ${phasePayload[0]} and ${phasePayload[1]}
         </div>
       )}
       {phase === "bsm" && <div>Do you want to buy sell or auction? </div>}

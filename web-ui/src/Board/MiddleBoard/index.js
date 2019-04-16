@@ -11,12 +11,14 @@ const MiddleBoard = props => {
     playerAction,
     publishAction,
     phase,
+    myId,
     phasePayload,
+    playersCash,
     properties
   } = props;
   return (
     <div className="middle-board">
-      <GameInfo />
+      <GameInfo playersCash={playersCash} myId={myId} />
       <MessageBox
         phase={phase}
         phasePayload={phasePayload}

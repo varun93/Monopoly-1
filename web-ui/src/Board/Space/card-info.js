@@ -8,7 +8,7 @@ const playersMapping = {
 const getPlayerOnPosition = (playersPositons, index) => {
   for (let playerId in playersPositons) {
     if (index === playersPositons[playerId]) {
-      return playersMapping[playerId];
+      return playersMapping[playerId].name;
     }
   }
   return "";
