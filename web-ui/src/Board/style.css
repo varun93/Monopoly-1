@@ -473,6 +473,14 @@
   background: blue;
 }
 
+.player-one-owner {
+  border-bottom: 5px solid red;
+}
+
+.player-two-owner {
+  border-bottom: 5px solid blue;
+}
+
 .owner-1 {
   background: red;
   height: 5px;

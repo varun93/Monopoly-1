@@ -59,6 +59,7 @@ class Space extends Component {
       properties,
       candidates,
       playerAction,
+      players,
       playersPositions
     } = this.props;
     const space = properties[index];
@@ -82,6 +83,7 @@ class Space extends Component {
       >
         <CardInfo
           index={index}
+          players={players}
           playersPositons={playersPositions}
           space={space}
           handleShow={handleShow}
@@ -168,6 +170,7 @@ const mapDispatchToProps = dispatch => {
 
 const mapStateToProps = state => {
   return {
+    players: state.players || [],
     properties: state.properties,
     candidates: state.candidates || [],
     playerAction: state.playerAction,

@@ -25,7 +25,10 @@ const getBuyingCandidates = state => {
     })
     .map(property => property.id);
 
-  return [4, 9, 12];
+  console.log("Buying Candidates");
+  console.log(candidates);
+
+  return candidates;
 };
 
 const getSellingCandidates = state => {
@@ -39,7 +42,9 @@ const getSellingCandidates = state => {
       return true;
     })
     .map(property => property.id);
-  return [11, 14, 19];
+  console.log("Selling Candidates");
+  console.log(candidates);
+  return candidates;
 };
 
 const getMortgageCandidates = state => {
@@ -57,7 +62,9 @@ const getMortgageCandidates = state => {
     })
     .map(property => property.id);
 
-  return [20, 25, 29];
+  console.log("Mortgage Candidates");
+  console.log(candidates);
+  return candidates;
 };
 
 const middleware = store => next => async action => {
@@ -80,6 +87,7 @@ const middleware = store => next => async action => {
   if (action.type === actionTypes.PUBLISH_ACTION) {
     const { formData, playerAction, endpoints } = state;
     const payload = [];
+
     let keyToExtract = "",
       endpoint = "";
 
@@ -107,8 +115,6 @@ const middleware = store => next => async action => {
     console.log([payload, endpoint]);
 
     window.session.publish(endpoint, payload);
-    // make sure you clear the previous form
-    // reset form
     dispatch(resetForm());
     return;
   }

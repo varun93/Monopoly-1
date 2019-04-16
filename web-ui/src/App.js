@@ -74,6 +74,15 @@ class App extends Component {
       window.session.publish(response["JAIL_OUT"], ["P"]);
     });
 
+    //   TRADE = 1
+    // DICE_ROLL = 2
+    // BUYING = 3
+    // AUCTION = 4
+    // PAYMENT = 5
+    // JAIL = 6
+    // CHANCE_CARD = 7
+    // COMMUNITY_CHEST_CARD = 8
+
     //generic receive state
     window.session.subscribe(response["BROADCAST_IN"], state => {
       const { receieveMessage } = this.props;
@@ -81,6 +90,9 @@ class App extends Component {
       let phase = state.current_phase_number;
       if (phase === 2) {
         phase = "dice_roll";
+      }
+      if (phase === 4) {
+        phase = "auction";
       }
       if (phase === 6) {
         phase = "jail_decision";
