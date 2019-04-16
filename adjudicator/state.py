@@ -17,6 +17,7 @@ class Property:
 		self.mortgaged = mortgaged #boolean
 		self.owned = owned #boolean
 		self.ownerId = ownerId
+		self.propertyId = propertyId 
 	
 	def convert(self):
 		hotel = False
@@ -44,7 +45,7 @@ class State:
 		self.currentPlayerId = None
 		#This causes same instance to be repeated for the entire list
 		#[Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
-		self.properties = [Property(0,False,False,0) for i in range(NUMBER_OF_PROPERTIES)]
+		self.properties = [Property(0,False,False,0,i) for i in range(NUMBER_OF_PROPERTIES)]
 		self.positions = {}
 		self.cash = {}
 		self.bankrupt = {}

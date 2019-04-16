@@ -1,150 +1,122 @@
 import React, { Component } from "react";
+import { connect } from "react-redux";
 import "bootstrap/dist/css/bootstrap.css";
 import Board from "./Board";
 import Autobahn from "autobahn";
 import * as constants from "./constants";
 import { substituteEndpoint } from "./utils";
-
-// import TurnChooser from "./TurnChooser";
+import { receieveMessage, setMyId, setEndpoints } from "./redux/actions";
 import "./App.css";
-// const autobahn = require("autobahn");
 
 class App extends Component {
   constructor(props, context) {
     super(props, context);
-    this.session = null;
-    // currently hardcoding game id and agent id
+    window.session = null;
+    // currently hardcoding game id
     this.gameId = 1;
-    this.agentId = 1;
-    this.state = {
-      actionButton: ""
-    };
   }
 
   componentWillMount() {
     const url = constants.ROUTER_ENDPOINT;
     const realm = constants.APPLICATION_REALM;
+    let response = null;
 
     const connection = new Autobahn.Connection({
       url,
       realm
     });
 
-    connection.onopen = session => {
-      this.session = session;
-      this.subscribeToEvents();
+    connection.onopen = async session => {
+      window.session = session;
+      const joinGameUri = substituteEndpoint(
+        constants.JOIN_GAME_ENDPOINT,
+        null,
+        this.gameId
+      );
+
+      response = await session.call(joinGameUri);
+      const { setMyId, setEndpoints } = this.props;
+      const myId = response["agent_id"];
+      setMyId(myId);
+      delete response["agent_id"];
+      setEndpoints(response);
+      this.subscribeToEvents(response);
+      response = await session.call(response["CONFIRM_REGISTER"]);
     };
 
     connection.open();
   }
 
   /* Receivers  */
-  receiveTradeRequest = state => {
-    this.setState({ actionButton: constants.TRADE_ACTION });
+  receiveRequest = (phase, state) => {
+    console.log(phase);
+    const { receieveMessage } = this.props;
+    receieveMessage(state, phase);
+  };
+
+  receiveBroadcast = state => {
     console.log(state);
   };
 
-  receiveAuctionRequest = state => {
-    this.setState({ actionButton: constants.AUCTION_ACTION });
-    console.log(state);
-  };
+  subscribeToEvents = response => {
+    window.session.subscribe(response["BROADCAST_IN"], this.receiveBroadcast);
 
-  receiveBSMRequest = state => {
-    this.setState({ actionButton: constants.BSM_ACTION });
-    console.log(state);
-  };
-
-  receiveJailDecisionRequest = state => {
-    this.setState({ actionButton: constants.JAIL_DECISION_ACTION });
-    console.log(state);
-  };
-
-  /* Send Response; action listners  */
-
-  sendTradeResponse = event => {
-    this.session.publish(substituteEndpoint(constants.TRADE_PUBLISHER));
-  };
-
-  sendAuctionResponse = event => {
-    this.session.publish(substituteEndpoint(constants.AUCTION_PUBLISHER));
-  };
-
-  sendBSMResponse = event => {
-    this.session.publish(substituteEndpoint(constants.BSM_PUBLISH));
-  };
-
-  sendJailDecisionResponse = event => {
-    this.session.publish(substituteEndpoint(constants.JAIL_PUBLISHER));
-  };
-
-  subscribeToEvents = () => {
-    const { gameId, agentId } = this;
-    this.session.subscribe(
-      substituteEndpoint(constants.TRADE_RECEIVER, agentId, gameId),
-      this.receiveTradeRequest
+    window.session.subscribe(
+      response["BUY_IN"],
+      this.receiveRequest.bind(this, "buy_property")
     );
-    this.session.subscribe(
-      substituteEndpoint(constants.AUCTION_RECEIVER, agentId, gameId),
-      this.receiveAuctionRequest
+
+    window.session.subscribe(
+      response["RESPOND_TRADE_IN"],
+      this.receiveRequest.bind(this, "trade")
     );
-    this.session.subscribe(
-      substituteEndpoint(constants.BSM_RECEIVER, agentId, gameId),
-      this.receiveBSMRequest
+    window.session.subscribe(
+      response["AUCTION_IN"],
+      this.receiveRequest.bind(this, "auction")
     );
-    this.session.subscribe(
-      substituteEndpoint(constants.JAIL_RECEIVER, agentId, gameId),
-      this.receiveJailDecisionRequest
+    window.session.subscribe(
+      response["BSM_IN"],
+      this.receiveRequest.bind(this, "bsm")
+    );
+    window.session.subscribe(
+      response["JAIL_IN"],
+      this.receiveRequest.bind(this, "jail_decision")
+    );
+    window.session.subscribe(
+      response["END_GAME_IN"],
+      this.receiveRequest.bind(this, "end_game")
+    );
+    window.session.subscribe(
+      response["START_GAME_IN"],
+      this.receiveRequest.bind(this, "start_game")
+    );
+    window.session.subscribe(
+      response["END_GAME_IN"],
+      this.receiveRequest.bind(this, "end_game")
     );
   };
 
   startGame = () => {
-    this.session.publish("monopoly.auction", ["Start Game"]);
+    window.session.publish("com.monopoly.start");
   };
 
   render() {
-    const { actionButton } = this.state;
-    const {
-      sendAuctionResponse,
-      sendBSMResponse,
-      sendJailDecisionResponse,
-      sendTradeResponse
-    } = this;
     return (
       <div className="App">
-        <h1>Welcome to Monopoly </h1>
-        <button onClick={this.startGame}> Start Game </button>
-        <button
-          onClick={sendTradeResponse}
-          className="trade"
-          disabled={actionButton === "trade" ? "" : "disabled"}
-        >
-          Trade
-        </button>
-        <button
-          onClick={sendAuctionResponse}
-          className="auction"
-          disabled={actionButton === "auction" ? "" : "disabled"}
-        >
-          Auction
-        </button>
-        <button
-          onClick={sendBSMResponse}
-          className="bsm"
-          disabled={actionButton === "bsm" ? "" : "disabled"}
-        >
-          BSM
-        </button>
-        <button
-          className="jail-decision"
-          disabled={actionButton === "jail-decision" ? "" : "disabled"}
-          onClick={sendJailDecisionResponse}
-        >
-          Jail Decision
-        </button>
         <Board />
       </div>
     );
   }
 }
 
-export default App;
+const mapDispatchToProps = dispatch => ({
+  receieveMessage: (rawState, phase) =>
+    dispatch(receieveMessage(rawState, phase)),
+  setMyId: id => dispatch(setMyId(id)),
+  setEndpoints: endpoints => dispatch(setEndpoints(endpoints))
+});
+
+export default connect(
+  null,
+  mapDispatchToProps
+)(App);

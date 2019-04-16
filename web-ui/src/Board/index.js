@@ -1,58 +1,59 @@
 import React, { Component } from "react";
-import * as constants from "./constants";
 import Space from "./Space";
-import properties from "./properties";
 import "./style.css";
-import UpdatesPanel from "../UpdatesPanel";
-import GameInfo from "./GameInfo";
+import MiddleBoard from "./MiddleBoard";
 
+// https://stackoverflow.com/questions/3895478/does-javascript-have-a-method-like-range-to-generate-a-range-within-the-supp
+const range = (size, startAt = 0) => {
+  return [...Array(size).keys()].map(i => i + startAt);
+};
+
+//this should connect to re
 export default class Board extends Component {
-
   render() {
-
     return (
       <div className="monopoly-table">
+        {/* Start of Board */}
         <div className="board">
-          <GameInfo />
+          <MiddleBoard />
 
-          <Space space={properties[0]}/>
-          
+          {/* Actual Grids go here */}
+          <Space key={0} index={0} />
+
+          {/* Bottom Section */}
           <div className="board-row horizontal-board-row bottom-board-row">
-            {properties.slice(1,10).reverse()
-              .map(prop => (
-                <Space space={prop}/>
-              ))}
-          </div>
-          
-          <Space space={properties[10]}/>
-          
-          <div className="board-row vertical-board-row left-board-row">
-            {properties.slice(11,20).reverse()
-              .map(prop => (
-                <Space space={prop}/>
-              ))}
-          </div>
-          
-          <Space space={properties[20]}/>
-          
-          <div className="board-row horizontal-board-row top-board-row">
-            {properties.slice(21,30)
-              .map(prop => (
-                <Space space={prop}/>
-              ))}
+            {range(9).map(index => (
+              <Space key={10 - (index + 1)} index={10 - (index + 1)} />
+            ))}
           </div>
 
-          <Space space={properties[30]}/>
-          
-          <div className="board-row vertical-board-row right-board-row">
-            {properties.slice(31)
-              .map(prop => (
-                <Space space={prop}/>
-              ))}
+          <Space key={10} index={10} />
+
+          {/* Left Section */}
+          <div className="board-row vertical-board-row left-board-row">
+            {range(9).map(index => (
+              <Space key={20 - (index + 1)} index={20 - (index + 1)} />
+            ))}
           </div>
-        </div>
-        <div class="updates-panel">
-          <UpdatesPanel />
+
+          <Space key={20} index={20} />
+
+          {/* Top Section */}
+          <div className="board-row horizontal-board-row top-board-row">
+            {range(9).map((prop, index) => (
+              <Space key={index + 21} index={index + 21} />
+            ))}
+          </div>
+
+          <Space key={30} index={30} />
+
+          {/* Right Section */}
+          <div className="board-row vertical-board-row right-board-row">
+            {range(9).map((prop, index) => (
+              <Space key={index + 31} index={index + 31} />
+            ))}
+          </div>
+          {/* End of Game Playing Grids */}
         </div>
       </div>
     );

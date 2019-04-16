@@ -8,3 +8,5 @@ COPY . /app
 ENV CBURL ws://crossbar:80/ws
 ENV CBREALM realm1
 
+
+

@@ -11,6 +11,7 @@ class RiskyAgent(BaseAgent):
 		self.stealing = False
 	
 	def getBSMDecision(self, state):
+		print(state)
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:
 			return self.getBestActionForMoney(state)
