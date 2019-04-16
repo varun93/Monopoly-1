@@ -19,13 +19,14 @@ class App extends Component {
   componentWillMount() {
     const url = constants.ROUTER_ENDPOINT;
     const realm = constants.APPLICATION_REALM;
+    let response = null;
 
     const connection = new Autobahn.Connection({
       url,
       realm
     });
 
-    connection.onopen = session => {
+    connection.onopen = async session => {
       window.session = session;
       const joinGameUri = substituteEndpoint(
         constants.JOIN_GAME_ENDPOINT,
@@ -33,14 +34,14 @@ class App extends Component {
         this.gameId
       );
 
-      session.call(joinGameUri).then(response => {
-        const { setMyId, setEndpoints } = this.props;
-        const myId = response["agent_id"];
-        setMyId(myId);
-        delete response["agent_id"];
-        setEndpoints(response);
-        this.subscribeToEvents(response);
-      });
+      response = await session.call(joinGameUri);
+      const { setMyId, setEndpoints } = this.props;
+      const myId = response["agent_id"];
+      setMyId(myId);
+      delete response["agent_id"];
+      setEndpoints(response);
+      this.subscribeToEvents(response);
+      response = await session.call(response["CONFIRM_REGISTER"]);
     };
 
     connection.open();
@@ -119,19 +120,3 @@ export default connect(
   null,
   mapDispatchToProps
 )(App);
-
-// // #URIs
-// join_game_uri = 'com.game{}.joingame'.format(self.game_id)
-
-// 4) call a remote procedure
-// );
-
-// // # call a remote procedure.
-// res = yield self.call(join_game_uri)
-// print("The agent was assigned id: {}".format(res['agent_id']))
-// self.id = res['agent_id']
-
-// self.endpoints = res
-
-// // #Successfully Registered. Invoke confirm_register
-// response = yield self.call(res['CONFIRM_REGISTER'])

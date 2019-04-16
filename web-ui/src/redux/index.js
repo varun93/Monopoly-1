@@ -4,6 +4,21 @@ import thunk from "redux-thunk";
 import properties from "./properties";
 import monopolyMiddleware from "./middlewares";
 
+const initialState = {
+  players: [],
+  currentPlayer: -1,
+  myId: -1,
+  currentPhase: -1,
+  playerAction: "",
+  endpoints: {},
+  rawState: {},
+  candidates: [],
+  properties,
+  playerCash: {},
+  playerBoardPositions: {},
+  formData: {}
+};
+
 const middlewares = [];
 
 //register our middleware
@@ -17,7 +32,7 @@ if (process.env.NODE_ENV === "development") {
 
 const store = createStore(
   reducer,
-  { properties },
+  initialState,
   applyMiddleware(...middlewares)
 );
 

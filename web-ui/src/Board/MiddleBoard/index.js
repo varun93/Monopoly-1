@@ -24,7 +24,14 @@ const mapDispatchToProps = dispatch => {
   };
 };
 
+const mapStateToProps = state => {
+  return {
+    playersCash: state.rawState.player_cash || {},
+    myId: state.myId
+  };
+};
+
 export default connect(
-  null,
+  mapStateToProps,
   mapDispatchToProps
 )(MiddleBoard);

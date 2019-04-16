@@ -27,22 +27,7 @@ import * as actionTypes from "./actionTypes";
 // CHANCE_CARD = 7
 // COMMUNITY_CHEST_CARD = 8
 
-const initialState = {
-  players: [],
-  currentPlayer: -1,
-  myId: -1,
-  currentPhase: -1,
-  playerAction: "",
-  endpoints: {},
-  rawState: {},
-  candidates: [],
-  properties: {},
-  playerCash: {},
-  playerBoardPositions: {},
-  formData: {}
-};
-
-const reducer = (state = initialState, action) => {
+const reducer = (state, action) => {
   switch (action.type) {
     case actionTypes.RECEIVE_MESSAGE:
       const { rawState, phase } = action;
@@ -58,14 +43,14 @@ const reducer = (state = initialState, action) => {
       const { id: myId } = action;
       return {
         ...state,
-        myId
+        myId: myId
       };
 
     case actionTypes.SET_ENDPOINTS:
       const { endpoints } = action;
       return {
         ...state,
-        endpoints
+        endpoints: endpoints
       };
 
     case actionTypes.SET_PLAYER_ACTION:
