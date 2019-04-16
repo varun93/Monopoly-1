@@ -35,7 +35,7 @@ const PlayerActions = props => {
           Start Turn
         </Button>
       </div>
-      <Button onClick={() => props.publishAction()} variant="success" size="lg">
+      <Button onClick={() => props.publishAction()} variant="danger" size="lg">
         Commit Changes
       </Button>
     </div>

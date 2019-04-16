@@ -18,39 +18,39 @@ export default class Board extends Component {
           <MiddleBoard />
 
           {/* Actual Grids go here */}
-          <Space index={0} />
+          <Space key={0} index={0} />
 
           {/* Bottom Section */}
           <div className="board-row horizontal-board-row bottom-board-row">
             {range(9).map(index => (
-              <Space index={10 - (index + 1)} />
+              <Space key={10 - (index + 1)} index={10 - (index + 1)} />
             ))}
           </div>
 
-          <Space index={10} />
+          <Space key={10} index={10} />
 
           {/* Left Section */}
           <div className="board-row vertical-board-row left-board-row">
             {range(9).map(index => (
-              <Space index={20 - (index + 1)} />
+              <Space key={20 - (index + 1)} index={20 - (index + 1)} />
             ))}
           </div>
 
-          <Space index={20} />
+          <Space key={20} index={20} />
 
           {/* Top Section */}
           <div className="board-row horizontal-board-row top-board-row">
             {range(9).map((prop, index) => (
-              <Space index={index + 21} />
+              <Space key={index + 21} index={index + 21} />
             ))}
           </div>
 
-          <Space index={30} />
+          <Space key={30} index={30} />
 
           {/* Right Section */}
           <div className="board-row vertical-board-row right-board-row">
             {range(9).map((prop, index) => (
-              <Space index={index + 31} />
+              <Space key={index + 31} index={index + 31} />
             ))}
           </div>
           {/* End of Game Playing Grids */}
