@@ -3,14 +3,17 @@ from config import log
 from constants import communityChestCards,chanceCards,board
 from state import Phase
 
-class HandleCards(Action):
+class TurnEffect(Action):
 	
 	def publish(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
 		phase = self.state.getPhase()
 		cardId = self.state.getPhasePayload() #TODO: verify payload
 		
-		if phase == Phase.COMMUNITY_CHEST_CARD:
+		if phase == Phase.DICE_ROLL:
+			self.determine_position_effect()
+		
+		elif phase == Phase.COMMUNITY_CHEST_CARD:
 			card = communityChestCards[cardId]
 			log("cards","Agent "+currentPlayerId+" has drawn the Community Chest card \""+
 			str(card['content'])+"\"")
@@ -21,6 +24,7 @@ class HandleCards(Action):
 				self.state.setPhase(Phase.NO_ACTION)
 			self.state.setPhasePayload(None)
 			self.handle_cards_pre_turn(card,'Chest')
+			
 		elif phase == Phase.CHANCE_CARD:
 			card = chanceCards[cardId]
 			log("cards","Agent "+currentPlayerId+" has drawn the Chance card \""+
@@ -35,6 +39,66 @@ class HandleCards(Action):
 	
 	def subscribe(self,response):
 		pass
+	
+	"""
+	Performed after dice is rolled and the player is moved to a new position.
+	Determines the effect of the position and action required from the player.
+	"""	 
+	def determine_position_effect(self):
+		currentPlayerId = self.state.getCurrentPlayerId()
+		playerPosition = self.state.getPosition(currentPlayerId)
+		playerCash = self.state.getCash(currentPlayerId)
+		propertyClass = board[playerPosition]['class']
+		
+		if propertyClass == 'Street' or propertyClass == 'Railroad' or propertyClass == 'Utility':
+			isPropertyOwned = self.state.isPropertyOwned(playerPosition)
+			ownerId = self.state.getPropertyOwner(playerPosition)
+			isPropertyMortgaged = self.state.isPropertyMortgaged(playerPosition)
+			if not isPropertyOwned:
+				#Unowned
+				self.state.setPhase(Phase.BUYING)
+				self.state.setPhasePayload(playerPosition)
+				
+				self.publishBSM("buyProperty")
+			else:
+				if ownerId!=currentPlayerId and not isPropertyMortgaged:
+					rent = self.calculateRent()
+					self.state.setPhase(Phase.PAYMENT)
+					self.state.setPhasePayload(playerPosition)
+					self.state.setDebtToPlayer(currentPlayerId,ownerId,rent)
+				
+				self.publishBSM("endTurn")
+			
+		elif propertyClass == 'Chance' or propertyClass == 'Chest':
+			if propertyClass == 'Chance':
+				card = self.chance.draw_card()
+				self.state.setPhase(Phase.CHANCE_CARD)
+				self.state.setPhasePayload(card['id'])
+			elif propertyClass == 'Chest':
+				card = self.chest.draw_card()
+				self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
+				self.state.setPhasePayload(card['id'])
+			
+			#ReceiveState
+			self.context.receiveState.previousAction = "turnEffect"
+			self.context.receiveState.nextAction = "turnEffect"
+			self.context.receiveState.setContext(self.context)
+			self.context.receiveState.publish()
+		   
+		elif propertyClass == 'Tax':
+			tax = board[playerPosition]['tax']
+			self.state.setPhase(Phase.PAYMENT)
+			self.state.setPhasePayload(None)
+			self.state.addDebtToBank(currentPlayerId,tax)
+			
+			self.publishBSM("endTurn")
+		
+		elif propertyClass == 'GoToJail':
+			self.send_player_to_jail()
+		
+		elif propertyClass == 'Idle':
+			#Represents Go,Jail(Visiting),Free Parking
+			self.publishBSM("endTurn")
 	
 	"""Method handles various events for Chance and Community cards"""
 	def handle_cards_pre_turn(self,card,deck):
@@ -164,7 +228,7 @@ class HandleCards(Action):
 			elif phaseNumber == Phase.BUYING:
 				self.publishBSM("buyProperty")
 			else:
-				self.publishBSM("handlePayment")
+				self.publishBSM("endTurn")
 			
 	def send_player_to_jail(self):
 		currentPlayerId = self.state.getCurrentPlayerId()
@@ -176,73 +240,13 @@ class HandleCards(Action):
 		self.state.setPhase(Phase.JAIL)
 		self.state.setPhasePayload(None)
 		
-		self.context.receiveState.previousAction = "diceRoll"
+		self.context.receiveState.previousAction = "turnEffect"
 		self.context.receiveState.nextAction = "endTurn"
 		self.context.receiveState.setContext(self.context)
 		self.context.receiveState.publish()
 	
-	"""
-	Performed after dice is rolled and the player is moved to a new position.
-	Determines the effect of the position and action required from the player.
-	"""	 
-	def determine_position_effect(self):
-		currentPlayerId = self.state.getCurrentPlayerId()
-		playerPosition = self.state.getPosition(currentPlayerId)
-		playerCash = self.state.getCash(currentPlayerId)
-		propertyClass = board[playerPosition]['class']
-		
-		if propertyClass == 'Street' or propertyClass == 'Railroad' or propertyClass == 'Utility':
-			isPropertyOwned = self.state.isPropertyOwned(playerPosition)
-			ownerId = self.state.getPropertyOwner(playerPosition)
-			isPropertyMortgaged = self.state.isPropertyMortgaged(playerPosition)
-			if not isPropertyOwned:
-				#Unowned
-				self.state.setPhase(Phase.BUYING)
-				self.state.setPhasePayload(playerPosition)
-				
-				self.publishBSM("buyProperty")
-			else:
-				if ownerId!=currentPlayerId and not isPropertyMortgaged:
-					rent = self.calculateRent()
-					self.state.setPhase(Phase.PAYMENT)
-					self.state.setPhasePayload(playerPosition)
-					self.state.setDebtToPlayer(currentPlayerId,ownerId,rent)
-				
-				self.publishBSM("handlePayment")
-			
-		elif propertyClass == 'Chance' or propertyClass == 'Chest':
-			if propertyClass == 'Chance':
-				card = self.chance.draw_card()
-				self.state.setPhase(Phase.CHANCE_CARD)
-				self.state.setPhasePayload(card['id'])
-			elif propertyClass == 'Chest':
-				card = self.chest.draw_card()
-				self.state.setPhase(Phase.COMMUNITY_CHEST_CARD)
-				self.state.setPhasePayload(card['id'])
-			
-			#ReceiveState
-			self.context.receiveState.previousAction = "diceRoll"
-			self.context.receiveState.nextAction = "handleCards"
-			self.context.receiveState.setContext(self.context)
-			self.context.receiveState.publish()
-		   
-		elif propertyClass == 'Tax':
-			tax = board[playerPosition]['tax']
-			self.state.setPhase(Phase.PAYMENT)
-			self.state.setPhasePayload(None)
-			self.state.addDebtToBank(currentPlayerId,tax)
-			
-			self.publishBSM("handlePayment")
-		
-		elif propertyClass == 'GoToJail':
-			self.send_player_to_jail()
-		
-		elif propertyClass == 'Idle':
-			#Represents Go,Jail(Visiting),Free Parking
-			self.publishBSM("handlePayment")
-	
 	def publishBSM(self,nextAction):
-		self.context.conductBSM.previousAction = "diceRoll"
+		self.context.conductBSM.previousAction = "turnEffect"
 		self.context.conductBSM.nextAction = nextAction
 		self.context.conductBSM.BSMCount = 0
 		self.context.conductBSM.setContext(self.context)

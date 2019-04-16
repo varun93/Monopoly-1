@@ -13,10 +13,9 @@ from actions.startTurn import StartTurn
 from actions.jailDecision import JailDecision
 from actions.receiveState import ReceiveState
 from actions.diceRoll import DiceRoll
-from actions.handleCards import HandleCards
+from actions.turnEffect import TurnEffect
 from actions.buyProperty import BuyProperty
 from actions.auctionProperty import AuctionProperty
-from actions.handlePayment import HandlePayment
 from actions.conductBSM import ConductBSM
 from actions.endTurn import EndTurn
 
@@ -36,7 +35,7 @@ class Adjudicator(ApplicationSession):
 		#self.gameId = int(sys.argv[1])
 		#self.expectedPlayerCount = int(sys.argv[2])
 		self.gameId = 1
-		self.expectedPlayerCount = 2
+		self.expectedPlayerCount = 3
 		
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
@@ -159,7 +158,7 @@ class Adjudicator(ApplicationSession):
 		self.PASSING_GO_MONEY = 200
 		self.TOTAL_NO_OF_TURNS = 100
 		self.INITIAL_CASH = 1500
-		self.NO_OF_GAMES =2
+		self.NO_OF_GAMES =1
 		self.gamesCompleted = 0
 		
 		self.winCount = {}
@@ -194,10 +193,9 @@ class Adjudicator(ApplicationSession):
 		self.jailDecision = JailDecision(staticContext)
 		self.receiveState = ReceiveState(staticContext)
 		self.diceRoll = DiceRoll(staticContext)
-		self.handleCards = HandleCards(staticContext)
+		self.turnEffect = TurnEffect(staticContext)
 		self.buyProperty = BuyProperty(staticContext)
 		self.auctionProperty = AuctionProperty(staticContext)
-		self.handlePayment = HandlePayment(staticContext)
 		self.conductBSM = ConductBSM(staticContext)
 		#self.trade = Trade(staticContext)
 		#self.respondTrade = RespondTrade(staticContext)

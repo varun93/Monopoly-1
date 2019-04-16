@@ -1,5 +1,6 @@
 from actions.action import Action
 from state import Phase
+import constants
 
 class JailDecision(Action):
 	
@@ -69,8 +70,8 @@ class JailDecision(Action):
 					self.state.setCash(currentPlayerId,playerCash-50)
 				else:
 					self.state.addDebtToBank(currentPlayerId,50)
-				self.state.setPosition(currentPlayerId,self.JUST_VISTING)
 				
+				self.state.setPosition(currentPlayerId,self.JUST_VISTING)
 				self.state.resetJailCounter(currentPlayerId)
 				return [True,False]
 			
@@ -85,6 +86,7 @@ class JailDecision(Action):
 							self.chance.deck.append(constants.chanceCards[7])
 						
 						self.state.setPropertyUnowned(action[1])
+						
 						self.state.setPosition(currentPlayerId,self.JUST_VISTING)
 						self.state.resetJailCounter(currentPlayerId)
 						return [True,False]
@@ -103,8 +105,11 @@ class JailDecision(Action):
 		if self.state.getJailCounter(currentPlayerId)==3:
 			playerCash = self.state.getCash(currentPlayerId)
 			#The player has to pay $50 and get out. 
-			#This is added as debt so that the player has the opportunity to resolve it.
-			self.state.addDebtToBank(currentPlayerId,50)
+			if playerCash>=50:
+				self.state.setCash(currentPlayerId,playerCash-50)
+			else:
+				#This is added as debt so that the player has the opportunity to resolve it.
+				self.state.addDebtToBank(currentPlayerId,50)
 			self.state.setPosition(currentPlayerId,self.JUST_VISTING)
 			self.state.resetJailCounter(currentPlayerId)
 
