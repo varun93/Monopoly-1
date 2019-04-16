@@ -102,7 +102,10 @@ class App extends Component {
     //do you want to do bsm
     window.session.subscribe(
       response["BSM_IN"],
-      this.receiveRequest.bind(this, "bsm")
+      state => {
+        window.session.publish(response["BSM_OUT"], []);
+      }
+      // this.receiveRequest.bind(this, "bsm")
     );
 
     //end game

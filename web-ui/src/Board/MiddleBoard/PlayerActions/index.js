@@ -1,20 +1,47 @@
 import React from "react";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Container from "react-bootstrap/Container";
 
-const PlayerActions = props => {
-  const { phase, playerAction } = props;
+const PlayerActions = ({
+  phase,
+  buyOutEndpoint,
+  setPlayerAction,
+  publishAction
+}) => {
   const click = playerAction => {
-    props.setPlayerAction(playerAction);
+    setPlayerAction(playerAction);
   };
 
   return (
     <div className="player-actions">
       <h2 className="label">Player Actions</h2>
       {phase === "buy_property" && (
-        <Button onClick={click.bind(null, "buy-property")} variant="primary">
-          Buy Property
-        </Button>
+        <Container>
+          <Form.Label as="legend" column>
+            Buy Property?
+          </Form.Label>
+          <Form.Check
+            onChange={event => {
+              window.session.publish(buyOutEndpoint, [true]);
+            }}
+            type="radio"
+            label="Yes"
+            name="formHorizontalRadios"
+            id="formHorizontalRadios1"
+          />
+          <Form.Check
+            onChange={event => {
+              window.session.publish(buyOutEndpoint, [false]);
+            }}
+            type="radio"
+            label="No"
+            name="formHorizontalRadios"
+            id="formHorizontalRadios2"
+          />
+        </Container>
       )}
+
       {phase === "bsm" && (
         <div>
           <Button
@@ -35,21 +62,10 @@ const PlayerActions = props => {
           >
             Mortgage/Unmortgage
           </Button>
+          <Button onClick={() => publishAction()} variant="danger" size="lg">
+            Commit Action
+          </Button>
         </div>
-      )}
-      <div>
-        <Button onClick={click.bind(null, "start-turn")} variant="primary">
-          Start Turn
-        </Button>
-      </div>
-      {playerAction && (
-        <Button
-          onClick={() => props.publishAction()}
-          variant="danger"
-          size="lg"
-        >
-          Commit Changes
-        </Button>
       )}
     </div>
   );

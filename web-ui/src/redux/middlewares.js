@@ -87,32 +87,26 @@ const middleware = store => next => async action => {
       return;
     }
 
-    if (playerAction === "buy-property") {
-      keyToExtract = "propertyBought";
-      endpoint = endpoints.BUY_OUT;
-      payload[0] = true;
-    } else {
-      if (playerAction === "buy-constructions") {
-        keyToExtract = "housesBought";
-        payload[0] = "BHS";
-        endpoint = endpoints.BSM_OUT;
-      } else if (playerAction === "sell-constructions") {
-        keyToExtract = "housesSold";
-        payload[0] = "S";
-        endpoint = endpoints.BSM_OUT;
-      } else if (playerAction === "mortage-unmortgage") {
-        keyToExtract = "mortgage";
-        payload[0] = "M";
-        endpoint = endpoints.BSM_OUT;
-      }
-      payload[1] = Object.keys(formData).map(key => {
-        return [key, formData[key][keyToExtract]];
-      });
+    if (playerAction === "buy-constructions") {
+      keyToExtract = "housesBought";
+      payload[0] = "BHS";
+      endpoint = endpoints.BSM_OUT;
+    } else if (playerAction === "sell-constructions") {
+      keyToExtract = "housesSold";
+      payload[0] = "S";
+      endpoint = endpoints.BSM_OUT;
+    } else if (playerAction === "mortage-unmortgage") {
+      keyToExtract = "mortgage";
+      payload[0] = "M";
+      endpoint = endpoints.BSM_OUT;
     }
+    payload[1] = Object.keys(formData).map(key => {
+      return [key, formData[key][keyToExtract]];
+    });
 
     console.log([payload, endpoint]);
 
-    // window.session.publish(endpoint, payload)
+    window.session.publish(endpoint, payload);
     // make sure you clear the previous form
     // reset form
     dispatch(resetForm());
