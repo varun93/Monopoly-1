@@ -8,6 +8,7 @@ import MessageBox from "./MessageBox";
 const MiddleBoard = props => {
   const {
     setPlayerAction,
+    playerAction,
     publishAction,
     phase,
     phasePayload,
@@ -22,6 +23,8 @@ const MiddleBoard = props => {
         properties={properties}
       />
       <PlayerActions
+        phase={phase}
+        playerAction={playerAction}
         publishAction={publishAction}
         setPlayerAction={setPlayerAction}
       />
@@ -40,6 +43,7 @@ const mapStateToProps = state => {
   return {
     playersCash: state.rawState.player_cash || {},
     myId: state.myId,
+    playerAction: state.playerAction,
     phase: state.phase,
     properties: state.properties,
     phasePayload: state.rawState.phase_payload
