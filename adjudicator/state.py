@@ -418,6 +418,7 @@ class Phase:
 	JAIL = 6
 	CHANCE_CARD = 7
 	COMMUNITY_CHEST_CARD = 8
+	TRADE_RESPONSE = 9
 	
 """
 The reason for victory:

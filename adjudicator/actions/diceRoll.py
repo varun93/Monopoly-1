@@ -29,15 +29,19 @@ class DiceRoll(Action):
 			self.state.setCash(currentPlayerId,playerCash)
 			self.state.setPosition(currentPlayerId,playerPosition)
 			
-			#sending the dice roll values to the agent
 			self.state.setPhase(Phase.DICE_ROLL)
-			self.state.setPhasePayload([self.dice.die_1, self.dice.die_2])
-			
-			#ReceiveState
-			self.context.receiveState.previousAction = "diceRoll"
-			self.context.receiveState.nextAction = "turnEffect"
-			self.context.receiveState.setContext(self.context)
-			self.context.receiveState.publish()
+			if self.isOption(currentPlayerId,"DICE_ROLL"):
+				#sending the dice roll values to the agent
+				self.state.setPhasePayload([self.dice.die_1, self.dice.die_2])
+				
+				#ReceiveState
+				self.context.receiveState.previousAction = "diceRoll"
+				self.context.receiveState.nextAction = "turnEffect"
+				self.context.receiveState.setContext(self.context)
+				self.context.receiveState.publish()
+			else:
+				self.context.turnEffect.setContext(self.context)
+				self.context.turnEffect.publish()
 	
 	def subscribe(self,response):
 		#there is no user action here
@@ -48,6 +52,7 @@ class DiceRoll(Action):
 		#send the player to jail and end the turn
 		#Disable double
 		self.dice.double = False
+		self.dice.double_counter = 0
 		log("jail","Agent "+str(currentPlayerId)+" has been sent to jail")
 		self.state.setPosition(currentPlayerId,self.JAIL)
 		self.state.setPhase(Phase.JAIL)

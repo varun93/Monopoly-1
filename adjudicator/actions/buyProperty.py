@@ -21,7 +21,7 @@ class BuyProperty(Action):
 		if len(args)>1:
 			response = args[1]
 		
-		if agentId and self.canAccessSubscribe(agentId):
+		if self.canAccessSubscribe(agentId):
 			response = typecast(response, bool, False)
 			if not response:
 				self.state.setPhase(Phase.AUCTION)

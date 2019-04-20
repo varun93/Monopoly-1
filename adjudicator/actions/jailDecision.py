@@ -5,11 +5,15 @@ import constants
 class JailDecision(Action):
 	
 	def publish(self):
+		#This is the action class from where the turn would start on rolling a double.
+		#Basically, if the turn is legitimate, the game has to pass through here.
+		self.context.mortgagedDuringTrade = []
+		
 		currentPlayerId = self.state.getCurrentPlayerId()
 		self.agentsYetToRespond = [currentPlayerId]
 		playerPosition = self.state.getPosition(currentPlayerId)
 		if playerPosition != self.JAIL:
-			#player is not in jail. bypass and call subscribe
+			#player is not in jail.
 			#send the player directly to diceRoll
 			self.context.diceRoll.diceThrown = False
 			self.context.diceRoll.setContext(self.context)
@@ -28,7 +32,7 @@ class JailDecision(Action):
 		if len(args)>1:
 			response = args[1]
 		
-		if agentId and self.canAccessSubscribe(agentId):
+		if self.canAccessSubscribe(agentId):
 			outOfJail,diceThrown = self.handle_in_jail_state(response)
 			
 			#let the player know if he is out of jail or not
@@ -97,6 +101,7 @@ class JailDecision(Action):
 			#Player can go out
 			#Need to ensure that there is no second turn for the player in this turn.
 			self.dice.double = False
+			self.dice.double_counter = 0
 			self.state.setPosition(currentPlayerId,self.JUST_VISTING)
 			self.state.resetJailCounter(currentPlayerId)
 			return [True,True]

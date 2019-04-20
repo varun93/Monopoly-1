@@ -12,7 +12,6 @@ class StartGame(Action):
 		self.context.chest = Cards(communityChestCards)
 		self.context.chance = Cards(chanceCards)
 		self.context.state =  State(self.PLAY_ORDER)
-		self.context.mortgagedDuringTrade = []
 		self.context.winner = None
 			
 		log("game","Game #"+str(self.context.gamesCompleted+1)+" started.")
@@ -27,6 +26,6 @@ class StartGame(Action):
 			agentId = args[0]
 		
 		#self.validSubs is updated in self.canAccessSubscribe
-		if agentId and self.canAccessSubscribe(agentId) and self.validSubs>=len(self.PLAY_ORDER):
+		if self.canAccessSubscribe(agentId) and self.validSubs>=len(self.PLAY_ORDER):
 			self.context.startTurn.setContext(self.context)
 			self.context.startTurn.publish()

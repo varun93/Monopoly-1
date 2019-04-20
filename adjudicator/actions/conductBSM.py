@@ -64,11 +64,16 @@ class ConductBSM(Action):
 							actionCount+=1
 					
 				"""All agents have responded or have timed out"""
-				if actionCount == 0 or self.BSMCount>=10:
-					#end bsm and go to the next action
-					nextAction = getattr(self.context, self.nextAction)
-					nextAction.setContext(self.context)
-					nextAction.publish()
+				if actionCount == 0:
+					if self.previousAction == "handleTrade":
+						#end bsm and go to the next action
+						nextAction = getattr(self.context, self.nextAction)
+						nextAction.setContext(self.context)
+						nextAction.publish()
+					else:
+						self.context.handleTrade.tradeCount = 0
+						self.context.handleTrade.setContext(self.context)
+						self.context.handleTrade.publish()
 				else:
 					currentPlayerIndex = self.state.getCurrentPlayerIndex()
 					numPlayers = len(self.PLAY_ORDER)
@@ -146,8 +151,19 @@ class ConductBSM(Action):
 					
 					if not isThereAnAuctionInBSM or isThereAnAuctionInBSM: #TODO
 						self.BSMCount+=1
-						self.setContext(self.context)
-						self.publish()
+						if self.BSMCount>=self.MAX_BSM_REQUESTS:
+							if self.previousAction == "handleTrade":
+								#end bsm and go to the next action
+								nextAction = getattr(self.context, self.nextAction)
+								nextAction.setContext(self.context)
+								nextAction.publish()
+							else:
+								self.context.handleTrade.tradeCount = 0
+								self.context.handleTrade.setContext(self.context)
+								self.context.handleTrade.publish()
+						else:
+							self.setContext(self.context)
+							self.publish()
 				
 	
 	"""Returns the type of action. Also checks if the action is valid."""
