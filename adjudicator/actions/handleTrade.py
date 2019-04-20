@@ -38,8 +38,8 @@ class HandleTrade(Action):
 					validTradeRequests[agentId] = []
 				
 				for agentId,action in self.tradeActions:
-					if self.validateTradeAction(action):
-						otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
+					otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
+					if self.validateTradeAction(agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 						validTradeRequests[otherAgentId].append((agentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest))
 						actionCount+=1
 
@@ -83,16 +83,11 @@ class HandleTrade(Action):
 				return False
 		return True
 	
-	#Syntax: (otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest)
-	def validateTradeAction(self,action):
-		if not ( isinstance(action, list) or isinstance(action, tuple) ) or len(action)<5:
-			return False
-		
-		otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
-		currentPlayerId = self.state.getCurrentPlayerId()
+	"""Checks if a proposed trade is valid"""
+	def validateTradeAction(self,agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 		
 		passed = False
-		if otherAgentId == currentPlayerId:
+		if otherAgentId == agentId:
 			return False
 		for playerId in self.state.getLivePlayers():
 			if otherAgentId == playerId:
@@ -103,7 +98,7 @@ class HandleTrade(Action):
 		
 		cashOffer = check_valid_cash(cashOffer)
 		cashRequest = check_valid_cash(cashRequest)
-		currentPlayerCash = self.state.getCash(currentPlayerId)
+		currentPlayerCash = self.state.getCash(agentId)
 		otherPlayerCash = self.state.getCash(otherAgentId)
 		if cashOffer > currentPlayerCash:
 			return False
@@ -114,7 +109,7 @@ class HandleTrade(Action):
 				return False
 		else:
 			for propertyId in propertiesOffer:
-				if not validPropertyToTrade(currentPlayerId, propertyId):
+				if not validPropertyToTrade(agentId, propertyId):
 					return False
 		
 		if not isinstance(propertiesRequest, list) and not isinstance(propertiesRequest, tuple):
