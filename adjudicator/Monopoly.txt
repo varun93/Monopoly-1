@@ -25,6 +25,11 @@ The TRADE_RESPONSE phase represents the time when the player to whom the trade i
 
 [<Trade Response(Boolean)>,<otherAgentId>,<cashOffer>,<propertiesOffer>,<cashRequest>,<propertiesRequest>]
 
+5) Phase = COMMUNITY_CHEST_CARD
+Sent when a user draws a community chest card. Payload is the card id.
+
+6) Phase = CHANCE_CARD
+Sent when a user draws a chance chest card. Payload is the card id.
 
 
 Which properties can you buy houses on?
@@ -35,3 +40,6 @@ property.owned == true and property.ownerId == <player id> and property.class ==
 
 Mortgage:
 property.owned == true and property.ownerId == <player id> and property.mortgaged == true
+
+
+Configurations that an agent can specify during confirm_register

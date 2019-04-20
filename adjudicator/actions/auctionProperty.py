@@ -24,7 +24,7 @@ class AuctionProperty(Action):
 		if len(args)>1:
 			bid = args[1]
 		
-		if agentId and self.canAccessSubscribe(agentId):
+		if self.canAccessSubscribe(agentId):
 			bid = check_valid_cash(bid)
 			playerCash = self.state.getCash(agentId)
 			

@@ -5,6 +5,7 @@ verbose = {
 			'pay': True, #Player has a debt to pay handle_payments method
            	'buy': True, #player is buying an unowned property
             'bsm':True,
+            'trade': True,
             'auction':True,
             'cards':True, #when player falls on chance or community cards
             'state': False, #state information during each turn

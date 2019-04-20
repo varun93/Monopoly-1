@@ -33,6 +33,7 @@ class Action:
 		self.ACTION_TIMEOUT = 300
 		self.DEFAULT_ACTIONS = {
 			"START_GAME_IN": None,
+			"START_TURN_IN": None,
 			"JAIL_IN": ("P",),
 			"BUY_IN": False,
 			"AUCTION_IN": 0,
@@ -40,16 +41,13 @@ class Action:
 			"TRADE_IN": None,
 			"RESPOND_TRADE_IN": False,
 			"BROADCAST_IN": None,
-			"END_GAME_IN": None
+			"END_GAME_IN": None,
+			"END_TURN_IN": None
 		}
 	
 	def setContext(self,context):
 		self.context = context
 		self.context.currentClass = self.__class__.__name__
-		#to prevent repeated calls to particular subscribe
-		#f = open("currentMethod.txt", "w")
-		#f.write("buyProperty")
-		#f.close()
 		
 		self.dice = context.dice
 		self.chest = context.chest
@@ -58,6 +56,12 @@ class Action:
 		self.mortgagedDuringTrade = context.mortgagedDuringTrade
 		self.winner = context.winner
 		self.validSubs = 0
+		
+	def isOption(self,agentId,option):
+		agentOptions = self.context.agent_options[agentId]
+		if agentOptions == None:
+			agentOptions = self.agent_default_options
+		return agentOptions[option]
 	
 	def publishAction(self,agentId,actionClass):
 		self.timeoutId = reactor.callLater(self.ACTION_TIMEOUT, partial(self.timeoutHandler,actionClass))
@@ -76,10 +80,9 @@ class Action:
 		Check if the agent can access the current subscribe method at the time of invocation
 		The game might have progressed to another ActionClass or another Player's turn.
 		"""
-		#f = open("currentMethod.txt", "r")
-		#currentMethod = f.read()
-		#f.close()
-		#print("Current Class: "+currentClass)
+		if agentId == None:
+			return False
+		
 		if agentId in self.agentsYetToRespond and self.context.currentClass == self.__class__.__name__:
 			#we are expecting this agent to respond to this action
 			#indicate that the agent has responded to this action

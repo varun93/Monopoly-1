@@ -17,16 +17,30 @@ class EndTurn(Action):
 			self.context.endGame.setContext(self.context)
 			self.context.endGame.publish()
 		else:
-			if self.dice.double:
+			currentPlayerId = self.state.getCurrentPlayerId()
+			if self.dice.double and not self.state.hasPlayerLost(currentPlayerId):
 				log("dice","Rolled Doubles. Play again.")
 				self.context.jailDecision.setContext(self.context)
 				self.context.jailDecision.publish()
 			else:
-				self.context.startTurn.setContext(self.context)
-				self.context.startTurn.publish()
+				if self.isOption(currentPlayerId,"END_TURN"):
+					self.agentsYetToRespond = [currentPlayerId]
+					self.publishAction(currentPlayerId,"END_TURN_IN")
+				else:
+					#no communication with the user here.
+					self.context.startTurn.setContext(self.context)
+					self.context.startTurn.publish()
 	
-	def subscribe(self):
-		pass
+	def subscribe(self,*args):
+		agentId = None
+		if len(args)>0:
+			agentId = args[0]
+		
+		if agentId and self.canAccessSubscribe(agentId):
+			self.context.startTurn.setContext(self.context)
+			self.context.startTurn.publish()
+		else:
+			print("Agent "+str(agentId)+" was not supposed to respond to endTurn here.")
 
 	"""
 	Handling payments the player has to make to the bank/opponent

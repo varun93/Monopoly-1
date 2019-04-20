@@ -36,7 +36,7 @@ class EndGame(Action):
 			agentId = args[0]
 		
 		#self.validSubs is updated in self.canAccessSubscribe
-		if agentId and self.canAccessSubscribe(agentId) and self.validSubs>=len(self.PLAY_ORDER):
+		if self.canAccessSubscribe(agentId) and self.validSubs>=len(self.PLAY_ORDER):
 			if self.context.gamesCompleted < self.NO_OF_GAMES:
 				#Start the next game
 				self.context.startGame.setContext(self.context)

@@ -235,12 +235,13 @@ class TurnEffect(Action):
 		#send the player to jail and end the turn
 		#Disable double
 		self.dice.double = False
+		self.dice.double_counter = 0
 		log("jail","Agent "+str(currentPlayerId)+" has been sent to jail")
 		self.state.setPosition(currentPlayerId,self.JAIL)
 		self.state.setPhase(Phase.JAIL)
 		self.state.setPhasePayload(None)
 		
-		self.context.receiveState.previousAction = "turnEffect"
+		self.context.receiveState.previousAction = "diceRoll"
 		self.context.receiveState.nextAction = "endTurn"
 		self.context.receiveState.setContext(self.context)
 		self.context.receiveState.publish()
