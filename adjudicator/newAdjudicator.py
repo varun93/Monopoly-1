@@ -35,7 +35,7 @@ class Adjudicator(ApplicationSession):
 		#self.gameId = int(sys.argv[1])
 		#self.expectedPlayerCount = int(sys.argv[2])
 		self.gameId = 1
-		self.expectedPlayerCount = 3
+		self.expectedPlayerCount = 2
 		
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME

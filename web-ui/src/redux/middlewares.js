@@ -1,95 +1,49 @@
 import * as actionTypes from "./actionTypes";
 import { setCandidates, resetForm } from "./actions";
+import {
+  getBuyingCandidates,
+  getSellingCandidates,
+  getMortgageCandidates
+} from "utils";
 
-const amIOwner = (property, myId) => {
-  return property.owned === true && property.ownerId === myId;
-};
-
-const completedMonopoly = (properties, property, myId) => {
-  for (let index = 0; index < property.monopoly_group_element.length; index++) {
-    if (!amIOwner(properties[index], myId)) return false;
-    if (properties[index].houses > 0) return false;
-  }
-  return true;
-};
-
-const getBuyingCandidates = state => {
-  const { properties, myId } = state;
-
-  const candidates = properties
-    .filter(property => {
-      if (property.class !== "Street") return false;
-      if (!amIOwner(property, myId)) return false;
-      if (!completedMonopoly(properties, property, myId)) return false;
-      return true;
-    })
-    .map(property => property.id);
-
-  console.log("Buying Candidates");
-  console.log(candidates);
-
-  return candidates;
-};
-
-const getSellingCandidates = state => {
-  const { properties, myId } = state;
-
-  const candidates = properties
-    .filter(property => {
-      if (property.class !== "Street") return false;
-      if (!amIOwner(property, myId)) return false;
-      if (!completedMonopoly(properties, property, myId)) return false;
-      return true;
-    })
-    .map(property => property.id);
-  console.log("Selling Candidates");
-  console.log(candidates);
-  return candidates;
-};
-
-const getMortgageCandidates = state => {
-  const { properties, myId } = state;
-
-  const candidates = properties
-    .filter(property => {
-      if (property.class !== "Street") return false;
-      if (property.mortgaged) return false;
-      if (!amIOwner(property, myId)) return false;
-      if (!completedMonopoly(properties, property, myId)) {
-        if (property.houses > 0 || property.hotel) return false;
-      }
-      return true;
-    })
-    .map(property => property.id);
-
-  console.log("Mortgage Candidates");
-  console.log(candidates);
-  return candidates;
-};
+// window.session.publish(endpoints.BSM_OUT, payload);
 
 const middleware = store => next => async action => {
   const dispatch = store.dispatch;
   const state = store.getState();
   let candidates = [];
+  const payload = [];
+  let keyToExtract = "",
+    endpoint = "";
+  const { endpoints } = state;
+
   if (action.type === actionTypes.SET_PLAYER_ACTION) {
     const { playerAction } = action;
+    const buyingCandidates = getBuyingCandidates(state);
+    const sellingCandidates = getSellingCandidates(state);
+    const mortageCandidates = getMortgageCandidates(state);
+
+    if (
+      buyingCandidates.length === 0 &&
+      sellingCandidates.length === 0 &&
+      mortageCandidates.length === 0
+    ) {
+      return;
+    }
+
     if (playerAction === "buy-constructions") {
-      candidates = getBuyingCandidates(state);
+      candidates = buyingCandidates;
     } else if (playerAction === "sell-constructions") {
-      candidates = getSellingCandidates(state);
+      candidates = sellingCandidates;
     } else if (playerAction === "mortage-unmortgage") {
-      candidates = getMortgageCandidates(state);
+      candidates = mortageCandidates;
     }
 
     dispatch(setCandidates(candidates));
   }
 
   if (action.type === actionTypes.PUBLISH_ACTION) {
-    const { formData, playerAction, endpoints } = state;
-    const payload = [];
-
-    let keyToExtract = "",
-      endpoint = "";
+    const { formData, playerAction } = state;
 
     if (formData === null || !Object.keys(formData)) {
       return;

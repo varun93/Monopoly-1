@@ -3,21 +3,21 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 
 const SpaceInfo = ({ space }) => {
-  let { rent } = space;
+  let { rent, houses, owned, ownerId, hotel } = space;
   rent = rent || [];
   return (
     <div>
       <Row className="show-grid">
         <Col xs={6} md={12}>
-          Ownwer : 1
+          Owner : {owned ? ownerId : "unowned"}
         </Col>
       </Row>
       <Row className="show-grid">
         <Col xs={6} md={6}>
-          Houses Count : 3
+          Houses Count : {houses}
         </Col>
         <Col xs={6} md={6}>
-          Hotels : Present
+          Hotels : {hotel ? "Present" : "Not Present"}
         </Col>
       </Row>
       <Row className="show-grid">

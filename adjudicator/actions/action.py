@@ -30,7 +30,7 @@ class Action:
 		#Maximum number of BSM requests a player can send in a BSM in a given turn
 		self.MAX_BSM_REQUESTS = 10
 		self.MAX_TRADE_REQUESTS = 10
-		self.ACTION_TIMEOUT = 30
+		self.ACTION_TIMEOUT = 300
 		self.DEFAULT_ACTIONS = {
 			"START_GAME_IN": None,
 			"JAIL_IN": ("P",),

@@ -70,10 +70,9 @@ class Space extends Component {
       saveChanges,
       onHousesBrought,
       onHousesSold,
-      onMortgaged,
-      onPropertyBrought
+      onMortgaged
     } = this;
-    const { housesBought, housesSold, propertyBought, mortaged } = this.state;
+    const { housesBought, housesSold, mortaged } = this.state;
     const highlighted = candidates.indexOf(space.id) !== -1 ? true : false;
 
     return (
@@ -101,7 +100,7 @@ class Space extends Component {
                 <Form.Group controlId="formBuyConstructions">
                   <Form.Label>Buy Constructions</Form.Label>
                   <Form.Control
-                    min={0}
+                    min={space.houses}
                     max={4}
                     onChange={onHousesBrought}
                     type="number"
@@ -118,7 +117,7 @@ class Space extends Component {
                     onChange={onHousesSold}
                     type="number"
                     min={0}
-                    max={4}
+                    max={space.houses}
                     value={housesSold || ""}
                     placeholder="Constructions to Sell"
                   />
@@ -132,16 +131,6 @@ class Space extends Component {
                     checked={mortaged}
                     type="checkbox"
                     label="Mortgage Property"
-                  />
-                </Form.Group>
-              )}
-              {highlighted && playerAction === "buy-property" && (
-                <Form.Group controlId="formBuyProperty">
-                  <Form.Check
-                    onChange={onPropertyBrought}
-                    checked={propertyBought}
-                    type="checkbox"
-                    label="Buy Property"
                   />
                 </Form.Group>
               )}

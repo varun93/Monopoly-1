@@ -11,6 +11,7 @@ const MiddleBoard = props => {
     publishAction,
     phase,
     myId,
+    startTurnEndpoint,
     phasePayload,
     playersCash,
     properties,
@@ -26,6 +27,7 @@ const MiddleBoard = props => {
       />
       <PlayerActions
         phase={phase}
+        startTurnEndpoint={startTurnEndpoint}
         buyOutEndpoint={buyOutEndpoint}
         publishAction={publishAction}
         setPlayerAction={setPlayerAction}
@@ -49,7 +51,8 @@ const mapStateToProps = state => {
     phase: state.phase,
     properties: state.properties,
     phasePayload: state.rawState.phase_payload,
-    buyOutEndpoint: state.endpoints.BUY_OUT
+    buyOutEndpoint: state.endpoints.BUY_OUT,
+    startTurnEndpoint: state.endpoints.START_TURN_OUT
   };
 };
 

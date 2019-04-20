@@ -6,6 +6,7 @@ import Container from "react-bootstrap/Container";
 const PlayerActions = ({
   phase,
   buyOutEndpoint,
+  startTurnEndpoint,
   setPlayerAction,
   publishAction
 }) => {
@@ -66,6 +67,17 @@ const PlayerActions = ({
             Commit Action
           </Button>
         </div>
+      )}
+
+      {phase === "start_turn" && (
+        <Button
+          onClick={() => {
+            window.session.publish(startTurnEndpoint);
+          }}
+          variant="secondary"
+        >
+          Start Turn
+        </Button>
       )}
     </div>
   );

@@ -1,32 +1,5 @@
 import * as actionTypes from "./actionTypes";
 
-// {
-//     "houses": 0,
-//     "hotel": false,
-//     "mortgaged": false,
-//     "owned": true,
-//     "ownerId": "1"
-//   }
-
-// "player_board_positions": {
-//     "1": 2,
-//     "2": 2
-//   },
-//   "player_cash": {
-//     "1": 522,
-//     "2": 509
-//   },
-
-// NO_ACTION = 0
-// TRADE = 1
-// DICE_ROLL = 2
-// BUYING = 3
-// AUCTION = 4
-// PAYMENT = 5
-// JAIL = 6
-// CHANCE_CARD = 7
-// COMMUNITY_CHEST_CARD = 8
-
 const mergeProperties = (current, incoming) => {
   const merged = current.map((property, index) => {
     return {

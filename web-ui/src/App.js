@@ -3,8 +3,14 @@ import { connect } from "react-redux";
 import "bootstrap/dist/css/bootstrap.css";
 import Board from "./Board";
 import Autobahn from "autobahn";
+import Button from "react-bootstrap/Button";
 import * as constants from "./constants";
-import { substituteEndpoint } from "./utils";
+import {
+  substituteEndpoint,
+  getBuyingCandidates,
+  getSellingCandidates,
+  getMortgageCandidates
+} from "utils";
 import {
   receieveMessage,
   setMyId,
@@ -24,33 +30,41 @@ class App extends Component {
   componentWillMount() {
     const url = constants.ROUTER_ENDPOINT;
     const realm = constants.APPLICATION_REALM;
-    let response = null;
 
     const connection = new Autobahn.Connection({
       url,
       realm
     });
 
-    connection.onopen = async session => {
+    connection.onopen = session => {
       window.session = session;
-      const joinGameUri = substituteEndpoint(
-        constants.JOIN_GAME_ENDPOINT,
-        null,
-        this.gameId
-      );
-
-      response = await session.call(joinGameUri);
-      const { setMyId, setEndpoints } = this.props;
-      const myId = response["agent_id"];
-      setMyId(myId);
-      delete response["agent_id"];
-      setEndpoints(response);
-      this.subscribeToEvents(response);
-      response = await session.call(response["CONFIRM_REGISTER"]);
     };
 
     connection.open();
   }
+
+  startGame = async () => {
+    let response = null;
+
+    if (!window.session) return null;
+
+    const session = window.session;
+
+    const joinGameUri = substituteEndpoint(
+      constants.JOIN_GAME_ENDPOINT,
+      null,
+      this.gameId
+    );
+
+    response = await session.call(joinGameUri);
+    const { setMyId, setEndpoints } = this.props;
+    const myId = response["agent_id"];
+    setMyId(myId);
+    delete response["agent_id"];
+    setEndpoints(response);
+    this.subscribeToEvents(response);
+    response = await session.call(response["CONFIRM_REGISTER"]);
+  };
 
   /* Receivers  */
   receiveRequest = (phase, state) => {
@@ -73,6 +87,10 @@ class App extends Component {
     window.session.subscribe(response["JAIL_IN"], state => {
       window.session.publish(response["JAIL_OUT"], ["P"]);
     });
+    window.session.subscribe(
+      response["START_TURN_IN"],
+      this.receiveRequest.bind(this, "start_turn")
+    );
 
     //   TRADE = 1
     // DICE_ROLL = 2
@@ -112,13 +130,23 @@ class App extends Component {
     });
 
     //do you want to do bsm
-    window.session.subscribe(
-      response["BSM_IN"],
-      state => {
+    window.session.subscribe(response["BSM_IN"], state => {
+      state = JSON.parse(state[0]);
+      const buyingCandidates = getBuyingCandidates(state);
+      const sellingCandidates = getSellingCandidates(state);
+      const mortageCandidates = getMortgageCandidates(state);
+
+      if (
+        buyingCandidates.length === 0 &&
+        sellingCandidates.length === 0 &&
+        mortageCandidates.length === 0
+      ) {
         window.session.publish(response["BSM_OUT"], []);
+      } else {
+        const { receieveMessage } = this.props;
+        receieveMessage(state, "bsm");
       }
-      // this.receiveRequest.bind(this, "bsm")
-    );
+    });
 
     //end game
     window.session.subscribe(
@@ -134,9 +162,18 @@ class App extends Component {
   };
 
   render() {
+    const { startGame } = this;
     return (
       <div className="App">
         <Board />
+        <Button
+          onClick={startGame}
+          style={{ marginTop: "40px" }}
+          size="lg"
+          variant="success"
+        >
+          Start Game
+        </Button>
       </div>
     );
   }
