@@ -21,13 +21,13 @@ const getOwned = (players, space) => {
   return "";
 };
 
-const CardInfo = ({ space, index, players, playersPositons, handleShow }) => {
+const CardInfo = ({ space, index, players, playersPositons }) => {
   const { monopoly, price, name } = space;
   const playerOnPosition = getPlayerOnPosition(playersPositons, index);
   const owned = getOwned(players, space);
 
   return (
-    <div onClick={handleShow} className={`${owned} monopoly-box`}>
+    <div className={`${owned} monopoly-box`}>
       {monopoly && <div className={`color-bar ${monopoly}`} />}
       {name && <div className="name">{name}</div>}
       <div className={`center-block ${playerOnPosition}`} />

@@ -71,6 +71,14 @@ const reducer = (state, action) => {
         playerAction: ""
       };
 
+    case actionTypes.TOGGLE_PROPERTY_MODAL:
+      const { showPropertyModal, selectedPropertyIndex } = action;
+      return {
+        ...state,
+        showPropertyModal,
+        selectedPropertyIndex
+      };
+
     default:
       return state;
   }

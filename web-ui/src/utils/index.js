@@ -4,6 +4,11 @@ export const substituteEndpoint = (endpoint, agentId, gameId) => {
   return endpoint;
 };
 
+// https://stackoverflow.com/questions/3895478/does-javascript-have-a-method-like-range-to-generate-a-range-within-the-supp
+export const range = (size, startAt = 0) => {
+  return [...Array(size).keys()].map(i => i + startAt);
+};
+
 export const amIOwner = (property, myId) => {
   return property.owned === true && property.ownerId === myId;
 };

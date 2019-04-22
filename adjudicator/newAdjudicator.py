@@ -43,7 +43,7 @@ class Adjudicator(ApplicationSession):
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
 		
-		self.EXPECTED_PLAYER_COUNT = 3
+		self.EXPECTED_PLAYER_COUNT = 2
 		self.currentPlayerCount = 0
 		self.agents = [] #Stores ids of agents in the current game
 		

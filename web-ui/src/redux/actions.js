@@ -31,3 +31,14 @@ export const resetForm = () => {
 export const publishAction = () => {
   return { type: actionTypes.PUBLISH_ACTION };
 };
+
+export const togglePropertyModal = (
+  showPropertyModal,
+  selectedPropertyIndex
+) => {
+  return {
+    type: actionTypes.TOGGLE_PROPERTY_MODAL,
+    showPropertyModal,
+    selectedPropertyIndex
+  };
+};

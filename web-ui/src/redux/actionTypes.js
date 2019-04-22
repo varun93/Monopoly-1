@@ -6,3 +6,4 @@ export const SET_CANDIDATES = "SET_CANDIDATES";
 export const SET_FORM_DATA = "SET_FORM_DATA";
 export const RESET_FORM = "RESET_FORM";
 export const PUBLISH_ACTION = "PUBLISH_ACTION";
+export const TOGGLE_PROPERTY_MODAL = "TOGGLE_MODAL";

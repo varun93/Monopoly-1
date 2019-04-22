@@ -1,16 +1,39 @@
 import React, { Component } from "react";
+import { connect } from "react-redux";
 import Space from "./Space";
+import SpaceDetailed from "./SpaceDetailed";
+import { range } from "utils";
 import "./style.css";
 import MiddleBoard from "./MiddleBoard";
+import { togglePropertyModal } from "redux/actions";
 
-// https://stackoverflow.com/questions/3895478/does-javascript-have-a-method-like-range-to-generate-a-range-within-the-supp
-const range = (size, startAt = 0) => {
-  return [...Array(size).keys()].map(i => i + startAt);
-};
+class Board extends Component {
+  getSpaceProps = index => {
+    const {
+      properties,
+      candidates,
+      players,
+      playersPositions,
+      togglePropertyModal
+    } = this.props;
+    const space = properties[index];
+    const key = index;
+    const highlighted = candidates.indexOf(index) !== -1 ? true : false;
 
-//this should connect to re
-export default class Board extends Component {
+    return {
+      index,
+      space,
+      key,
+      highlighted,
+      players,
+      playersPositions,
+      togglePropertyModal
+    };
+  };
+
   render() {
+    const { getSpaceProps } = this;
+
     return (
       <div className="monopoly-table">
         {/* Start of Board */}
@@ -18,44 +41,66 @@ export default class Board extends Component {
           <MiddleBoard />
 
           {/* Actual Grids go here */}
-          <Space key={0} index={0} />
+          <Space {...getSpaceProps(0)} />
 
           {/* Bottom Section */}
           <div className="board-row horizontal-board-row bottom-board-row">
             {range(9).map(index => (
-              <Space key={10 - (index + 1)} index={10 - (index + 1)} />
+              <Space {...getSpaceProps(10 - (index + 1))} />
             ))}
           </div>
 
-          <Space key={10} index={10} />
+          <Space {...getSpaceProps(10)} />
 
           {/* Left Section */}
           <div className="board-row vertical-board-row left-board-row">
             {range(9).map(index => (
-              <Space key={20 - (index + 1)} index={20 - (index + 1)} />
+              <Space {...getSpaceProps(20 - (index + 1))} />
             ))}
           </div>
 
-          <Space key={20} index={20} />
+          <Space {...getSpaceProps(20)} />
 
           {/* Top Section */}
           <div className="board-row horizontal-board-row top-board-row">
             {range(9).map((prop, index) => (
-              <Space key={index + 21} index={index + 21} />
+              <Space {...getSpaceProps(21 + index)} />
             ))}
           </div>
 
-          <Space key={30} index={30} />
+          <Space {...getSpaceProps(30)} />
 
           {/* Right Section */}
           <div className="board-row vertical-board-row right-board-row">
             {range(9).map((prop, index) => (
-              <Space key={index + 31} index={index + 31} />
+              <Space {...getSpaceProps(31 + index)} />
             ))}
           </div>
           {/* End of Game Playing Grids */}
         </div>
+        <SpaceDetailed />
       </div>
     );
   }
 }
+
+const mapDispatchToProps = dispatch => {
+  return {
+    togglePropertyModal: (showPropertyModal, selectedPropertyIndex) =>
+      dispatch(togglePropertyModal(showPropertyModal, selectedPropertyIndex))
+  };
+};
+
+const mapStateToProps = state => {
+  return {
+    players: state.players || [],
+    properties: state.properties,
+    candidates: state.candidates || [],
+    playersPositions: state.playersPositions
+  };
+};
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Board);

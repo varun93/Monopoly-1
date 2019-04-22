@@ -16,7 +16,9 @@ const initialState = {
   properties,
   playersCash: {},
   playersPositions: {},
-  formData: {}
+  formData: {},
+  showPropertyModal: false,
+  selectedPropertyIndex: -1
 };
 
 const middlewares = [];

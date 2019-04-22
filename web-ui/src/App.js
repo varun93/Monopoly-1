@@ -122,10 +122,13 @@ class App extends Component {
 
     //buy property
     window.session.subscribe(response["BUY_IN"], state => {
-      const { receieveMessage, setCandidates } = this.props;
+      const { receieveMessage } = this.props;
       state = JSON.parse(state[0]);
       const propertyToBuy = state.phase_payload;
-      setCandidates([propertyToBuy]);
+      //this is the property I landed on
+      //trigger a modal on this property
+      // send a redux acion maybe?
+      console.log(propertyToBuy);
       receieveMessage(state, "buy_property");
     });
 
