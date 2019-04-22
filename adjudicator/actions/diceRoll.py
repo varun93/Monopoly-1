@@ -34,6 +34,8 @@ class DiceRoll(Action):
 				#sending the dice roll values to the agent
 				self.state.setPhasePayload([self.dice.die_1, self.dice.die_2])
 				
+				#log("dice","Dice Roll Event called")
+				
 				#ReceiveState
 				self.context.receiveState.previousAction = "diceRoll"
 				self.context.receiveState.nextAction = "turnEffect"

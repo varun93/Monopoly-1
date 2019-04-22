@@ -13,6 +13,9 @@ class RiskyAgent(BaseAgent):
 	def startTurn(self,state):
 		return None
 	
+	def endTurn(self,state):
+		return None
+	
 	def getBSMDecision(self, state):
 		state = State(state)
 		if state.money[self.pid] - state.debt[self.pid].getTotalDebt() < 0:

@@ -43,7 +43,7 @@ class Adjudicator(ApplicationSession):
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
 		
-		self.EXPECTED_PLAYER_COUNT = 2
+		self.EXPECTED_PLAYER_COUNT = 3
 		self.currentPlayerCount = 0
 		self.agents = [] #Stores ids of agents in the current game
 		
@@ -78,9 +78,9 @@ class Adjudicator(ApplicationSession):
 		}
 		
 		self.agent_default_options = {
-			"START_TURN": False,
-			"END_TURN"	: False,
-			"DICE_ROLL"	: False
+			"START_TURN": True,
+			"END_TURN"	: True,
+			"DICE_ROLL"	: True
 		}
 		
 		self.agent_options = {}
@@ -156,10 +156,13 @@ class Adjudicator(ApplicationSession):
 	
 	def genAgentChannels(self,agentId,requiredChannel = None):
 		agent_attributes = {}
-		agent_options = self.agent_options[agentId]
-		if agent_options == None:
+		if agentId == None:
 			agent_options = self.agent_default_options
-		
+		else:
+			agent_options = self.agent_options[agentId]
+			if agent_options == None:
+				agent_options = self.agent_default_options
+			
 		if requiredChannel == None:
 			for channel,value in self.agent_info.items():
 				if not agent_options["START_TURN"] and (channel == "START_TURN_IN" or channel == "START_TURN_OUT"):
@@ -173,11 +176,11 @@ class Adjudicator(ApplicationSession):
 				else:
 					agent_attributes[channel] = value.format(self.gameId,agentId)
 		else:
-			if not agent_options["START_TURN"] and (requiredChannel == "START_TURN_IN" or requiredChannel == "START_TURN_OUT"):
-				continue
-			elif not agent_options["END_TURN"] and (requiredChannel == "END_TURN_IN" or requiredChannel == "END_TURN_OUT"):
-				continue
-			elif requiredChannel == 'agent_id':
+			#if not agent_options["START_TURN"] and (requiredChannel == "START_TURN_IN" or requiredChannel == "START_TURN_OUT"):
+			#	continue
+			#elif not agent_options["END_TURN"] and (requiredChannel == "END_TURN_IN" or requiredChannel == "END_TURN_OUT"):
+			#	continue
+			if requiredChannel == 'agent_id':
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(agentId)
 			elif requiredChannel == "AUCTION_IN" or requiredChannel == "BROADCAST_IN" or requiredChannel == "START_GAME_IN" or requiredChannel == "END_GAME_IN":
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.gameId)

@@ -38,6 +38,10 @@ class HandleTrade(Action):
 					validTradeRequests[agentId] = []
 				
 				for agentId,action in self.tradeActions:
+					if not isinstance(action, list) and not isinstance(action, tuple):
+						continue
+					if len(action) != 5:
+						continue
 					otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest = action
 					if self.validateTradeAction(agentId,otherAgentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest):
 						validTradeRequests[otherAgentId].append((agentId,cashOffer,propertiesOffer,cashRequest,propertiesRequest))

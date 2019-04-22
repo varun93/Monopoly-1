@@ -58,10 +58,13 @@ class Action:
 		self.validSubs = 0
 		
 	def isOption(self,agentId,option):
-		agentOptions = self.context.agent_options[agentId]
-		if agentOptions == None:
-			agentOptions = self.agent_default_options
-		return agentOptions[option]
+		if agentId == None:
+			agent_options = self.context.agent_default_options
+		else:
+			agent_options = self.context.agent_options[agentId]
+			if agent_options == None:
+				agent_options = self.context.agent_default_options
+		return agent_options[option]
 	
 	def publishAction(self,agentId,actionClass):
 		self.timeoutId = reactor.callLater(self.ACTION_TIMEOUT, partial(self.timeoutHandler,actionClass))

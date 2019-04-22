@@ -36,7 +36,14 @@ class BaseAgent(ApplicationSession):
 		self.respondTradeIn = yield self.subscribe(self.respondTradeListener,res['RESPOND_TRADE_IN'])
 		self.startGameIn = yield self.subscribe(self.startGameListener,res['START_GAME_IN'])
 		self.endGameIn = yield self.subscribe(self.endGameListener,res['END_GAME_IN'])
-		self.startTurnIn = yield self.subscribe(self.startTurnListener,res['START_TURN_IN'])
+		if 'START_TURN_IN' in res:
+			self.startTurnIn = yield self.subscribe(self.startTurnListener,res['START_TURN_IN'])
+		else:
+			self.startTurnIn = None
+		if 'END_TURN_IN' in res:
+			self.endTurnIn = yield self.subscribe(self.endTurnListener,res['END_TURN_IN'])
+		else:
+			self.endTurnIn = None
 		
 		self.endpoints = res
 
@@ -50,6 +57,10 @@ class BaseAgent(ApplicationSession):
 	def startTurnListener(self,state):
 		result = self.startTurn(state)
 		self.publish(self.endpoints['START_TURN_OUT'],result)
+	
+	def endTurnListener(self,state):
+		result = self.endTurn(state)
+		self.publish(self.endpoints['END_TURN_OUT'],result)
 	
 	def startGameListener(self,state):
 		result = self.startGame(state)
@@ -106,7 +117,10 @@ class BaseAgent(ApplicationSession):
 		self.respondTradeIn.unsubscribe()
 		self.startGameIn.unsubscribe()
 		self.endGameIn.unsubscribe()
-		self.startTurnIn.unsubscribe()
+		if self.startTurnIn != None:
+			self.startTurnIn.unsubscribe()
+		if self.endTurnIn != None:
+			self.endTurnIn.unsubscribe()
 
 		self.leave()
 	
@@ -120,6 +134,12 @@ class BaseAgent(ApplicationSession):
 	def startTurn(self, state):
 		"""
 		Merely indicating the start of a turn. No other intended function.
+		"""
+	
+	@abc.abstractmethod
+	def endTurn(self, state):
+		"""
+		Merely indicating the end of a turn. No other intended function.
 		"""
 	
 	@abc.abstractmethod
