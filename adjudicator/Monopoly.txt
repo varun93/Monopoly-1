@@ -31,6 +31,19 @@ Sent when a user draws a community chest card. Payload is the card id.
 6) Phase = CHANCE_CARD
 Sent when a user draws a chance chest card. Payload is the card id.
 
+7) Phase = PAYMENT
+Sent when a user falls on an opponent's property and has to pay rent.
+
+Jail Decision Payload:
+----------------------
+Pay $50 to get out: ("P",) or "P" 
+Roll doubles and try to get out: ("R",) or "R"
+Use a Get out of Jail Free card: ("C",<property id of the card>)
+
+Note: For Get out of Jail Free cards, the property id's are, 40 for the Chance card and 41 for the Community Chest card.
+
+BSM (Buy Houses/Hotels, Sell Houses/Hotels or Mortgage/Unmortgage properties)
+-----------------------------------------------------------------------------
 
 Which properties can you buy houses on?
 property.owned == true and property.ownerId == <player id> and property.class == 'Street' and completed monopoly and houses < 4
@@ -38,7 +51,7 @@ property.owned == true and property.ownerId == <player id> and property.class ==
 Which properties can you sell houses from?
 property.owned == true and property.ownerId == <player id> and property.class == 'Street' and completed monopoly and houses > 0
 
-Mortgage:
+Which properties can you unmortgage?:
 property.owned == true and property.ownerId == <player id> and property.mortgaged == true
 
 
