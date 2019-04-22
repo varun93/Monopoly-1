@@ -67,7 +67,16 @@ class TurnEffect(Action):
 					self.state.setPhasePayload(playerPosition)
 					self.state.setDebtToPlayer(currentPlayerId,ownerId,rent)
 				
-				self.publishBSM("endTurn")
+				#After the receiveState,BSM needs to be called.
+				self.context.conductBSM.previousAction = "turnEffect"
+				self.context.conductBSM.nextAction = "endTurn"
+				self.context.conductBSM.BSMCount = 0
+
+				#ReceiveState
+				self.context.receiveState.previousAction = "turnEffect"
+				self.context.receiveState.nextAction = "conductBSM"
+				self.context.receiveState.setContext(self.context)
+				self.context.receiveState.publish()
 			
 		elif propertyClass == 'Chance' or propertyClass == 'Chest':
 			if propertyClass == 'Chance':
