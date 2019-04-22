@@ -42,3 +42,18 @@ export const togglePropertyModal = (
     selectedPropertyIndex
   };
 };
+
+export const toggleJailDecisionModal = showJailDecisionModal => {
+  return {
+    type: actionTypes.TOGGLE_JAIL_DECISION_MODAL,
+    showJailDecisionModal
+  };
+};
+
+export const toggleRentModal = (showRentModal, rent) => {
+  return {
+    type: actionTypes.TOGGLE_RENT_MODAL,
+    showRentModal,
+    rent
+  };
+};

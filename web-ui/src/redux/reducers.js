@@ -79,6 +79,21 @@ const reducer = (state, action) => {
         selectedPropertyIndex
       };
 
+    case actionTypes.TOGGLE_JAIL_DECISION_MODAL:
+      const { showJailDecisionModal } = action;
+      return {
+        ...state,
+        showJailDecisionModal
+      };
+
+    case actionTypes.TOGGLE_RENT_MODAL:
+      const { showRentModal, rent } = action;
+      return {
+        ...state,
+        showRentModal,
+        rent
+      };
+
     default:
       return state;
   }

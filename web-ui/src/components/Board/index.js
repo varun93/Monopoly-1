@@ -1,11 +1,11 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import Space from "./Space";
-import SpaceDetailed from "./SpaceDetailed";
+import SpaceDetailed from "components/SpaceDetailed";
 import { range } from "utils";
-import "./style.css";
 import MiddleBoard from "./MiddleBoard";
 import { togglePropertyModal } from "redux/actions";
+import "./style.css";
 
 class Board extends Component {
   getSpaceProps = index => {

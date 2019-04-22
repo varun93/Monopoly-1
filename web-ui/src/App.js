@@ -1,10 +1,11 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
-import "bootstrap/dist/css/bootstrap.css";
-import Board from "./Board";
 import Autobahn from "autobahn";
+import Board from "components/Board";
+import JailDecision from "components/JailDecision";
+import Rent from "components/Rent";
 import Button from "react-bootstrap/Button";
-import * as constants from "./constants";
+import { togglePropertyModal } from "redux/actions";
 import {
   substituteEndpoint,
   getBuyingCandidates,
@@ -17,7 +18,9 @@ import {
   setEndpoints,
   setCandidates
 } from "./redux/actions";
+import * as constants from "./constants";
 import "./App.css";
+import "bootstrap/dist/css/bootstrap.css";
 
 class App extends Component {
   constructor(props, context) {
@@ -122,14 +125,11 @@ class App extends Component {
 
     //buy property
     window.session.subscribe(response["BUY_IN"], state => {
-      const { receieveMessage } = this.props;
+      const { receieveMessage, togglePropertyModal } = this.props;
       state = JSON.parse(state[0]);
-      const propertyToBuy = state.phase_payload;
-      //this is the property I landed on
-      //trigger a modal on this property
-      // send a redux acion maybe?
-      console.log(propertyToBuy);
+      const propertyToBuy = parseInt(state.phase_payload);
       receieveMessage(state, "buy_property");
+      togglePropertyModal(true, propertyToBuy);
     });
 
     //do you want to do bsm
@@ -177,6 +177,8 @@ class App extends Component {
         >
           Start Game
         </Button>
+        <JailDecision />
+        <Rent />
       </div>
     );
   }
@@ -187,7 +189,9 @@ const mapDispatchToProps = dispatch => ({
     dispatch(receieveMessage(rawState, phase)),
   setMyId: id => dispatch(setMyId(id)),
   setEndpoints: endpoints => dispatch(setEndpoints(endpoints)),
-  setCandidates: candidates => dispatch(setCandidates(candidates))
+  setCandidates: candidates => dispatch(setCandidates(candidates)),
+  togglePropertyModal: (showPropertyModal, selectedPropertyIndex) =>
+    dispatch(togglePropertyModal(showPropertyModal, selectedPropertyIndex))
 });
 
 export default connect(
