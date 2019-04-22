@@ -6,6 +6,8 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import SpaceInfo from "./space-info";
 import { setFormData, togglePropertyModal } from "redux/actions";
+import BuyPropertyForm from "./BuyPropertyForm";
+import AuctionPropertyForm from "./AuctionPropertyForm";
 
 class SpaceDetailed extends Component {
   state = {
@@ -50,7 +52,10 @@ class SpaceDetailed extends Component {
       showPropertyModal,
       properties,
       candidates,
-      playerAction
+      phase,
+      playerAction,
+      buyOutEndpoint,
+      auctionEndpoint
     } = this.props;
     const { onHousesBrought, onMortgaged, onHousesSold, saveChanges } = this;
     const space = properties[selectedPropertyIndex];
@@ -67,6 +72,20 @@ class SpaceDetailed extends Component {
             <Container>
               {/* Space info */}
               <SpaceInfo space={space} />
+              {/* Buy Property Form */}
+              {phase === "buy_property" && (
+                <BuyPropertyForm
+                  buyOutEndpoint={buyOutEndpoint}
+                  handleClose={handleClose}
+                />
+              )}
+              {/* Auciton Property Form */}
+              {phase === "auction_property" && (
+                <AuctionPropertyForm
+                  auctionEndpoint={auctionEndpoint}
+                  handleClose={handleClose}
+                />
+              )}
               {/* Form Section */}
               {highlighted && playerAction === "buy-constructions" && (
                 <Form.Group controlId="formBuyConstructions">
@@ -138,8 +157,11 @@ const mapStateToProps = state => {
   return {
     selectedPropertyIndex: state.selectedPropertyIndex,
     showPropertyModal: state.showPropertyModal,
+    phase: state.phase,
     playerAction: state.playerAction,
     properties: state.properties,
+    buyOutEndpoint: state.endpoints.BUY_OUT,
+    auctionEndpoint: state.endpoints.AUCTION_OUT,
     candidates: state.candidates || []
   };
 };

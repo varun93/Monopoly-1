@@ -5,7 +5,11 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import { toggleJailDecisionModal } from "redux/actions";
 
-const JailDecision = ({ showJailDecisionModal, toggleJailDecisionModal }) => {
+const JailDecision = ({
+  showJailDecisionModal,
+  jailDecisionEndpoint,
+  toggleJailDecisionModal
+}) => {
   return (
     showJailDecisionModal && (
       <Modal
@@ -17,9 +21,30 @@ const JailDecision = ({ showJailDecisionModal, toggleJailDecisionModal }) => {
         </Modal.Header>
         <Modal.Body>
           <Container>
-            <Button variant="success">Roll a Double</Button>
-            <Button variant="warning">Pay $100</Button>
-            <Button variant="secondary">Use Get Out of Jail Card</Button>
+            <Button
+              onClick={() => {
+                window.session.publish(jailDecisionEndpoint, ["R"]);
+              }}
+              variant="success"
+            >
+              Roll a Double
+            </Button>
+            <Button
+              onClick={() => {
+                window.session.publish(jailDecisionEndpoint, ["P"]);
+              }}
+              variant="warning"
+            >
+              Pay $100
+            </Button>
+            <Button
+              onClick={() => {
+                window.session.publish(jailDecisionEndpoint, ["C", 41]);
+              }}
+              variant="secondary"
+            >
+              Use Get Out of Jail Card
+            </Button>
           </Container>
         </Modal.Body>
       </Modal>

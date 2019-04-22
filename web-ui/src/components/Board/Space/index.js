@@ -1,13 +1,26 @@
 import React from "react";
-import CardInfo from "./card-info";
 
-const Space = ({ highlighted, space, index, togglePropertyModal, ...rest }) => {
+const Space = ({
+  highlighted,
+  space,
+  togglePropertyModal,
+  index,
+  playerOnPosition,
+  owned
+}) => {
+  const { monopoly, price, name } = space;
+
   return (
     <div
       onClick={() => togglePropertyModal(true, index)}
       className={`space ${space.class}  ${highlighted ? "highlight" : ""}`}
     >
-      <CardInfo space={space} index={index} {...rest} />
+      <div className={`${owned.owner} monopoly-box`}>
+        {monopoly && <div className={`color-bar ${monopoly}`} />}
+        {name && <div className="name">{name}</div>}
+        <div className={`center-block ${playerOnPosition.player}`} />
+        {price && <div className="price">Price ${price}</div>}
+      </div>
     </div>
   );
 };

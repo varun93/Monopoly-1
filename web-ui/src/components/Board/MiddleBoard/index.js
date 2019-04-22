@@ -51,7 +51,6 @@ const mapStateToProps = state => {
     phase: state.phase,
     properties: state.properties,
     phasePayload: state.rawState.phase_payload,
-    buyOutEndpoint: state.endpoints.BUY_OUT,
     startTurnEndpoint: state.endpoints.START_TURN_OUT
   };
 };

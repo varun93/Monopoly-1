@@ -77,25 +77,28 @@ class App extends Component {
   };
 
   subscribeToEvents = response => {
-    //default responses
+    //not implementing trade for the time being; just rejecting all trade responses
     window.session.subscribe(response["RESPOND_TRADE_IN"], state => {
       window.session.publish(response["RESPOND_TRADE_OUT"], [false]);
     });
     window.session.subscribe(response["TRADE_IN"], state => {
       window.session.publish(response["TRADE_OUT"], [false]);
     });
-    window.session.subscribe(response["AUCTION_IN"], state => {
-      window.session.publish(response["AUCTION_OUT"], [0]);
-    });
+
     window.session.subscribe(response["JAIL_IN"], state => {
       window.session.publish(response["JAIL_OUT"], ["P"]);
     });
+
+    window.session.subscribe(response["END_TURN_IN"], state => {
+      window.session.publish(response["END_TURN_OUT"]);
+    });
+
     window.session.subscribe(
       response["START_TURN_IN"],
       this.receiveRequest.bind(this, "start_turn")
     );
 
-    //   TRADE = 1
+    // TRADE = 1
     // DICE_ROLL = 2
     // BUYING = 3
     // AUCTION = 4
@@ -121,6 +124,15 @@ class App extends Component {
 
       receieveMessage(state, phase);
       window.session.publish(response["BROADCAST_OUT"], []);
+    });
+
+    //auction property
+    window.session.subscribe(response["AUCTION_IN"], state => {
+      const { togglePropertyModal, receieveMessage } = this.props;
+      state = JSON.parse(state);
+      const propertyToAuction = state.phase_payload;
+      receieveMessage(state, "auction_property");
+      togglePropertyModal(true, propertyToAuction);
     });
 
     //buy property
