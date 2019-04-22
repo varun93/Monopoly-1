@@ -18,7 +18,10 @@ const initialState = {
   playersPositions: {},
   formData: {},
   showPropertyModal: false,
-  selectedPropertyIndex: -1
+  selectedPropertyIndex: -1,
+  showJailDecisionModal: false,
+  showRentModal: false,
+  rent: 0
 };
 
 const middlewares = [];
