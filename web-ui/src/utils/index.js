@@ -13,56 +13,47 @@ export const adjustPlayerPositions = playersPositions => {
   return Object.keys(playersPositions).reduce((adjusted, playerId) => {
     if (playersPositions[playerId] === -1) {
       adjusted[playerId] = 10;
+    } else {
+      adjusted[playerId] = playersPositions[playerId];
     }
-    adjusted[playerId] = playersPositions[playerId];
     return adjusted;
   }, {});
 };
 
-export const amIOwner = (property, myId) => {
+const amIOwner = (property, myId) => {
   return property.owned === true && property.ownerId === myId;
 };
 
-export const completedMonopoly = (properties, property, myId) => {
-  for (let index = 0; index < property.monopoly_group_element.length; index++) {
-    if (!amIOwner(properties[index], myId)) return false;
-    if (properties[index].houses > 0) return false;
+const completedMonopoly = (properties, property, myId) => {
+  const group_elements = property.monopoly_group_elements;
+  for (let index = 0; index < group_elements.length; index++) {
+    const group_element = group_elements[index];
+    if (!amIOwner(properties[group_element], myId)) return false;
   }
   return true;
 };
 
-export const getBuyingCandidates = state => {
+const getBSMCandidates = state => {
   const { properties, myId } = state;
 
-  const candidates = properties
-    .filter(property => {
-      if (property.class !== "Street") return false;
-      if (!amIOwner(property, myId)) return false;
-      if (!completedMonopoly(properties, property, myId)) return false;
-      return true;
-    })
+  return properties.filter(property => {
+    if (property.class !== "street") return false;
+    if (!amIOwner(property, myId)) return false;
+    if (!completedMonopoly(properties, property, myId)) return false;
+    return true;
+  });
+};
+
+export const getBuyingCandidates = state => {
+  return getBSMCandidates(state)
+    .filter(property => property.houses < 5)
     .map(property => property.id);
-
-  console.log("Buying Candidates");
-  console.log(candidates);
-
-  return candidates;
 };
 
 export const getSellingCandidates = state => {
-  const { properties, myId } = state;
-
-  const candidates = properties
-    .filter(property => {
-      if (property.class !== "Street") return false;
-      if (!amIOwner(property, myId)) return false;
-      if (!completedMonopoly(properties, property, myId)) return false;
-      return true;
-    })
+  return getBSMCandidates(state)
+    .filter(property => property.houses > 0)
     .map(property => property.id);
-  console.log("Selling Candidates");
-  console.log(candidates);
-  return candidates;
 };
 
 export const getMortgageCandidates = state => {
@@ -70,17 +61,14 @@ export const getMortgageCandidates = state => {
 
   const candidates = properties
     .filter(property => {
-      if (property.class !== "Street") return false;
+      if (property.class !== "street") return false;
       if (property.mortgaged) return false;
       if (!amIOwner(property, myId)) return false;
-      if (!completedMonopoly(properties, property, myId)) {
-        if (property.houses > 0 || property.hotel) return false;
-      }
+      //even if it is a completed monopoly there shouldn't be any constructions?
+      if (property.houses > 0 || property.hotel) return false;
       return true;
     })
     .map(property => property.id);
 
-  console.log("Mortgage Candidates");
-  console.log(candidates);
   return candidates;
 };
