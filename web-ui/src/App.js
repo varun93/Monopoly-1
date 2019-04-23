@@ -3,9 +3,8 @@ import { connect } from "react-redux";
 import Autobahn from "autobahn";
 import Board from "components/Board";
 import JailDecision from "components/JailDecision";
-import Rent from "components/Rent";
+import ToastMessage from "components/ToastMessage";
 import Button from "react-bootstrap/Button";
-import { togglePropertyModal, toggleJailDecisionModal } from "redux/actions";
 import {
   substituteEndpoint,
   getBuyingCandidates,
@@ -16,11 +15,15 @@ import {
   receieveMessage,
   setMyId,
   setEndpoints,
-  setCandidates
-} from "./redux/actions";
+  setCandidates,
+  togglePropertyModal,
+  toggleJailDecisionModal,
+  toggleToastMessageModal
+} from "redux/actions";
 import * as constants from "./constants";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
+import { setTimeout } from "timers";
 
 class App extends Component {
   constructor(props, context) {
@@ -30,6 +33,7 @@ class App extends Component {
     this.gameId = 1;
   }
 
+  //deprecated
   componentWillMount() {
     const url = constants.ROUTER_ENDPOINT;
     const realm = constants.APPLICATION_REALM;
@@ -113,21 +117,51 @@ class App extends Component {
 
     //generic receive state
     window.session.subscribe(response["BROADCAST_IN"], state => {
-      const { receieveMessage } = this.props;
+      const { receieveMessage, toggleToastMessageModal, myId } = this.props;
       state = JSON.parse(state);
-      let phase = state.current_phase_number;
-      if (phase === 2) {
-        phase = "dice_roll";
-      }
-      if (phase === 4) {
-        phase = "auction";
-      }
-      if (phase === 6) {
-        phase = "jail_decision";
+      let phase = constants.PhaseNameMapping[state.current_phase_number];
+      const currentPlayer = state.current_player_id;
+      // const phasePayload = state.phase_payload;
+      let message = "",
+        title = "",
+        currentPlayerName = "",
+        opponentPlayerName = "";
+
+      if (myId === currentPlayer) {
+        currentPlayerName = "Human";
+        opponentPlayerName = "Robot";
+      } else {
+        currentPlayerName = "Robot";
+        opponentPlayerName = "Human";
       }
 
-      receieveMessage(state, phase);
-      window.session.publish(response["BROADCAST_OUT"], []);
+      if (phase === "chance_card") {
+        title = "Chance Card";
+        message = `${currentPlayerName} won a Chance Card`;
+      }
+
+      if (phase === "community_chest_card") {
+        title = "Community Chest Card";
+        message = `${currentPlayerName} won a Community Chest Card`;
+      }
+
+      if (phase === "payment") {
+        title = "Rent";
+        message = `Player ${currentPlayerName} landed on ${opponentPlayerName}'s property.`;
+      }
+
+      if (message && message.length) {
+        //automatically close the modal after 4 seconds
+        setTimeout(() => {
+          receieveMessage(state, phase);
+          toggleToastMessageModal(false);
+          window.session.publish(response["BROADCAST_OUT"], []);
+        }, 4000);
+        toggleToastMessageModal(true, title, message);
+      } else {
+        receieveMessage(state, phase);
+        window.session.publish(response["BROADCAST_OUT"], []);
+      }
     });
 
     //auction property
@@ -196,7 +230,7 @@ class App extends Component {
           Start Game
         </Button>
         <JailDecision />
-        <Rent />
+        <ToastMessage />
       </div>
     );
   }
@@ -211,10 +245,20 @@ const mapDispatchToProps = dispatch => ({
   togglePropertyModal: (showPropertyModal, selectedPropertyIndex) =>
     dispatch(togglePropertyModal(showPropertyModal, selectedPropertyIndex)),
   toggleJailDecisionModal: showJailDecisionModal =>
-    dispatch(toggleJailDecisionModal(showJailDecisionModal))
+    dispatch(toggleJailDecisionModal(showJailDecisionModal)),
+  toggleToastMessageModal: (showToastMessage, toastTitle, toastMessage) =>
+    dispatch(
+      toggleToastMessageModal(showToastMessage, toastTitle, toastMessage)
+    )
 });
 
+const mapStateToProps = state => {
+  return {
+    myId: state.myId
+  };
+};
+
 export default connect(
-  null,
+  mapStateToProps,
   mapDispatchToProps
 )(App);

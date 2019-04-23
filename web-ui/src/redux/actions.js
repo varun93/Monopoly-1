@@ -50,10 +50,15 @@ export const toggleJailDecisionModal = showJailDecisionModal => {
   };
 };
 
-export const toggleRentModal = (showRentModal, rent) => {
+export const toggleToastMessageModal = (
+  showToastMessage,
+  toastTitle,
+  toastMessage
+) => {
   return {
-    type: actionTypes.TOGGLE_RENT_MODAL,
-    showRentModal,
-    rent
+    type: actionTypes.TOGGLE_TOAST_MESSAGE,
+    showToastMessage,
+    toastTitle,
+    toastMessage
   };
 };

@@ -89,12 +89,13 @@ const reducer = (state, action) => {
         showJailDecisionModal
       };
 
-    case actionTypes.TOGGLE_RENT_MODAL:
-      const { showRentModal, rent } = action;
+    case actionTypes.TOGGLE_TOAST_MESSAGE:
+      const { showToastMessage, toastTitle, toastMessage } = action;
       return {
         ...state,
-        showRentModal,
-        rent
+        showToastMessage,
+        toastTitle,
+        toastMessage
       };
 
     default:
