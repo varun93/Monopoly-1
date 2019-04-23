@@ -5,6 +5,9 @@ import Col from "react-bootstrap/Col";
 const SpaceInfo = ({ space }) => {
   let { rent, houses, owned, ownerId, hotel } = space;
   rent = rent || [];
+  houses = houses || 0;
+  hotel = hotel ? "Present" : "Not Present";
+
   return (
     <div>
       <Row className="show-grid">
@@ -14,15 +17,15 @@ const SpaceInfo = ({ space }) => {
       </Row>
       <Row className="show-grid">
         <Col xs={6} md={6}>
-          Houses Count : {houses}
+          Houses : {houses}
         </Col>
         <Col xs={6} md={6}>
-          Hotels : {hotel ? "Present" : "Not Present"}
+          Hotels : {hotel}
         </Col>
       </Row>
       <Row className="show-grid">
         <Col xs={6} md={6}>
-          Price : {space.price}
+          Price : ${space.price}
         </Col>
       </Row>
       <Row className="show-grid">
@@ -34,7 +37,7 @@ const SpaceInfo = ({ space }) => {
                 {index === 0
                   ? " : "
                   : index < 5
-                  ? `House ${index + 1} : `
+                  ? `House ${index} : `
                   : "Rent Hotel : "}
                 ${item}
               </Col>
