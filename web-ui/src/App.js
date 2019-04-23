@@ -5,7 +5,7 @@ import Board from "components/Board";
 import JailDecision from "components/JailDecision";
 import Rent from "components/Rent";
 import Button from "react-bootstrap/Button";
-import { togglePropertyModal } from "redux/actions";
+import { togglePropertyModal, toggleJailDecisionModal } from "redux/actions";
 import {
   substituteEndpoint,
   getBuyingCandidates,
@@ -85,10 +85,6 @@ class App extends Component {
       window.session.publish(response["TRADE_OUT"], [false]);
     });
 
-    window.session.subscribe(response["JAIL_IN"], state => {
-      window.session.publish(response["JAIL_OUT"], ["P"]);
-    });
-
     window.session.subscribe(response["END_TURN_IN"], state => {
       window.session.publish(response["END_TURN_OUT"]);
     });
@@ -107,10 +103,15 @@ class App extends Component {
     // CHANCE_CARD = 7
     // COMMUNITY_CHEST_CARD = 8
 
+    window.session.subscribe(response["JAIL_IN"], state => {
+      const { toggleJailDecisionModal } = this.props;
+      toggleJailDecisionModal(true);
+    });
+
     //generic receive state
     window.session.subscribe(response["BROADCAST_IN"], state => {
       const { receieveMessage } = this.props;
-      state = JSON.parse(state[0]);
+      state = JSON.parse(state);
       let phase = state.current_phase_number;
       if (phase === 2) {
         phase = "dice_roll";
@@ -138,7 +139,7 @@ class App extends Component {
     //buy property
     window.session.subscribe(response["BUY_IN"], state => {
       const { receieveMessage, togglePropertyModal } = this.props;
-      state = JSON.parse(state[0]);
+      state = JSON.parse(state);
       const propertyToBuy = parseInt(state.phase_payload);
       receieveMessage(state, "buy_property");
       togglePropertyModal(true, propertyToBuy);
@@ -146,7 +147,7 @@ class App extends Component {
 
     //do you want to do bsm
     window.session.subscribe(response["BSM_IN"], state => {
-      state = JSON.parse(state[0]);
+      state = JSON.parse(state);
       const buyingCandidates = getBuyingCandidates(state);
       const sellingCandidates = getSellingCandidates(state);
       const mortageCandidates = getMortgageCandidates(state);
@@ -203,7 +204,9 @@ const mapDispatchToProps = dispatch => ({
   setEndpoints: endpoints => dispatch(setEndpoints(endpoints)),
   setCandidates: candidates => dispatch(setCandidates(candidates)),
   togglePropertyModal: (showPropertyModal, selectedPropertyIndex) =>
-    dispatch(togglePropertyModal(showPropertyModal, selectedPropertyIndex))
+    dispatch(togglePropertyModal(showPropertyModal, selectedPropertyIndex)),
+  toggleJailDecisionModal: showJailDecisionModal =>
+    dispatch(toggleJailDecisionModal(showJailDecisionModal))
 });
 
 export default connect(

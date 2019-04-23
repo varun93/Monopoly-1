@@ -12,36 +12,42 @@ const JailDecision = ({
 }) => {
   return (
     showJailDecisionModal && (
-      <Modal
-        show={showJailDecisionModal}
-        onHide={() => showJailDecisionModal(false)}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Get out of Jail</Modal.Title>
+      <Modal show={showJailDecisionModal}>
+        <Modal.Header>
+          <Modal.Title>How do you want Get out of Jail</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Container>
             <Button
               onClick={() => {
                 window.session.publish(jailDecisionEndpoint, ["R"]);
+                toggleJailDecisionModal(false);
               }}
               variant="success"
+              style={{ marginTop: "15px", marginBottom: "15px" }}
+              block
             >
               Roll a Double
             </Button>
             <Button
               onClick={() => {
                 window.session.publish(jailDecisionEndpoint, ["P"]);
+                toggleJailDecisionModal(false);
               }}
               variant="warning"
+              style={{ marginBottom: "15px" }}
+              block
             >
               Pay $100
             </Button>
             <Button
               onClick={() => {
                 window.session.publish(jailDecisionEndpoint, ["C", 41]);
+                toggleJailDecisionModal(false);
               }}
               variant="secondary"
+              style={{ marginTop: "15px", marginBottom: "15px" }}
+              block
             >
               Use Get Out of Jail Card
             </Button>
@@ -61,7 +67,8 @@ const mapDispatchToProps = dispatch => {
 
 const mapStateToProps = state => {
   return {
-    showJailDecisionModal: state.showJailDecisionModal
+    showJailDecisionModal: state.showJailDecisionModal,
+    jailDecisionEndpoint: state.endpoints.JAIL_OUT
   };
 };
 
