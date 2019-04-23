@@ -1,4 +1,5 @@
 import * as actionTypes from "./actionTypes";
+import { adjustPlayerPositions } from "utils";
 
 const mergeProperties = (current, incoming) => {
   const merged = current.map((property, index) => {
@@ -22,7 +23,9 @@ const reducer = (state, action) => {
         properties: mergeProperties(state.properties, rawState.properties),
         players: rawState.player_ids,
         currentPlayer: rawState.current_player_id,
-        playersPositions: rawState.player_board_positions,
+        playersPositions: adjustPlayerPositions(
+          rawState.player_board_positions
+        ),
         playersCash: rawState.player_cash
       };
 

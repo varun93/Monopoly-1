@@ -9,6 +9,16 @@ export const range = (size, startAt = 0) => {
   return [...Array(size).keys()].map(i => i + startAt);
 };
 
+export const adjustPlayerPositions = playersPositions => {
+  return Object.keys(playersPositions).reduce((adjusted, playerId) => {
+    if (playersPositions[playerId] === -1) {
+      adjusted[playerId] = 10;
+    }
+    adjusted[playerId] = playersPositions[playerId];
+    return adjusted;
+  }, {});
+};
+
 export const amIOwner = (property, myId) => {
   return property.owned === true && property.ownerId === myId;
 };

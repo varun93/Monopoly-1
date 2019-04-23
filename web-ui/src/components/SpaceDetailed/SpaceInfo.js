@@ -9,7 +9,7 @@ const SpaceInfo = ({ space }) => {
     <div>
       <Row className="show-grid">
         <Col xs={6} md={12}>
-          Owner : {owned ? ownerId : "unowned"}
+          Owner : {owned ? ownerId : "Unowned"}
         </Col>
       </Row>
       <Row className="show-grid">
@@ -26,13 +26,20 @@ const SpaceInfo = ({ space }) => {
         </Col>
       </Row>
       <Row className="show-grid">
-        {rent.map((item, index) => {
-          return (
-            <Col key={index} xs={6} md={6}>
-              Rent {index < 4 ? `House ${index + 1}` : "Rent Hotel"} : {item}
-            </Col>
-          );
-        })}
+        {rent.length &&
+          rent.map((item, index) => {
+            return (
+              <Col key={index} xs={6} md={6}>
+                Rent
+                {index === 0
+                  ? " : "
+                  : index < 5
+                  ? `House ${index + 1} : `
+                  : "Rent Hotel : "}
+                ${item}
+              </Col>
+            );
+          })}
       </Row>
     </div>
   );

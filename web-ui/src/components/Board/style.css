@@ -462,34 +462,26 @@
 
 /* end monopoly board properties */
 
-.player-one {
+.human-present {
   height: 15px;
   width: 15px;
   background: red;
 }
-.player-two {
+.robot-present {
   height: 15px;
   width: 15px;
   background: blue;
 }
 
-.player-one-owner {
+.human-owner {
   border-bottom: 5px solid red;
 }
 
-.player-two-owner {
+.robot-owner {
   border-bottom: 5px solid blue;
 }
 
-.owner-1 {
-  background: red;
-  height: 5px;
-}
-
-.owner-2 {
-  background: blue;
-  height: 5px;
-}
+/*  */
 
 .center-block {
   display: block;

@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import Space from "./Space";
 import SpaceDetailed from "components/SpaceDetailed";
-import { range } from "utils";
+import { range, adjustPlayerPositions } from "utils";
 import MiddleBoard from "./MiddleBoard";
 import { togglePropertyModal } from "redux/actions";
 import "./style.css";
@@ -19,8 +19,9 @@ class Board extends Component {
 
   getPlayerOnPosition = index => {
     const { playersPositions, myId } = this.props;
+    const adjustedPlayersPositions = adjustPlayerPositions(playersPositions);
     for (let playerId in playersPositions) {
-      if (index === playersPositions[playerId]) {
+      if (index === adjustedPlayersPositions[playerId]) {
         return { present: true, player: this.getPlayerName(playerId, myId) };
       }
     }
@@ -40,7 +41,7 @@ class Board extends Component {
     const space = properties[index];
     const key = index;
     const highlighted = candidates.indexOf(index) !== -1 ? true : false;
-    const owned = this.getOwned(index);
+    const owned = this.getOwned(space);
     const playerOnPosition = this.getPlayerOnPosition(index);
 
     return {
