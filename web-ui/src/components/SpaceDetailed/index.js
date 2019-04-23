@@ -21,22 +21,27 @@ const SpaceDetailed = ({
   togglePropertyModal,
   setFormData
 }) => {
-  const handleClose = () => {
-    togglePropertyModal(false);
+  const handleClose = (hide = true) => {
+    if (hide) togglePropertyModal(false);
   };
 
   const space = properties[selectedPropertyIndex];
   const [housesBought, setHousesBought] = useState(0);
   const [housesSold, setHousesSold] = useState(0);
   const [mortaged, setMortgaged] = useState(false);
+  const buyMortgage =
+    ["buy_property", "auction_property"].indexOf(phase) !== -1;
+  const closeButton = {
+    closeButton: !buyMortgage
+  };
 
   const highlighted =
     candidates.indexOf(selectedPropertyIndex) !== -1 ? true : false;
 
   return (
     showPropertyModal && (
-      <Modal show={showPropertyModal} onHide={handleClose}>
-        <Modal.Header style={{ background: space.monopoly }} closeButton>
+      <Modal show={showPropertyModal} onHide={() => handleClose(!buyMortgage)}>
+        <Modal.Header style={{ background: space.monopoly }} {...closeButton}>
           <Modal.Title>{space.name}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -96,25 +101,37 @@ const SpaceDetailed = ({
                 />
               </Form.Group>
             )}
+            {/* no set form data required just publish! */}
+            {highlighted &&
+              [
+                "mortage-unmortgage",
+                "sell-contructions",
+                "buy-constructions"
+              ].indexOf(playerAction) !== -1 && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setFormData(selectedPropertyIndex, {
+                      housesBought,
+                      housesSold,
+                      mortaged
+                    });
+                    handleClose();
+                  }}
+                  block
+                >
+                  Save Changes
+                </Button>
+              )}
           </Container>
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            Close
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() =>
-              setFormData(selectedPropertyIndex, {
-                housesBought,
-                housesSold,
-                mortaged
-              })
-            }
-          >
-            Save Changes
-          </Button>
-        </Modal.Footer>
+        {!buyMortgage && (
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>
+              Close
+            </Button>
+          </Modal.Footer>
+        )}
       </Modal>
     )
   );

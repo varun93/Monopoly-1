@@ -1,6 +1,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { setPlayerAction, publishAction } from "redux/actions";
+
 import GameInfo from "./GameInfo";
 import PlayerActions from "./PlayerActions";
 import MessageBox from "./MessageBox";

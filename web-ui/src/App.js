@@ -151,6 +151,7 @@ class App extends Component {
     //do you want to conduct a BSM?
     window.session.subscribe(response["BSM_IN"], state => {
       state = JSON.parse(state);
+
       const buyingCandidates = getBuyingCandidates(state);
       const sellingCandidates = getSellingCandidates(state);
       const mortageCandidates = getMortgageCandidates(state);
@@ -168,10 +169,11 @@ class App extends Component {
     });
 
     //end game
-    window.session.subscribe(
-      response["END_GAME_IN"],
-      this.receiveRequest.bind(this, "end_game")
-    );
+    window.session.subscribe(response["END_GAME_IN"], state => {
+      state = JSON.parse(state);
+      //display the statistics
+      window.session.publish(response["END_GAME_OUT"], []);
+    });
 
     //start game
     window.session.subscribe(response["START_GAME_IN"], state => {

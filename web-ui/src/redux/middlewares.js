@@ -17,6 +17,7 @@ const middleware = store => next => async action => {
     endpoint = "";
   const { endpoints } = state;
 
+  //this happens on click of a button
   if (action.type === actionTypes.SET_PLAYER_ACTION) {
     const { playerAction } = action;
     const buyingCandidates = getBuyingCandidates(state);
@@ -42,6 +43,7 @@ const middleware = store => next => async action => {
     dispatch(setCandidates(candidates));
   }
 
+  // finally send to adjudicator
   if (action.type === actionTypes.PUBLISH_ACTION) {
     const { formData, playerAction } = state;
 
@@ -69,6 +71,7 @@ const middleware = store => next => async action => {
     console.log([payload, endpoint]);
 
     window.session.publish(endpoint, payload);
+    //toggle the modal
     dispatch(resetForm());
     return;
   }
