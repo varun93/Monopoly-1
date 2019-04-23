@@ -103,8 +103,11 @@ class App extends Component {
     // CHANCE_CARD = 7
     // COMMUNITY_CHEST_CARD = 8
 
+    //how do you want to get out jail?
     window.session.subscribe(response["JAIL_IN"], state => {
-      const { toggleJailDecisionModal } = this.props;
+      const { toggleJailDecisionModal, receieveMessage } = this.props;
+      state = JSON.parse(state);
+      receieveMessage(state, "jail_decision");
       toggleJailDecisionModal(true);
     });
 
@@ -145,7 +148,7 @@ class App extends Component {
       togglePropertyModal(true, propertyToBuy);
     });
 
-    //do you want to do bsm
+    //do you want to conduct a BSM?
     window.session.subscribe(response["BSM_IN"], state => {
       state = JSON.parse(state);
       const buyingCandidates = getBuyingCandidates(state);
