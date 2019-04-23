@@ -4,6 +4,29 @@ export const substituteEndpoint = (endpoint, agentId, gameId) => {
   return endpoint;
 };
 
+export const mergeProperties = (current, incoming) => {
+  const merged = current.map((property, index) => {
+    return {
+      ...property,
+      ...incoming[index]
+    };
+  });
+
+  return merged;
+};
+
+export const calculateRent = (playerDebts, playerId) => {
+  let debts = playerDebts[playerId];
+  const otherPlayerDebts = debts.otherPlayers;
+  let totalDebts = 0;
+  totalDebts += debts.bank;
+  for (let otherPlayer in otherPlayerDebts) {
+    totalDebts += otherPlayerDebts[otherPlayer];
+  }
+
+  return totalDebts;
+};
+
 export const getPlayerName = (myId, id) => {
   if (myId === id) {
     return "human";
@@ -66,7 +89,7 @@ export const getSellingCandidates = state => {
 export const getMortgageCandidates = state => {
   const { properties, myId } = state;
 
-  const candidates = properties
+  return properties
     .filter(property => {
       if (property.class !== "street") return false;
       if (property.mortgaged) return false;
@@ -76,6 +99,4 @@ export const getMortgageCandidates = state => {
       return true;
     })
     .map(property => property.id);
-
-  return candidates;
 };

@@ -4,7 +4,6 @@ import { setPlayerAction, publishAction } from "redux/actions";
 
 import GameInfo from "./GameInfo";
 import PlayerActions from "./PlayerActions";
-import MessageBox from "./MessageBox";
 
 const MiddleBoard = props => {
   const {
@@ -13,19 +12,12 @@ const MiddleBoard = props => {
     phase,
     myId,
     startTurnEndpoint,
-    phasePayload,
     playersCash,
-    properties,
     buyOutEndpoint
   } = props;
   return (
     <div className="middle-board">
       <GameInfo playersCash={playersCash} myId={myId} />
-      <MessageBox
-        phase={phase}
-        phasePayload={phasePayload}
-        properties={properties}
-      />
       <PlayerActions
         phase={phase}
         startTurnEndpoint={startTurnEndpoint}

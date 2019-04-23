@@ -5,7 +5,7 @@ const Space = ({
   space,
   togglePropertyModal,
   index,
-  playerOnPosition,
+  playersOnPosition,
   owned
 }) => {
   const { monopoly, price, name } = space;
@@ -19,11 +19,13 @@ const Space = ({
       >
         {monopoly && <div className={`color-bar ${monopoly}`} />}
         {name && <div className="name">{name}</div>}
-        <div
-          className={`center-block ${
-            playerOnPosition.present ? `${playerOnPosition.player}-present` : ""
-          }`}
-        />
+
+        {playersOnPosition["human"] && (
+          <div className={"center-block human-present"} />
+        )}
+        {playersOnPosition["robot"] && (
+          <div className={"center-block robot-present"} />
+        )}
         {price && <div className="price">Price ${price}</div>}
       </div>
     </div>

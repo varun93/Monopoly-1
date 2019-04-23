@@ -12,23 +12,28 @@ export const JAIL_DECISION_ACTION = "jail";
 export const JOIN_GAME_ENDPOINT = "com.game{%game_id%}.joingame";
 
 export const Phase = {
-  JAIL: 1,
+  NO_ACTION: 0,
+  TRADE: 1,
   DICE_ROLL: 2,
-  AUCTION: 3,
-  TRADE_RESPONSE: 4,
-  COMMUNITY_CHEST_CARD: 5,
-  CHANCE_CARD: 6,
-  PAYMENT: 7
+  BUYING: 3,
+  AUCTION: 4,
+  PAYMENT: 5,
+  JAIL: 6,
+  CHANCE_CARD: 7,
+  COMMUNITY_CHEST_CARD: 8,
+  TRADE_RESPONSE: 9
 };
 
 export const PhaseNameMapping = {
-  1: "jail_decision",
+  1: "trade",
   2: "dice_roll",
-  3: "auction",
-  4: "trade_response",
-  5: "community_chest_card",
-  6: "chance_card",
-  7: "payment"
+  3: "buying",
+  4: "auction",
+  5: "payment",
+  6: "jail",
+  7: "chance_card",
+  8: "community_chest_card",
+  9: "trade_response"
 };
 
 export const communityChestCards = [

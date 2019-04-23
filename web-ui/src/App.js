@@ -9,7 +9,8 @@ import {
   substituteEndpoint,
   getBuyingCandidates,
   getSellingCandidates,
-  getMortgageCandidates
+  getMortgageCandidates,
+  calculateRent
 } from "utils";
 import {
   receieveMessage,
@@ -24,6 +25,7 @@ import * as constants from "./constants";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
 import { setTimeout } from "timers";
+import { mergeProperties } from "./utils";
 
 class App extends Component {
   constructor(props, context) {
@@ -121,7 +123,7 @@ class App extends Component {
       state = JSON.parse(state);
       let phase = constants.PhaseNameMapping[state.current_phase_number];
       const currentPlayer = state.current_player_id;
-      // const phasePayload = state.phase_payload;
+      const phasePayload = state.phase_payload;
       let message = "",
         title = "",
         currentPlayerName = "",
@@ -137,26 +139,32 @@ class App extends Component {
 
       if (phase === "chance_card") {
         title = "Chance Card";
-        message = `${currentPlayerName} won a Chance Card`;
+        message = `${currentPlayerName} won a Chance Card - ${
+          constants.chanceCards[phasePayload].content
+        }`;
       }
 
       if (phase === "community_chest_card") {
         title = "Community Chest Card";
-        message = `${currentPlayerName} won a Community Chest Card`;
+        message = `${currentPlayerName} won a Community Chest Card - ${
+          constants.communityChestCards[phasePayload].content
+        }`;
       }
 
       if (phase === "payment") {
         title = "Rent";
-        message = `Player ${currentPlayerName} landed on ${opponentPlayerName}'s property.`;
+        const rent = calculateRent(state.player_debts, currentPlayer);
+        message = `Player ${currentPlayerName} landed on ${opponentPlayerName}'s property. 
+        ${currentPlayerName} pays ${opponentPlayerName} - ${rent}`;
       }
 
       if (message && message.length) {
-        //automatically close the modal after 4 seconds
+        //automatically close the modal after 5 seconds
         setTimeout(() => {
           receieveMessage(state, phase);
           toggleToastMessageModal(false);
           window.session.publish(response["BROADCAST_OUT"], []);
-        }, 4000);
+        }, 5000);
         toggleToastMessageModal(true, title, message);
       } else {
         receieveMessage(state, phase);
@@ -182,7 +190,7 @@ class App extends Component {
       togglePropertyModal(true, propertyToBuy);
     });
 
-    //do you want to conduct a BSM?
+    //Cconduct a BSM
     window.session.subscribe(response["BSM_IN"], state => {
       state = JSON.parse(state);
 

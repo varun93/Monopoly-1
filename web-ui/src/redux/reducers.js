@@ -1,16 +1,5 @@
 import * as actionTypes from "./actionTypes";
-import { adjustPlayerPositions } from "utils";
-
-const mergeProperties = (current, incoming) => {
-  const merged = current.map((property, index) => {
-    return {
-      ...property,
-      ...incoming[index]
-    };
-  });
-
-  return merged;
-};
+import { adjustPlayerPositions, mergeProperties } from "utils";
 
 const reducer = (state, action) => {
   switch (action.type) {
