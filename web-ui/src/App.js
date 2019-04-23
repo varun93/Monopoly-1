@@ -25,11 +25,13 @@ import * as constants from "./constants";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
 import { setTimeout } from "timers";
-import { mergeProperties } from "./utils";
 
 class App extends Component {
   constructor(props, context) {
     super(props, context);
+    this.state = {
+      showStartButton: true
+    };
     window.session = null;
     // currently hardcoding game id
     this.gameId = 1;
@@ -73,6 +75,7 @@ class App extends Component {
     setEndpoints(response);
     this.subscribeToEvents(response);
     response = await session.call(response["CONFIRM_REGISTER"]);
+    this.setState({ showStartButton: false });
   };
 
   /* Receivers  */
@@ -99,15 +102,6 @@ class App extends Component {
       response["START_TURN_IN"],
       this.receiveRequest.bind(this, "start_turn")
     );
-
-    // TRADE = 1
-    // DICE_ROLL = 2
-    // BUYING = 3
-    // AUCTION = 4
-    // PAYMENT = 5
-    // JAIL = 6
-    // CHANCE_CARD = 7
-    // COMMUNITY_CHEST_CARD = 8
 
     //how do you want to get out jail?
     window.session.subscribe(response["JAIL_IN"], state => {
@@ -211,8 +205,20 @@ class App extends Component {
 
     //end game
     window.session.subscribe(response["END_GAME_IN"], state => {
-      state = JSON.parse(state);
-      //display the statistics
+      const { myId, toggleToastMessageModal } = this.props;
+      const result = state[0] || {};
+
+      if (state[0] && state[0][myId]) {
+        let winner = "";
+
+        if (result[myId] === 1) {
+          winner = "Human";
+        } else {
+          winner = "Robot";
+        }
+        toggleToastMessageModal(true, "Game Ended", `${winner} won`);
+      }
+
       window.session.publish(response["END_GAME_OUT"], []);
     });
 
@@ -225,17 +231,21 @@ class App extends Component {
 
   render() {
     const { startGame } = this;
+    const { showStartButton } = this.state;
     return (
       <div className="App">
         <Board />
-        <Button
-          onClick={startGame}
-          style={{ marginTop: "40px" }}
-          size="lg"
-          variant="success"
-        >
-          Start Game
-        </Button>
+        {showStartButton && (
+          <Button
+            onClick={startGame}
+            style={{ marginTop: "40px" }}
+            size="lg"
+            variant="success"
+          >
+            Start Game
+          </Button>
+        )}
+
         <JailDecision />
         <ToastMessage />
       </div>

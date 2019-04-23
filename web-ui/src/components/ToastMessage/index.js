@@ -4,7 +4,6 @@ import Modal from "react-bootstrap/Modal";
 import Container from "react-bootstrap/Container";
 import { toggleToastMessageModal } from "redux/actions";
 
-//change the rent to a debt object; which tells who owes who money
 const ToastMessage = ({
   toggleToastMessageModal,
   showToastMessage,
