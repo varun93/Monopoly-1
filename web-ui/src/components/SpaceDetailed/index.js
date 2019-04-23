@@ -125,13 +125,6 @@ const SpaceDetailed = ({
               )}
           </Container>
         </Modal.Body>
-        {!buyMortgage && (
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose}>
-              Close
-            </Button>
-          </Modal.Footer>
-        )}
       </Modal>
     )
   );
