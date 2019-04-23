@@ -159,12 +159,11 @@ class App extends Component {
       }
 
       if (message && message.length) {
-        //automatically close the modal after 5 seconds
         setTimeout(() => {
           receieveMessage(state, phase);
           toggleToastMessageModal(false);
           window.session.publish(response["BROADCAST_OUT"], []);
-        }, 5000);
+        }, 4000);
         toggleToastMessageModal(true, title, message);
       } else {
         receieveMessage(state, phase);
