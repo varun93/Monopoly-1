@@ -43,7 +43,7 @@ class Adjudicator(ApplicationSession):
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
 		
-		self.EXPECTED_PLAYER_COUNT = 3
+		self.EXPECTED_PLAYER_COUNT = 2
 		self.currentPlayerCount = 0
 		self.agents = [] #Stores ids of agents in the current game
 		
@@ -204,7 +204,7 @@ class Adjudicator(ApplicationSession):
 	def startGame(self):
 		"""CONFIGURATION SETTINGS"""
 		self.PASSING_GO_MONEY = 200
-		self.TOTAL_NO_OF_TURNS = 100
+		self.TOTAL_NO_OF_TURNS = 25
 		self.INITIAL_CASH = 1500
 		self.NO_OF_GAMES =1
 		self.gamesCompleted = 0
