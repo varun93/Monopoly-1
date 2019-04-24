@@ -75,9 +75,10 @@ const getBSMCandidates = state => {
 };
 
 export const getBuyingCandidates = state => {
-  return getBSMCandidates(state)
+  const candidates = getBSMCandidates(state)
     .filter(property => property.houses < 5)
     .map(property => property.id);
+  return candidates;
 };
 
 export const getSellingCandidates = state => {

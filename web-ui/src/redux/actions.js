@@ -16,8 +16,8 @@ export const setPlayerAction = playerAction => {
   return { type: actionTypes.SET_PLAYER_ACTION, playerAction };
 };
 
-export const setCandidates = candidates => {
-  return { type: actionTypes.SET_CANDIDATES, candidates };
+export const setBSMCandidates = bsmCandidates => {
+  return { type: actionTypes.SET_BSM_CANDIDATES, bsmCandidates };
 };
 
 export const setFormData = (propertyId, formData) => {

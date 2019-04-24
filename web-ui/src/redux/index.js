@@ -11,7 +11,11 @@ const initialState = {
   playerAction: "",
   endpoints: {},
   rawState: {},
-  candidates: [],
+  bsmCandidates: {
+    buyingCandidates: [],
+    sellingCandidates: [],
+    mortgageCandidates: []
+  },
   properties,
   playersCash: {},
   playersPositions: {},

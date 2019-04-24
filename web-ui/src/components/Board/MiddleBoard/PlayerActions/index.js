@@ -1,13 +1,25 @@
 import React from "react";
+import { connect } from "react-redux";
 import Button from "react-bootstrap/Button";
+import { setPlayerAction, publishAction } from "redux/actions";
 
 const PlayerActions = ({
   phase,
-  buyOutEndpoint,
   startTurnEndpoint,
   setPlayerAction,
-  publishAction
+  publishAction,
+  bsmCandidates
 }) => {
+  const {
+    buyingCandidates,
+    sellingCandidates,
+    mortgageCandidates
+  } = bsmCandidates;
+
+  const activateBuy = buyingCandidates.length;
+  const activateSell = sellingCandidates.length;
+  const activateMortgage = mortgageCandidates.length;
+
   const click = playerAction => {
     setPlayerAction(playerAction);
   };
@@ -20,24 +32,29 @@ const PlayerActions = ({
           <Button
             onClick={click.bind(null, "buy-constructions")}
             variant="secondary"
+            {...{ disabled: !activateBuy }}
           >
             Buy Constructions
           </Button>
           <Button
             onClick={click.bind(null, "sell-constructions")}
             variant="success"
+            {...{ disabled: !activateSell }}
           >
             Sell Constructions
           </Button>
           <Button
             onClick={click.bind(null, "mortage-unmortgage")}
             variant="warning"
+            {...{ disabled: !activateMortgage }}
           >
             Mortgage/Unmortgage
           </Button>
-          <Button onClick={() => publishAction()} variant="danger" size="lg">
-            Commit Action
-          </Button>
+          {(activateBuy || activateSell || activateMortgage) && (
+            <Button onClick={() => publishAction()} variant="danger" size="lg">
+              Commit Action
+            </Button>
+          )}
         </div>
       )}
 
@@ -55,4 +72,21 @@ const PlayerActions = ({
   );
 };
 
-export default PlayerActions;
+const mapDispatchToProps = dispatch => {
+  return {
+    setPlayerAction: playerAction => dispatch(setPlayerAction(playerAction)),
+    publishAction: () => dispatch(publishAction())
+  };
+};
+
+const mapStateToProps = state => {
+  return {
+    startTurnEndpoint: state.endpoints.START_TURN_OUT,
+    bsmCandidates: state.bsmCandidates
+  };
+};
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(PlayerActions);

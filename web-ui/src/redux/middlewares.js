@@ -1,51 +1,49 @@
 import * as actionTypes from "./actionTypes";
-import { setCandidates, resetForm } from "./actions";
+import { setBSMCandidates, resetForm } from "./actions";
 import {
   getBuyingCandidates,
   getSellingCandidates,
   getMortgageCandidates
 } from "utils";
 
-// window.session.publish(endpoints.BSM_OUT, payload);
-
 const middleware = store => next => async action => {
   const dispatch = store.dispatch;
-  const state = store.getState();
-  let candidates = [];
-  const payload = [];
-  let keyToExtract = "",
-    endpoint = "";
-  const { endpoints } = state;
+  let state = store.getState();
 
-  //this happens on click of a button
-  if (action.type === actionTypes.SET_PLAYER_ACTION) {
-    const { playerAction } = action;
+  if (action.type === actionTypes.RECEIVE_MESSAGE && action.phase === "bsm") {
+    next(action);
+
+    state = store.getState();
+
     const buyingCandidates = getBuyingCandidates(state);
     const sellingCandidates = getSellingCandidates(state);
-    const mortageCandidates = getMortgageCandidates(state);
+    const mortgageCandidates = getMortgageCandidates(state);
 
     if (
       buyingCandidates.length === 0 &&
       sellingCandidates.length === 0 &&
-      mortageCandidates.length === 0
+      mortgageCandidates.length === 0
     ) {
-      return;
+      window.session.publish(state.endpoints.BSM_OUT, []);
     }
 
-    if (playerAction === "buy-constructions") {
-      candidates = buyingCandidates;
-    } else if (playerAction === "sell-constructions") {
-      candidates = sellingCandidates;
-    } else if (playerAction === "mortage-unmortgage") {
-      candidates = mortageCandidates;
-    }
-
-    dispatch(setCandidates(candidates));
+    dispatch(
+      setBSMCandidates({
+        buyingCandidates,
+        sellingCandidates,
+        mortgageCandidates
+      })
+    );
   }
 
   // finally send to adjudicator
-  if (action.type === actionTypes.PUBLISH_ACTION) {
+  else if (action.type === actionTypes.PUBLISH_ACTION) {
     const { formData, playerAction } = state;
+    const { endpoints } = state;
+    const payload = [];
+
+    let keyToExtract = "",
+      endpoint = "";
 
     if (formData === null || !Object.keys(formData)) {
       return;
@@ -73,10 +71,10 @@ const middleware = store => next => async action => {
     window.session.publish(endpoint, payload);
     //toggle the modal
     dispatch(resetForm());
-    return;
+    next(action);
+  } else {
+    next(action);
   }
-
-  next(action);
 };
 
 export default middleware;

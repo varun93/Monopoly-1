@@ -13,7 +13,6 @@ const SpaceDetailed = ({
   selectedPropertyIndex,
   showPropertyModal,
   properties,
-  candidates,
   phase,
   playerAction,
   buyOutEndpoint,
@@ -34,9 +33,6 @@ const SpaceDetailed = ({
   const closeButton = {
     closeButton: !buyMortgage
   };
-
-  const highlighted =
-    candidates.indexOf(selectedPropertyIndex) !== -1 ? true : false;
 
   return (
     showPropertyModal && (
@@ -63,7 +59,7 @@ const SpaceDetailed = ({
               />
             )}
             {/* Form Section */}
-            {highlighted && playerAction === "buy-constructions" && (
+            {playerAction === "buy-constructions" && (
               <Form.Group controlId="formBuyConstructions">
                 <Form.Label>Buy Constructions</Form.Label>
                 <Form.Control
@@ -77,7 +73,7 @@ const SpaceDetailed = ({
               </Form.Group>
             )}
 
-            {highlighted && playerAction === "sell-constructions" && (
+            {playerAction === "sell-constructions" && (
               <Form.Group controlId="formSellConstructions">
                 <Form.Label>Sell Constructions</Form.Label>
                 <Form.Control
@@ -91,7 +87,7 @@ const SpaceDetailed = ({
               </Form.Group>
             )}
 
-            {highlighted && playerAction === "mortage-unmortgage" && (
+            {playerAction === "mortage-unmortgage" && (
               <Form.Group controlId="formMortgageProperty">
                 <Form.Check
                   onChange={event => setMortgaged(event.target.checked)}
@@ -102,27 +98,26 @@ const SpaceDetailed = ({
               </Form.Group>
             )}
             {/* no set form data required just publish! */}
-            {highlighted &&
-              [
-                "mortage-unmortgage",
-                "sell-contructions",
-                "buy-constructions"
-              ].indexOf(playerAction) !== -1 && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setFormData(selectedPropertyIndex, {
-                      housesBought,
-                      housesSold,
-                      mortaged
-                    });
-                    handleClose();
-                  }}
-                  block
-                >
-                  Save Changes
-                </Button>
-              )}
+            {[
+              "mortage-unmortgage",
+              "sell-contructions",
+              "buy-constructions"
+            ].indexOf(playerAction) !== -1 && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setFormData(selectedPropertyIndex, {
+                    housesBought,
+                    housesSold,
+                    mortaged
+                  });
+                  handleClose();
+                }}
+                block
+              >
+                Save Changes
+              </Button>
+            )}
           </Container>
         </Modal.Body>
       </Modal>
@@ -147,8 +142,7 @@ const mapStateToProps = state => {
     playerAction: state.playerAction,
     properties: state.properties,
     buyOutEndpoint: state.endpoints.BUY_OUT,
-    auctionEndpoint: state.endpoints.AUCTION_OUT,
-    candidates: state.candidates || []
+    auctionEndpoint: state.endpoints.AUCTION_OUT
   };
 };
 

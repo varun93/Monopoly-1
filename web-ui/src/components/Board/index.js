@@ -32,12 +32,35 @@ class Board extends Component {
   };
 
   getSpaceProps = index => {
-    const { properties, candidates, togglePropertyModal } = this.props;
+    const {
+      properties,
+      playerAction,
+      bsmCandidates,
+      togglePropertyModal
+    } = this.props;
+    let highlighted = false;
     const space = properties[index];
     const key = index;
-    const highlighted = candidates.indexOf(index) !== -1 ? true : false;
     const owned = this.getOwned(space);
     const playersOnPosition = this.getPlayersOnPosition(index);
+
+    if (playerAction) {
+      const {
+        buyingCandidates,
+        sellingCandidates,
+        mortgageCandidates
+      } = bsmCandidates;
+
+      if (playerAction === "buy-constructions") {
+        highlighted = buyingCandidates.indexOf(index) !== -1;
+      }
+      if (playerAction === "sell-constructions") {
+        highlighted = sellingCandidates.indexOf(index) !== -1;
+      }
+      if (playerAction === "mortage-unmortgage") {
+        highlighted = mortgageCandidates.indexOf(index) !== -1;
+      }
+    }
 
     return {
       index,
@@ -52,12 +75,13 @@ class Board extends Component {
 
   render() {
     const { getSpaceProps } = this;
+    const { phase, myId, playersCash } = this.props;
 
     return (
       <div className="monopoly-table">
         {/* Start of Board */}
         <div className="board">
-          <MiddleBoard />
+          <MiddleBoard phase={phase} myId={myId} playersCash={playersCash} />
 
           {/* Actual Grids go here */}
           <Space {...getSpaceProps(0)} />
@@ -113,10 +137,14 @@ const mapDispatchToProps = dispatch => {
 const mapStateToProps = state => {
   return {
     myId: state.myId,
+    phase: state.phase,
+    playersCash: state.playersCash,
     players: state.players || [],
     properties: state.properties,
     candidates: state.candidates || [],
-    playersPositions: state.playersPositions
+    playersPositions: state.playersPositions,
+    bsmCandidates: state.bsmCandidates,
+    playerAction: state.playerAction
   };
 };
 

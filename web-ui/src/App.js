@@ -5,18 +5,11 @@ import Board from "components/Board";
 import JailDecision from "components/JailDecision";
 import ToastMessage from "components/ToastMessage";
 import Button from "react-bootstrap/Button";
-import {
-  substituteEndpoint,
-  getBuyingCandidates,
-  getSellingCandidates,
-  getMortgageCandidates,
-  calculateRent
-} from "utils";
+import { substituteEndpoint, calculateRent } from "utils";
 import {
   receieveMessage,
   setMyId,
   setEndpoints,
-  setCandidates,
   togglePropertyModal,
   toggleJailDecisionModal,
   toggleToastMessageModal
@@ -81,7 +74,7 @@ class App extends Component {
   /* Receivers  */
   receiveRequest = (phase, state) => {
     const { receieveMessage } = this.props;
-    state = JSON.parse(state[0]);
+    state = JSON.parse(state);
     receieveMessage(state, phase);
   };
 
@@ -183,24 +176,12 @@ class App extends Component {
       togglePropertyModal(true, propertyToBuy);
     });
 
-    //Cconduct a BSM
+    //conduct a BSM
     window.session.subscribe(response["BSM_IN"], state => {
       state = JSON.parse(state);
-
-      const buyingCandidates = getBuyingCandidates(state);
-      const sellingCandidates = getSellingCandidates(state);
-      const mortageCandidates = getMortgageCandidates(state);
-
-      if (
-        buyingCandidates.length === 0 &&
-        sellingCandidates.length === 0 &&
-        mortageCandidates.length === 0
-      ) {
-        window.session.publish(response["BSM_OUT"], []);
-      } else {
-        const { receieveMessage } = this.props;
-        receieveMessage(state, "bsm");
-      }
+      const { receieveMessage } = this.props;
+      receieveMessage(state, "bsm");
+      window.session.publish(response["BSM_OUT"], []);
     });
 
     //end game
@@ -245,7 +226,6 @@ class App extends Component {
             Start Game
           </Button>
         )}
-
         <JailDecision />
         <ToastMessage />
       </div>
@@ -258,7 +238,6 @@ const mapDispatchToProps = dispatch => ({
     dispatch(receieveMessage(rawState, phase)),
   setMyId: id => dispatch(setMyId(id)),
   setEndpoints: endpoints => dispatch(setEndpoints(endpoints)),
-  setCandidates: candidates => dispatch(setCandidates(candidates)),
   togglePropertyModal: (showPropertyModal, selectedPropertyIndex) =>
     dispatch(togglePropertyModal(showPropertyModal, selectedPropertyIndex)),
   toggleJailDecisionModal: showJailDecisionModal =>

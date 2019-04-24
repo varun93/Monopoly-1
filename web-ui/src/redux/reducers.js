@@ -7,7 +7,7 @@ const reducer = (state, action) => {
       const { rawState, phase } = action;
       return {
         ...state,
-        rawState,
+        ...rawState,
         phase,
         properties: mergeProperties(state.properties, rawState.properties),
         players: rawState.player_ids,
@@ -39,11 +39,11 @@ const reducer = (state, action) => {
         playerAction
       };
 
-    case actionTypes.SET_CANDIDATES:
-      const { candidates } = action;
+    case actionTypes.SET_BSM_CANDIDATES:
+      const { bsmCandidates } = action;
       return {
         ...state,
-        candidates
+        bsmCandidates
       };
 
     case actionTypes.SET_FORM_DATA:
