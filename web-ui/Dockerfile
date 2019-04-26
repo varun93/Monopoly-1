@@ -3,7 +3,4 @@ WORKDIR /app
 COPY . ./
 RUN yarn
 RUN yarn build
-
-# COPY --from=react-build /app/build ./
-
- 
+VOLUME /app

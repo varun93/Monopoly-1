@@ -1,21 +1,26 @@
 version: "3"
+
 services:
   crossbar:
     build: ./router
     container_name: crossbar
+    networks:
+      - gateway
     ports:
       - "80:80"
-  # adjudicator:
-  #   build: ./adjudicator
-  #   links:
-  #     - "crossbar"
-  #   command: ["python", "invoke.py"]
-  # game_gen:
-  #   build: ./game_gen
-  #   links:
-  #     - "crossbar"
-  #   command: ["python", "game_gen.py", "1", "6"]
-  # react-build:
-  #   build: ./web-ui
-# volumes:
-#   react-build:
+    volumes:
+      - webapp
+  adjudicator:
+    build: ./adjudicator
+    networks:
+      - gateway
+    command: ["python", "newAdjudicator.py"]
+  webapp:
+    build: ./web-ui
+    container_name: webapp
+
+networks:
+  gateway: {}
+
+volumes:
+  webapp:
