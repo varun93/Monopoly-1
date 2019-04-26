@@ -15,12 +15,6 @@ docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --volumes-from we
 docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:80/ws" -e CBREALM="realm1" --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/newAdjudicator.py
 ```
 
-`docker-compose up`
-
-**Stop**
-
-`docker-compose down`
-
 ## Issue Log
 
 1. If you face issues with running the code on Windows, please check the Issues list.
