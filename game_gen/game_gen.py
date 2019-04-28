@@ -78,6 +78,11 @@ class GameGen(ApplicationSession):
 		
 		return game.serialize()
 	
+	#Used to register the comm channel to the UI.
+	#Since we don't know when the UI could come online, we need to register this beforehand.
+	def stub(self,*args):
+		pass
+	
 	#@inlineCallbacks
 	def adjudicatorCommChannel(self,gameId,messageType,message):
 		currentGame = None
@@ -100,6 +105,7 @@ class GameGen(ApplicationSession):
 			currentGame.gamesCompleted += 1
 			
 		#TODO: Send these to the UI as updates
+		self.publish("com.monopoly.ui.comm_channel", [gameId,messageType,message])
 	
 	def fetch_games(self):
 		print("Inside fetch_games")

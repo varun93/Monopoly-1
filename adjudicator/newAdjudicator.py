@@ -97,6 +97,7 @@ class Adjudicator(ApplicationSession):
 				
 	#Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
 	#TODO: Should we verify if these connections are active?
+	@inlineCallbacks
 	def confirmRegisterListener(self,agentId):
 		if self.currentPlayerCount >= self.EXPECTED_PLAYER_COUNT or self.gameStarted:
 			return False
@@ -111,28 +112,28 @@ class Adjudicator(ApplicationSession):
 			self.gameStarted = True
 			if self.timeoutId.active():
 				self.timeoutId.cancel()
-			self.register(self.adjudicatorCommChannel,)
-			self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
+			yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
 			self.startGame()
 		
 		return True
-	   
+	
+	@inlineCallbacks
 	def timeoutHandler(self):
 		print('In joingame timeoutHandler')
 		if not self.gameStarted:
 			if self.currentPlayerCount < self.EXPECTED_PLAYER_COUNT:
 				if self.timeoutBehaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
 					self.gameStarted = True
-					self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
+					yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
 					self.startGame()
 				else:
 					#only one player joined or not enough people joined and game is set to exit in
 					#such a case.
-					self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
+					yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
 					self.leave()
 			else:
 				self.gameStarted = True
-				self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
+				yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
 				self.startGame()
 	
 	#TODO: Synchronization
@@ -196,11 +197,12 @@ class Adjudicator(ApplicationSession):
 				agent_attributes[requiredChannel] = self.agent_info[requiredChannel].format(self.gameId,agentId)
 		return agent_attributes
 	
+	@inlineCallbacks
 	def shutDown(self):
 		self.confirmReg.unregister()
 		for subscribeKey in self.subscribeKeys:
 			subscribeKey.unsubscribe()
-		self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
+		yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
 		self.leave()
 	
 	#Supposedly called after we call self.leave()
@@ -300,11 +302,10 @@ class Adjudicator(ApplicationSession):
 		self.startGame.publish()
 	
 if __name__ == '__main__':
-	print(sys.argv)
 	if len(sys.argv) < 5:
 		sys.exit("Not enough arguments")
 	import six
-	url = environ.get("CBURL", u"ws://127.0.0.1:3000/ws")
+	url = environ.get("CBURL", u"ws://127.0.0.1:80/ws")
 	if six.PY2 and type(url) == six.binary_type:
 		url = url.decode('utf8')
 	realm = environ.get('CBREALM', u'realm1')
