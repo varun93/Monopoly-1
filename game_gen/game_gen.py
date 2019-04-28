@@ -6,7 +6,15 @@ from twisted.internet.defer import inlineCallbacks
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
 from autobahn import wamp
 from twisted.python.failure import Failure
+from subprocess import Popen,PIPE
 
+class Game:
+	def __init__(self,numberOfPlayers,timeoutBehaviour,gameId,noOfGames,popenId):
+		self.numberOfPlayers = numberOfPlayers
+		self.timeoutBehaviour = timeoutBehaviour
+		self.gameId = gameId
+		self.noOfGames = noOfGames
+		self.popenId = popenId
 
 class GameGen(ApplicationSession):
 	
@@ -14,99 +22,44 @@ class GameGen(ApplicationSession):
 	def onJoin(self, details):
 		print("In "+self.onJoin.__name__)
 		
-		self.CHANCE_GET_OUT_OF_JAIL_FREE = 40
-		self.COMMUNITY_GET_OUT_OF_JAIL_FREE = 41
-		self.JUST_VISTING = 10
-		self.JAIL = -1
-		
-		self.dice = None
-		
-		"""CONFIGURATION SETTINGS"""
-		self.BOARD_SIZE = 40
-		self.PASSING_GO_MONEY = 200
-		self.TOTAL_NO_OF_TURNS = 100
-		self.INITIAL_CASH = 1500
-		
-		#TODO: Configuration for these
-		#TODO: The  agentCounter used in the URI needs to be hashed to prevent impersonation (Or some other solution)
-		self.expected_no_players = int(sys.argv[2])
-		self.current_no_players = 0
-		self.agents = [] #Stores ids of agents in the current game
-		self.game_id = int(sys.argv[1])
-		self.gameStarted = False
+		self.gameid_counter = 0
+		self.games_list = []
 
 		self.confirm_registration_handles = {}
 
-		self.game_end_uri = 'com.game{}.end_game'.format(self.game_id)
-		self.agentCounter = 0
-		self.agent_info = { 'agent_id':'{}',
-				'confirm_register':'com.game{}.agent{}.confirm_register',
-				'bsm':'com.game{}.agent{}.bsm',
-				'respondtrade':'com.game{}.agent{}.respondtrade',
-				'buy':'com.game{}.agent{}.buy',
-				'auction':'com.game{}.agent{}.auction',
-				'jail':'com.game{}.agent{}.jail',
-				'receivestate':'com.game{}.agent{}.receivestate',
-				'trade':'com.game{}.agent{}.trade',
-				'endgame':'com.game{}.agent{}.endgame'
-				}
-	   
-		results = []
-		res = yield self.register(self)
-		results.extend(res)
+		self.FETCH_GAMES_URI = "com.monopoly.fetch_games"
+		
+		#called by the Start New Game UI
+		yield self.register(self.init_game,"com.monopoly.init_game")
 
-		for res in results:
-			if isinstance(res, Failure):
-				print("Failed to register procedure: {}".format(res.value))
-			else:
-				print("registration ID {}: {}".format(res.id, res.procedure))
-
-		results = yield self.subscribe(self)
-
-		# check we didn't have any errors
-		for sub in results:
-			if isinstance(sub, Failure):
-				print("subscribe failed:", sub.getErrorMessage())
-
-	#Agent has confirmed that he has registered all his methods. We can enroll the agent in the game.
-	#TODO: Should we verify if these connections are active?
-	def confirm_register(self,agentId):
-		if self.current_no_players >= self.expected_no_players:
+	def init_game(self,*args):
+		numberOfPlayers = None
+		timeoutBehaviour = None
+		if len(args)>0 and isinstance(args[0],int) and args[0] > 2 and args[0] < 8:
+			numberOfPlayers = args[0]
+		if len(args)>1 and isinstance(args[1],int) and (args[1]==0 or args[1]==1):
+			timeoutBehaviour = args[1]
+		
+		if numberOfPlayers == None or timeoutBehaviour == None:
 			return False
 		
-		self.current_no_players+=1
-		self.agents.append(agentId)
+		self.gameid_counter += 1
+		gameId = self.gameid_counter
 		
-		# publish the message to the adjudicator
-		if self.current_no_players == self.expected_no_players:
-			game_start_uri = 'com.game{}.start_game'.format(self.game_id)
-			# I dont like the hardcoding here but its fine for the time being
-			game_end_uri = 'com.game{}.endgame'.format(sys.argv[1])
-			# yield self.register(self.teardownAgent,game_end_uri)
-			self.publish(game_start_uri, self.agents, game_end_uri)
+		#called by the newly started adjudicator instance to provide updates about the game.
+		yield self.register(self.init_game,"com.monopoly.game{}.comm_channel".format(gameId))
+		
+		#sys.executable gets the python executable used to start the current script
+		popen_id = Popen([sys.executable,"newAdjudicator.py",numberOfPlayers,timeoutBehaviour,gameId])
+		
+		game = Game(numberOfPlayers,timeoutBehaviour,gameId,popen_id)
+		self.games_list.append(game)
 		
 		return True
 	
-	@wamp.register('com.game{}.joingame'.format(sys.argv[1]))
-	@inlineCallbacks
-	def generateAgentDetails(self):
-		# this logic has to be changed
-		self.agentCounter += 1
-		
-		agent_attributes = {}
-		for key,value in self.agent_info.items():
-			if key == 'agent_id':
-				agent_attributes[key] = value.format(self.agentCounter)
-			else:
-				agent_attributes[key] = value.format(self.game_id, self.agentCounter)
-				
-		#Create channel where the agent can confirm  his registration
-		self.confirm_registration_handles[str(self.agentCounter)] = yield self.register(
-			self.confirm_register,
-			agent_attributes['confirm_register'])
-			   
-		print("Agent with counter "+str(self.agentCounter)+" initialized.")
-		return agent_attributes
+	#
+	def adjudicatorCommChannel(self,gameId,messageType,message):
+		pass
 	   
 	@wamp.subscribe('com.game{}.endgame'.format(sys.argv[1]))
 	def teardownAgent(self,agent_id, result):
@@ -129,7 +82,7 @@ class GameGen(ApplicationSession):
 
 if __name__ == '__main__':
 	import six
-	url = environ.get("CBURL", u"ws://127.0.0.1:8080/ws")
+	url = environ.get("CBURL", u"ws://127.0.0.1:3000/ws")
 	if six.PY2 and type(url) == six.binary_type:
 		url = url.decode('utf8')
 	realm = environ.get('CBREALM', u'realm1')
