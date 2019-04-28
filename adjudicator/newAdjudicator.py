@@ -36,14 +36,17 @@ class Adjudicator(ApplicationSession):
 		#extra stuff
 		#TODO: Configuration for these
 		#TODO: The  agentCounter used in the URI needs to be hashed to prevent impersonation (Or some other solution)
-		#self.gameId = int(sys.argv[1])
-		#self.EXPECTED_PLAYER_COUNT = int(sys.argv[2])
-		self.gameId = 1
+		self.gameId = int(sys.argv[1])
+		self.EXPECTED_PLAYER_COUNT = int(sys.argv[2])
+		self.timeoutBehaviour = int(sys.argv[3])
+		self.NO_OF_GAMES = int(sys.argv[4])
+		#self.gameId = 1
+		#self.EXPECTED_PLAYER_COUNT = 2
+		#self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
+		#self.NO_OF_GAMES =1
 		
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
-		self.timeoutBehaviour = TimeoutBehaviour.STOP_GAME
 		
-		self.EXPECTED_PLAYER_COUNT = 2
 		self.currentPlayerCount = 0
 		self.agents = [] #Stores ids of agents in the current game
 		
@@ -108,6 +111,8 @@ class Adjudicator(ApplicationSession):
 			self.gameStarted = True
 			if self.timeoutId.active():
 				self.timeoutId.cancel()
+			self.register(self.adjudicatorCommChannel,)
+			self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
 			self.startGame()
 		
 		return True
@@ -118,13 +123,16 @@ class Adjudicator(ApplicationSession):
 			if self.currentPlayerCount < self.EXPECTED_PLAYER_COUNT:
 				if self.timeoutBehaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
 					self.gameStarted = True
+					self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
 					self.startGame()
 				else:
 					#only one player joined or not enough people joined and game is set to exit in
 					#such a case.
+					self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
 					self.leave()
 			else:
 				self.gameStarted = True
+				self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
 				self.startGame()
 	
 	#TODO: Synchronization
@@ -192,6 +200,7 @@ class Adjudicator(ApplicationSession):
 		self.confirmReg.unregister()
 		for subscribeKey in self.subscribeKeys:
 			subscribeKey.unsubscribe()
+		self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
 		self.leave()
 	
 	#Supposedly called after we call self.leave()
@@ -206,7 +215,6 @@ class Adjudicator(ApplicationSession):
 		self.PASSING_GO_MONEY = 200
 		self.TOTAL_NO_OF_TURNS = 25
 		self.INITIAL_CASH = 1500
-		self.NO_OF_GAMES =1
 		self.gamesCompleted = 0
 		
 		self.winCount = {}
@@ -292,6 +300,8 @@ class Adjudicator(ApplicationSession):
 		self.startGame.publish()
 	
 if __name__ == '__main__':
+	if len(sys.argv) < 5:
+		return False
 	import six
 	url = environ.get("CBURL", u"ws://127.0.0.1:80/ws")
 	if six.PY2 and type(url) == six.binary_type:
