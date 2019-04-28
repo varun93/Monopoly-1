@@ -16,7 +16,8 @@ class BaseAgent(ApplicationSession):
 		
 		#TODO: Configuration for these
 		#Command line args
-		self.game_id = 1
+		#self.game_id = 1
+		self.game_id = int(sys.argv[1])
 		
 		#URIs
 		join_game_uri = 'com.game{}.joingame'.format(self.game_id)
