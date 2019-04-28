@@ -48,20 +48,21 @@ class GameGen(ApplicationSession):
 		
 	@inlineCallbacks
 	def init_game(self,*args):
-		numberOfPlayers = None
-		timeoutBehaviour = None
-		noOfGames = None
+		print("Inside init_game")
 		if len(args) < 2:
-			return False
-		if isinstance(args[0],int) and args[0] > 2 and args[0] < 8:
-			numberOfPlayers = args[0]
-		if isinstance(args[1],int) and (args[1]==0 or args[1]==1):
-			timeoutBehaviour = args[1]
-		if isinstance(args[2],int) and args[0] > 0:
-			noOfGames = args[2]
-		
-		if numberOfPlayers == None or timeoutBehaviour == None or noOfGames == None:
-			return False
+			return -1
+		try:
+			numberOfPlayers = int(args[0])
+			timeoutBehaviour = int(args[1])
+			noOfGames = int(args[2])
+		except:
+			return -1
+		if numberOfPlayers < 2 or numberOfPlayers > 8:
+			return -1
+		if timeoutBehaviour != 0 and timeoutBehaviour != 1:
+			return -1
+		if noOfGames <= 0:
+			return -1
 		
 		self.gameid_counter += 1
 		gameId = self.gameid_counter
@@ -70,14 +71,14 @@ class GameGen(ApplicationSession):
 		yield self.register(self.adjudicatorCommChannel,"com.monopoly.game{}.comm_channel".format(gameId))
 		
 		#sys.executable gets the python executable used to start the current script
-		popen_id = Popen([sys.executable,"../adjudicator/newAdjudicator.py",gameId,numberOfPlayers,timeoutBehaviour,noOfGames])
+		popen_id = Popen([sys.executable,"../adjudicator/newAdjudicator.py",str(gameId),str(numberOfPlayers),str(timeoutBehaviour),str(noOfGames)])
 		
 		game = Game(gameId,numberOfPlayers,timeoutBehaviour,noOfGames,popen_id)
 		self.games_list.append(game)
 		
-		return True
+		return game.serialize()
 	
-	@inlineCallbacks
+	#@inlineCallbacks
 	def adjudicatorCommChannel(self,gameId,messageType,message):
 		currentGame = None
 		
@@ -101,8 +102,8 @@ class GameGen(ApplicationSession):
 		#TODO: Send these to the UI as updates
 	
 	def fetch_games(self):
-		return json.dumps([game.serialize() for game in self.games_list])
-		
+		print("Inside fetch_games")
+		return [game.serialize() for game in self.games_list]
 		
 	def onDisconnect(self):
 		if reactor.running:

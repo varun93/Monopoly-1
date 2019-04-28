@@ -11,14 +11,26 @@
     </head>
 
     <body>
-        <div class="container" style="margin-top: 10%;margin-bottom: 10%;">
+        <div class="container" style="margin-top: 4%;margin-bottom: 10%;">
             <!-- Page Content goes here -->
+            <div class="row" style="margin-bottom:6%;">
+                <div class="col s5"></div>
+                <div class="col s2">
+                    <h2>Monopoly</h2>
+                </div>
+                <div class="col s5"></div>
+            </div>
             <div class="row">
                 <div class="col s5">
-                    <form action="#data" method="post">
+                    <h4 style="margin-bottom: 30px;">Start a New Game</h4>
+                    <form>
                         <div class="input-field">
-                          <input value=2 id="last_name" type="number" min=0 max=8 class="validate">
-                          <label for="last_name">Number of Players</label>
+                          <input value=2 id="nplayers" type="number" min=0 max=8 class="validate">
+                          <label for="nplayers">Number of Players</label>
+                        </div>
+                        <div class="input-field">
+                          <input value=1 id="ngames" type="number" min=1 class="validate">
+                          <label for="ngames">Number of Games</label>
                         </div>
 
                         <!--<div class="input-field">
@@ -30,30 +42,159 @@
                           Once a game has been started, there will be a 5 minute wait for all the players to join. If all the players didn't join within this time, the below mentioned Timeout Behaviour would be put into effect.
                         </blockquote>
 
-                        <label for="group1">Timeout Behaviour</label>                        
+                        <label for="timeout">Timeout Behaviour</label>                        
                         <p>
                           <label>
-                            <input name="group1" type="radio" value="true" checked />
+                            <input name="timeout" type="radio" checked />
                             <span>Stop the Game</span>
                           </label>
                         </p>
                         <p>
                           <label>
-                            <input name="group1" type="radio" value="false" />
+                            <input name="timeout" type="radio" />
                             <span>Start the Game Anyway</span>
                           </label>
                         </p>
-                        <button class="btn waves-effect waves-light" type="submit" name="action">Start New Game
+                        <button id="newgame" class="btn waves-effect waves-light" type="button">Start New Game
                             <i class="material-icons right">send</i>
                         </button>
                     </form>
+                </div>
+                <div class="col s2">
+                </div>
+                <div id="games_list_container" class="col s5">
+                    <h4>List of Games</h4>
+                    <p id="empty_banner">No game has been started yet.</p>
                 </div>
             </div>
         </div>
       <!--JavaScript at end of body for optimized loading-->
       <script type="text/javascript" src="js/materialize.min.js"></script>
+      <script type="text/javascript" src="js/autobahn.min.js"></script>
       <script>
+        function handleCollapsible() {
+            var elems = document.querySelectorAll('.collapsible');
+            var instances = M.Collapsible.init(elems, {});
+        }
+        handleCollapsible();
+
+        function addGame(game) {
+            // add a new game into games list
+            var games_list = document.getElementById("games_list");
+            var listElem = document.createElement("li");
+
+            var headerDiv = document.createElement("div");
+            headerDiv.className = "collapsible-header";
+            headerDiv.appendChild(document.createTextNode("Game #"+game.gameId));
+            listElem.appendChild(headerDiv);
+            if (!game.haveGamesStarted) {
+                //Players can join games
+                var joinBtn = document.createElement("button");
+                joinBtn.className = "btn-small waves-effect waves-light";
+                joinBtn.style = "margin-left: auto;";
+                joinBtn.type = "button";
+                joinBtn.appendChild(document.createTextNode("Join Game"));
+                iconElem = document.createElement("i");
+                iconElem.className = "material-icons right";
+                iconElem.style="margin-right: 0px;";
+                iconElem.appendChild(document.createTextNode("send"));
+                joinBtn.appendChild(iconElem);
+                headerDiv.appendChild(joinBtn);
+            }
+            else if (!game.haveGamesEnded) {
+                var badge = document.createElement("span");
+                badge.className="new badge red";
+                badge["data-badge-caption"] = "Ended";
+                headerDiv.appendChild(badge);
+            }
+            else {
+                var badge = document.createElement("span");
+                badge.className="new badge blue";
+                badge["data-badge-caption"] = "Already Started";
+                headerDiv.appendChild(badge);
+            }
+            
+            var bodyDiv = document.createElement("div");
+            bodyDiv.className = "collapsible-body";
+            var timeoutStr = "Stop the Game";
+            if (game.timeoutBehaviour == 0) {
+                timeoutStr = "Start the Game Anyway";
+            }
+            var content = "Game Id: "+game.gameId;
+            bodyDiv.appendChild(document.createTextNode(content));
+            bodyDiv.appendChild(document.createElement("br"));
+            content = "Number of Players: "+game.numberOfPlayers;
+            bodyDiv.appendChild(document.createTextNode(content));
+            bodyDiv.appendChild(document.createElement("br"));
+            content = "Timeout Behaviour: "+timeoutStr;
+            bodyDiv.appendChild(document.createTextNode(content));
+            bodyDiv.appendChild(document.createElement("br"));
+            content = "Number of Games: "+game.noOfGames;
+            bodyDiv.appendChild(document.createTextNode(content));
+            bodyDiv.appendChild(document.createElement("br"));                       
+            listElem.appendChild(bodyDiv);
+
+            games_list.appendChild(listElem);
+        }
+        
+        // To be called just before populating a game into the 'ul' games_list
+        function handleGameListContainer() {
+            var games_list_container = document.getElementById("games_list_container");
+            var empty_banner = document.getElementById("empty_banner");
+            if (empty_banner != null) {
+                games_list_container.removeChild(empty_banner);
+            }
+            if (document.getElementById("games_list") == null) {
+                var games_list = document.createElement("ul");
+                games_list.className = "collapsible";
+                games_list.id = "games_list";
+                games_list_container.appendChild(games_list);
+            }
+        }
+
         //fetch the list of currently running games
+        const connection = new autobahn.Connection({url: 'ws://127.0.0.1:3000/ws', realm: 'realm1'});
+
+        connection.onopen = session => {
+          window.session = session;
+          session.call("com.monopoly.fetch_games").then(
+            function (res) {
+                if(res.length > 0) {
+                    handleGameListContainer();
+
+                    for(var i=0;i<res.length;i++) {
+                        console.log(res[i]);
+                        addGame(res[i]);
+                    }
+                    handleCollapsible();
+
+                }
+            });
+        };
+
+        connection.open();
+
+        document.getElementById("newgame").onclick = function () {
+            console.log("Inside newgame onclick");
+            var nplayers = document.getElementById("nplayers").value;
+            var ngames = document.getElementById("ngames").value;
+            var timeout = 0;
+            if(document.getElementsByName("timeout")[0].checked) {
+                timeout = 1;
+            }
+
+            window.session.call("com.monopoly.init_game",[nplayers,timeout,ngames]).then(
+                function (res) {
+                    console.log(res);
+                    if(res != -1) {
+                        handleGameListContainer();
+                        addGame(res);
+                        handleCollapsible();
+                    }         
+                }
+            );
+        }
+
       </script>
       <!--<script>
           document.addEventListener('DOMContentLoaded', function() {
