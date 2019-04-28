@@ -82,6 +82,7 @@
             // add a new game into games list
             var games_list = document.getElementById("games_list");
             var listElem = document.createElement("li");
+            listElem.id = "game_"+game.gameId;
 
             var headerDiv = document.createElement("div");
             headerDiv.className = "collapsible-header";
@@ -104,13 +105,13 @@
             else if (!game.haveGamesEnded) {
                 var badge = document.createElement("span");
                 badge.className="new badge red";
-                badge["data-badge-caption"] = "Ended";
+                badge.dataset.badgeCaption = "Ended";
                 headerDiv.appendChild(badge);
             }
             else {
                 var badge = document.createElement("span");
                 badge.className="new badge blue";
-                badge["data-badge-caption"] = "Already Started";
+                badge.dataset.badgeCaption = "Already Started";
                 headerDiv.appendChild(badge);
             }
             
@@ -152,6 +153,43 @@
             }
         }
 
+        function uiUpdater(res) {
+            console.log("Inside uiUpdater");
+            var listElem = document.getElementById("game_"+res[0]);
+            if (listElem != null) {
+                var headerDiv = listElem.getElementsByTagName("div")[0];
+                if (res[1] == 0) {
+                    var buttons = headerDiv.getElementsByTagName("button");
+                    var spans = headerDiv.getElementsByTagName("span");
+                    if (buttons.length > 0) {
+                        headerDiv.removeChild(buttons[0]);
+                    }
+                    if (spans.length > 0) {
+                        headerDiv.removeChild(spans[0]);
+                    }
+                    var badge = document.createElement("span");
+                    badge.className="new badge red";
+                    badge.dataset.badgeCaption = "Ended";
+                    headerDiv.appendChild(badge);
+
+                }
+                else if (res[1] == 1) {
+                    var buttons = headerDiv.getElementsByTagName("button");
+                    var spans = headerDiv.getElementsByTagName("span");
+                    if (buttons.length > 0) {
+                        headerDiv.removeChild(buttons[0]);
+                    }
+                    if (spans.length > 0) {
+                        headerDiv.removeChild(spans[0]);
+                    }
+                    var badge = document.createElement("span");
+                    badge.className="new badge blue";
+                    badge.dataset.badgeCaption = "Already Started";
+                    headerDiv.appendChild(badge);
+                }
+            }
+        }
+
         //fetch the list of currently running games
         const connection = new autobahn.Connection({url: 'ws://127.0.0.1:3000/ws', realm: 'realm1'});
 
@@ -170,6 +208,8 @@
 
                 }
             });
+
+          session.subscribe("com.monopoly.ui.comm_channel",uiUpdater);
         };
 
         connection.open();
