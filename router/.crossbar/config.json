@@ -41,6 +41,13 @@
           "paths": {
             "/": {
               "type": "static",
+              "directory": "../../landing",
+              "options": {
+                "enable_directory_listing": true
+              }
+            },
+            "player": {
+              "type": "static",
               "directory": "/app/build",
               "options": {
                 "enable_directory_listing": true
