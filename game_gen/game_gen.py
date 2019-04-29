@@ -19,6 +19,7 @@ class Game:
 		self.haveGamesStarted = False
 		# noOfGames could be > 1. This Boolean thus represents when all these games have been completed
 		self.haveGamesEnded = False
+		self.playersJoined = 0
 	
 	def serialize(self):
 		return {
@@ -28,7 +29,8 @@ class Game:
 			"noOfGames":self.noOfGames,
 			"gamesCompleted":self.gamesCompleted,
 			"haveGamesStarted":self.haveGamesStarted,
-			"haveGamesEnded":self.haveGamesEnded
+			"haveGamesEnded":self.haveGamesEnded,
+			"playersJoined":self.playersJoined
 			}
 
 class GameGen(ApplicationSession):
@@ -84,7 +86,7 @@ class GameGen(ApplicationSession):
 		pass
 	
 	#@inlineCallbacks
-	def adjudicatorCommChannel(self,gameId,messageType,message):
+	def adjudicatorCommChannel(self,gameId,messageType):
 		currentGame = None
 		
 		for game in self.games_list:
@@ -95,6 +97,7 @@ class GameGen(ApplicationSession):
 		if currentGame == None:
 			return False
 		
+		message = None
 		if messageType == 0: # games for this adjudicator have started
 			currentGame.haveGamesStarted = True
 		elif messageType == 1:
@@ -103,8 +106,11 @@ class GameGen(ApplicationSession):
 			currentGame.haveGamesEnded = True
 		elif messageType == 2:
 			currentGame.gamesCompleted += 1
+			message = currentGame.gamesCompleted
+		elif messageType == 3: # an agent has joined the game
+			currentGame.playersJoined += 1
+			message = currentGame.playersJoined
 			
-		#TODO: Send these to the UI as updates
 		self.publish("com.monopoly.ui.comm_channel", [gameId,messageType,message])
 	
 	def fetch_games(self):

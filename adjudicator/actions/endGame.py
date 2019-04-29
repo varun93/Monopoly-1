@@ -21,13 +21,17 @@ class EndGame(Action):
 		self.context.winCount[winner]+=1
 		#Allow the agent to make changes based on current game results
 		self.context.gamesCompleted+=1
+		
+		#update to GameGen which is then passed to the UI
+		self.context.call("com.monopoly.game{}.comm_channel".format(self.context.gameId),self.context.gameId,2)
+		
 		self.timeoutId = reactor.callLater(self.ACTION_TIMEOUT, partial(self.timeoutHandler,"END_GAME_IN"))
 		agent_attributes = self.context.genAgentChannels(None,requiredChannel = "END_GAME_IN")
 		if self.context.gamesCompleted < self.NO_OF_GAMES:
 			self.context.publish(agent_attributes["END_GAME_IN"], winner)
 		else:
 			#All the games have completed
-			self.context.publish(agent_attributes["END_GAME_IN"], winner)
+			#self.context.publish(agent_attributes["END_GAME_IN"], winner)
 			self.context.publish(agent_attributes["END_GAME_IN"], self.context.winCount)
 	
 	def subscribe(self,*args):

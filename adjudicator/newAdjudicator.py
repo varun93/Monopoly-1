@@ -104,15 +104,15 @@ class Adjudicator(ApplicationSession):
 		
 		self.currentPlayerCount+=1
 		self.agents.append(agentId)
-		print("Current Player Count: {}".format(self.currentPlayerCount))
-		print("Agent with id "+agentId+" has been registered.")
+		#print("Agent with id "+agentId+" has been registered.")
+		yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,3)
 		
 		# enough people have joined. start the game.
 		if self.currentPlayerCount == self.EXPECTED_PLAYER_COUNT:
 			self.gameStarted = True
 			if self.timeoutId.active():
 				self.timeoutId.cancel()
-			yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
+			yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0)
 			self.startGame()
 		
 		return True
@@ -124,16 +124,16 @@ class Adjudicator(ApplicationSession):
 			if self.currentPlayerCount < self.EXPECTED_PLAYER_COUNT:
 				if self.timeoutBehaviour == TimeoutBehaviour.PLAY_ANYWAY and len(self.agents)>=2:
 					self.gameStarted = True
-					yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
+					yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0)
 					self.startGame()
 				else:
 					#only one player joined or not enough people joined and game is set to exit in
 					#such a case.
-					yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
+					yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1)
 					self.leave()
 			else:
 				self.gameStarted = True
-				yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0,None)
+				yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,0)
 				self.startGame()
 	
 	#TODO: Synchronization
@@ -202,7 +202,7 @@ class Adjudicator(ApplicationSession):
 		self.confirmReg.unregister()
 		for subscribeKey in self.subscribeKeys:
 			subscribeKey.unsubscribe()
-		yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1,None)
+		yield self.call("com.monopoly.game{}.comm_channel".format(self.gameId),self.gameId,1)
 		self.leave()
 	
 	#Supposedly called after we call self.leave()
