@@ -108,7 +108,7 @@
                 iconElem.style="margin-right: 0px;";
                 iconElem.appendChild(document.createTextNode("send"));
                 joinBtn.appendChild(iconElem);
-                headerDiv.appendChild(joinBtn);
+                //headerDiv.appendChild(joinBtn);
             }
             else if (!game.haveGamesEnded) {
                 var badge = document.createElement("span");
@@ -225,7 +225,7 @@
         }
 
         //fetch the list of currently running games
-        const connection = new autobahn.Connection({url: 'ws://127.0.0.1:3000/ws', realm: 'realm1'});
+        const connection = new autobahn.Connection({url: 'ws://127.0.0.1:80/ws', realm: 'realm1'});
 
         connection.onopen = session => {
           window.session = session;
