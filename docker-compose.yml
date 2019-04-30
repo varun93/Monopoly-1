@@ -14,7 +14,11 @@ services:
     build: ./adjudicator
     networks:
       - gateway
-    command: ["python", "newAdjudicator.py"]
+  game_gen:
+    build: ./game_gen
+    networks:
+      - gateway
+    command: ["python", "game_gen.py"]
   webapp:
     build: ./web-ui
     container_name: webapp
