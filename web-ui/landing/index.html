@@ -78,6 +78,13 @@
         }
         handleCollapsible();
 
+        function joinGame(e) {
+            e.stopPropagation();
+            var gameId = e.path[2].id.split("_")[1];
+            window.sessionStorage.setItem("gameId",gameId);
+            window.location.replace("player");
+        }
+
         function addGame(game) {
             // add a new game into games list
             var games_list = document.getElementById("games_list");
@@ -88,12 +95,13 @@
             headerDiv.className = "collapsible-header";
             headerDiv.appendChild(document.createTextNode("Game #"+game.gameId));
             listElem.appendChild(headerDiv);
-            if (!game.haveGamesStarted) {
+            if (!game.haveGamesStarted && !game.haveGamesEnded) {
                 //Players can join games
                 var joinBtn = document.createElement("button");
                 joinBtn.className = "btn-small waves-effect waves-light";
                 joinBtn.style = "margin-left: auto;";
                 joinBtn.type = "button";
+                joinBtn.onclick = joinGame;
                 joinBtn.appendChild(document.createTextNode("Join Game"));
                 iconElem = document.createElement("i");
                 iconElem.className = "material-icons right";
