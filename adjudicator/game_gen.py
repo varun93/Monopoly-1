@@ -47,6 +47,7 @@ class GameGen(ApplicationSession):
 		#called by the Start New Game UI
 		yield self.register(self.init_game,"com.monopoly.init_game")
 		yield self.register(self.fetch_games,"com.monopoly.fetch_games")
+		yield self.register(self.init_game,"com.monopoly.add_our_agent")
 		
 	@inlineCallbacks
 	def init_game(self,*args):
@@ -125,11 +126,16 @@ class GameGen(ApplicationSession):
 		except:
 			return False
 		
-		#sys.executable gets the python executable used to start the current script
-		#popen_id = Popen([sys.executable,"../agents/TeamBoardwalk/agent_init.py",str(gameId)])
-		#for docker, use the code below
-		popen_id = Popen([sys.executable,"./sampleAgents/TeamBoardwalk/agent_init.py",str(gameId)])
+		found = False
+		for game in self.games_list:
+			if game.gameId == gameId:
+				found = True
+		if not found:
+			return False
 		
+		#sys.executable gets the python executable used to start the current script
+		popen_id = Popen([sys.executable,"./sampleAgents/TeamBoardwalk/agent_init.py",str(gameId)])
+		print("Our agent was added into game #"+str(gameId))
 		return True
 			
 		
