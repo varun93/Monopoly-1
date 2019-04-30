@@ -73,7 +73,7 @@ class GameGen(ApplicationSession):
 		yield self.register(self.adjudicatorCommChannel,"com.monopoly.game{}.comm_channel".format(gameId))
 		
 		#sys.executable gets the python executable used to start the current script
-		popen_id = Popen([sys.executable,"../adjudicator/newAdjudicator.py",str(gameId),str(numberOfPlayers),str(timeoutBehaviour),str(noOfGames)])
+		popen_id = Popen([sys.executable,"./newAdjudicator.py",str(gameId),str(numberOfPlayers),str(timeoutBehaviour),str(noOfGames)])
 		
 		game = Game(gameId,numberOfPlayers,timeoutBehaviour,noOfGames,popen_id)
 		self.games_list.append(game)
@@ -116,6 +116,22 @@ class GameGen(ApplicationSession):
 	def fetch_games(self):
 		print("Inside fetch_games")
 		return [game.serialize() for game in self.games_list]
+	
+	def addOurAgent(self,*args):
+		if len(args) < 1:
+			return False
+		try:
+			gameId = int(args[0])
+		except:
+			return False
+		
+		#sys.executable gets the python executable used to start the current script
+		#popen_id = Popen([sys.executable,"../agents/TeamBoardwalk/agent_init.py",str(gameId)])
+		#for docker, use the code below
+		popen_id = Popen([sys.executable,"./sampleAgents/TeamBoardwalk/agent_init.py",str(gameId)])
+		
+		return True
+			
 		
 	def onDisconnect(self):
 		if reactor.running:
