@@ -47,6 +47,7 @@ class Adjudicator(ApplicationSession):
 		
 		self.TIMEOUT = 300 #will wait 5 min for all players to join
 		
+		self.agentCounter = 0
 		self.currentPlayerCount = 0
 		self.agents = [] #Stores ids of agents in the current game
 		
@@ -152,7 +153,10 @@ class Adjudicator(ApplicationSession):
 			agent_options = None
 
 		#generate a random string as agent_id
-		agent_id = ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(50))
+		#agent_id = ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(50))
+		self.agentCounter += 1
+		agent_id = str(self.agentCounter)
+		
 		self.agent_options[agent_id] = agent_options	
 		
 		agent_attributes = self.genAgentChannels(agent_id)
@@ -305,7 +309,7 @@ if __name__ == '__main__':
 	if len(sys.argv) < 5:
 		sys.exit("Not enough arguments")
 	import six
-	url = environ.get("CBURL", u"ws://127.0.0.1:80/ws")
+	url = environ.get("CBURL", u"ws://127.0.0.1:3000/ws")
 	if six.PY2 and type(url) == six.binary_type:
 		url = url.decode('utf8')
 	realm = environ.get('CBREALM', u'realm1')

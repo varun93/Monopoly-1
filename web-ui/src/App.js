@@ -189,8 +189,8 @@ class App extends Component {
 
       const result = state[0] || {};
 
-      if (state[0]) {
-        if (state[0].length === 1) {
+      if (result) {
+        if (typeof(result) === "string") {
           let winMessage = "lost";
 
           if (myId in result) {

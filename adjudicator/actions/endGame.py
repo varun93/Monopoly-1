@@ -14,7 +14,7 @@ class EndGame(Action):
 		resultsArray = self.final_winning_condition()
 		log("win","Agent "+str(resultsArray[0])+" won the Game.")
 		
-		self.setPhase(Phase.NO_ACTION)
+		self.state.setPhase(Phase.NO_ACTION)
 		self.state.setPhasePayload(None)
 		self.agentsYetToRespond = list(self.PLAY_ORDER)
 		#inside self.canAccessSubscribe, we remove elements from agentsYetToRespond. So, make a new copy here
