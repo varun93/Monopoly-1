@@ -1,11 +1,11 @@
 # Monopoly
 
 Data Science Project CSE 519
-Monopoly game playing AI Agent
+Monopoly game playing AI Agent and Adjudicator
 
-## Run the code
+## Installation and Setup
 
-`Install docker`
+`Install docker and docker-compose`
 
 **Start**
 
@@ -13,8 +13,9 @@ Monopoly game playing AI Agent
 docker-compose build
 docker create -v /app --name webapp <docker-imagefile>
 docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --volumes-from webapp -p 80:80 crossbario/crossbar
-docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:80/ws" -e CBREALM="realm1" --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/newAdjudicator.py
+docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:80/ws" -e CBREALM="realm1" --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/game_gen.py
 ```
+Note: The name of the imagefile should be in the stdout of `docker-compose build`
 
 ## Issue Log
 
