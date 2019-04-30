@@ -10,9 +10,9 @@ class ConductBSM(Action):
 		self.bsmActions = []
 		currentPlayerIndex = self.state.getCurrentPlayerIndex()
 		for i in crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
-				playerId = self.PLAY_ORDER[i]
-				if not self.state.hasPlayerLost(playerId):
-					self.publishAction(playerId,"BSM_IN")
+			playerId = self.PLAY_ORDER[i]
+			if self.canAgentDoBSM[playerId]:
+				self.publishAction(playerId,"BSM_IN")
 		
 	def subscribe(self,*args):
 		"""
@@ -62,6 +62,8 @@ class ConductBSM(Action):
 							log("bsm","Player "+str(agentId)+" wants to sell houses/hotels.")
 							log("bsm",str(action[1]))
 							actionCount+=1
+					elif self.isOption(agentId,"PREMPTIVE_BSM"):
+						self.canAgentDoBSM[agentId] = False
 					
 				"""All agents have responded or have timed out"""
 				if actionCount == 0:

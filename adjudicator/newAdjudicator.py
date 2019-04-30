@@ -82,9 +82,10 @@ class Adjudicator(ApplicationSession):
 		}
 		
 		self.agent_default_options = {
-			"START_TURN": True,
-			"END_TURN"	: True,
-			"DICE_ROLL"	: True
+			"START_TURN": False,
+			"END_TURN"	: False,
+			"DICE_ROLL"	: False,
+			"PREMPTIVE_BSM":True
 		}
 		
 		self.agent_options = {}

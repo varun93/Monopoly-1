@@ -70,6 +70,12 @@ class TradeResponse(Action):
 		self.context.conductBSM.previousAction = "handleTrade"
 		self.context.conductBSM.nextAction = nextAction
 		self.context.conductBSM.BSMCount = 0
+		self.context.conductBSM.canAgentDoBSM = {}
+		for agentId in self.PLAY_ORDER:
+			if self.state.hasPlayerLost(agentId):
+				self.context.conductBSM.canAgentDoBSM[agentId] = False
+			else:
+				self.context.conductBSM.canAgentDoBSM[agentId] = True
 		self.context.conductBSM.setContext(self.context)
 		self.context.conductBSM.publish()
 	
