@@ -4,7 +4,6 @@ import Autobahn from "autobahn";
 import Board from "components/Board";
 import JailDecision from "components/JailDecision";
 import ToastMessage from "components/ToastMessage";
-import Button from "react-bootstrap/Button";
 import { substituteEndpoint, calculateRent } from "utils";
 import {
   receieveMessage,
@@ -22,12 +21,13 @@ import { setTimeout } from "timers";
 class App extends Component {
   constructor(props, context) {
     super(props, context);
-    this.state = {
-      showStartButton: true
-    };
     window.session = null;
-    // currently hardcoding game id
-    this.gameId = 1;
+    //this.gameId = 1;
+    this.gameId = window.sessionStorage.getItem("gameId");
+    if (this.gameId == null) {
+      window.location.replace("/");
+    }
+    this.subIds = [];
   }
 
   //deprecated
@@ -42,34 +42,26 @@ class App extends Component {
 
     connection.onopen = session => {
       window.session = session;
+
+      const joinGameUri = substituteEndpoint(
+        constants.JOIN_GAME_ENDPOINT,
+        null,
+        this.gameId
+      );
+
+      session.call(joinGameUri).then(function (response){
+        const { setMyId, setEndpoints } = this.props;
+        const myId = response["agent_id"];
+        setMyId(myId);
+        delete response["agent_id"];
+        setEndpoints(response);
+        this.subscribeToEvents(response);
+        session.call(response["CONFIRM_REGISTER"]);
+      }.bind(this));
     };
 
     connection.open();
   }
-
-  startGame = async () => {
-    let response = null;
-
-    if (!window.session) return null;
-
-    const session = window.session;
-
-    const joinGameUri = substituteEndpoint(
-      constants.JOIN_GAME_ENDPOINT,
-      null,
-      this.gameId
-    );
-
-    response = await session.call(joinGameUri);
-    const { setMyId, setEndpoints } = this.props;
-    const myId = response["agent_id"];
-    setMyId(myId);
-    delete response["agent_id"];
-    setEndpoints(response);
-    this.subscribeToEvents(response);
-    response = await session.call(response["CONFIRM_REGISTER"]);
-    this.setState({ showStartButton: false });
-  };
 
   /* Receivers  */
   receiveRequest = (phase, state) => {
@@ -82,19 +74,25 @@ class App extends Component {
     //not implementing trade for the time being; just rejecting all trade responses
     window.session.subscribe(response["RESPOND_TRADE_IN"], state => {
       window.session.publish(response["RESPOND_TRADE_OUT"], [false]);
-    });
+    }).then(subId => { this.subIds.push(subId); });
     window.session.subscribe(response["TRADE_IN"], state => {
       window.session.publish(response["TRADE_OUT"], [false]);
-    });
+    }).then(subId => { this.subIds.push(subId); });
 
-    window.session.subscribe(response["END_TURN_IN"], state => {
-      window.session.publish(response["END_TURN_OUT"]);
-    });
+    //start game
+    window.session.subscribe(response["START_GAME_IN"], state => {
+      this.receiveRequest.bind(this, "start_game");
+      window.session.publish(response["START_GAME_OUT"], []);
+    }).then(subId => { this.subIds.push(subId); });
 
     window.session.subscribe(
       response["START_TURN_IN"],
       this.receiveRequest.bind(this, "start_turn")
-    );
+    ).then(subId => { this.subIds.push(subId); });
+
+    window.session.subscribe(response["END_TURN_IN"], state => {
+      window.session.publish(response["END_TURN_OUT"]);
+    }).then(subId => { this.subIds.push(subId); });
 
     //how do you want to get out jail?
     window.session.subscribe(response["JAIL_IN"], state => {
@@ -102,7 +100,7 @@ class App extends Component {
       state = JSON.parse(state);
       receieveMessage(state, "jail_decision");
       toggleJailDecisionModal(true);
-    });
+    }).then(subId => { this.subIds.push(subId); });
 
     //generic receive state
     window.session.subscribe(response["BROADCAST_IN"], state => {
@@ -156,7 +154,7 @@ class App extends Component {
         receieveMessage(state, phase);
         window.session.publish(response["BROADCAST_OUT"], []);
       }
-    });
+    }).then(subId => { this.subIds.push(subId); });
 
     //auction property
     window.session.subscribe(response["AUCTION_IN"], state => {
@@ -165,7 +163,7 @@ class App extends Component {
       const propertyToAuction = state.phase_payload;
       receieveMessage(state, "auction_property");
       togglePropertyModal(true, propertyToAuction);
-    });
+    }).then(subId => { this.subIds.push(subId); });
 
     //buy property
     window.session.subscribe(response["BUY_IN"], state => {
@@ -174,7 +172,7 @@ class App extends Component {
       const propertyToBuy = parseInt(state.phase_payload);
       receieveMessage(state, "buy_property");
       togglePropertyModal(true, propertyToBuy);
-    });
+    }).then(subId => { this.subIds.push(subId); });
 
     //conduct a BSM
     window.session.subscribe(response["BSM_IN"], state => {
@@ -182,50 +180,45 @@ class App extends Component {
       const { receieveMessage } = this.props;
       receieveMessage(state, "bsm");
       window.session.publish(response["BSM_OUT"], []);
-    });
+    }).then(subId => { this.subIds.push(subId); });
 
     //end game
     window.session.subscribe(response["END_GAME_IN"], state => {
       const { myId, toggleToastMessageModal } = this.props;
+      var unsub = false;
+
       const result = state[0] || {};
 
-      if (state[0] && state[0][myId]) {
-        let winner = "";
+      if (state[0]) {
+        if (state[0].length === 1) {
+          let winMessage = "lost";
 
-        if (result[myId] === 1) {
-          winner = "Human";
-        } else {
-          winner = "Robot";
+          if (myId in result) {
+            winMessage = "won";
+          }
+          toggleToastMessageModal(true, "Game Ended", `You ${winMessage} this game.`);
         }
-        toggleToastMessageModal(true, "Game Ended", `${winner} won`);
+        else {
+          //This is the final winCount message. Start teardown.
+          //toggleToastMessageModal(true, "Game Ended", `All the games have ended.`);
+          unsub = true;
+        }
       }
 
       window.session.publish(response["END_GAME_OUT"], []);
-    });
+      if (unsub) {
+        for (var subId in this.subIds) {
+          subId.unsubscribe();
+        }
+      }
 
-    //start game
-    window.session.subscribe(response["START_GAME_IN"], state => {
-      this.receiveRequest.bind(this, "start_game");
-      window.session.publish(response["START_GAME_OUT"], []);
-    });
+    }).then(subId => { this.subIds.push(subId); });
   };
 
   render() {
-    const { startGame } = this;
-    const { showStartButton } = this.state;
     return (
       <div className="App">
         <Board />
-        {showStartButton && (
-          <Button
-            onClick={startGame}
-            style={{ marginTop: "40px" }}
-            size="lg"
-            variant="success"
-          >
-            Start Game
-          </Button>
-        )}
         <JailDecision />
         <ToastMessage />
       </div>
