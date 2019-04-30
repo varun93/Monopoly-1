@@ -41,7 +41,7 @@
           "paths": {
             "/": {
               "type": "static",
-              "directory": "../../landing",
+              "directory": "/app/landing",
               "options": {
                 "enable_directory_listing": true
               }
