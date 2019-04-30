@@ -1,6 +1,7 @@
 from actions.action import Action
 from config import log
 from constants import board
+from state import Phase
 
 from functools import partial
 from twisted.internet import reactor
@@ -12,7 +13,8 @@ class EndGame(Action):
 		
 		resultsArray = self.final_winning_condition()
 		log("win","Agent "+str(resultsArray[0])+" won the Game.")
-	
+		
+		self.setPhase(Phase.NO_ACTION)
 		self.state.setPhasePayload(None)
 		self.agentsYetToRespond = list(self.PLAY_ORDER)
 		#inside self.canAccessSubscribe, we remove elements from agentsYetToRespond. So, make a new copy here
@@ -31,7 +33,7 @@ class EndGame(Action):
 			self.context.publish(agent_attributes["END_GAME_IN"], winner)
 		else:
 			#All the games have completed
-			#self.context.publish(agent_attributes["END_GAME_IN"], winner)
+			self.context.publish(agent_attributes["END_GAME_IN"], winner)
 			self.context.publish(agent_attributes["END_GAME_IN"], self.context.winCount)
 	
 	def subscribe(self,*args):
