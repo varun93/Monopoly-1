@@ -10,7 +10,8 @@ Monopoly game playing AI Agent
 **Start**
 
 ```
-docker create -v /app --name webapp monopoly-ui
+docker-compose build
+docker create -v /app --name webapp <docker-imagefile>
 docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --volumes-from webapp -p 80:80 crossbario/crossbar
 docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:80/ws" -e CBREALM="realm1" --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/newAdjudicator.py
 ```
