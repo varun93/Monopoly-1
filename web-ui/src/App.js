@@ -52,11 +52,17 @@ class App extends Component {
       session.call(joinGameUri).then(function (response){
         const { setMyId, setEndpoints } = this.props;
         const myId = response["agent_id"];
+        const agentOptions = {
+          "START_TURN": true,
+          "END_TURN"  : true,
+          "DICE_ROLL" : true,
+          "PREMPTIVE_BSM":true
+        };
         setMyId(myId);
         delete response["agent_id"];
         setEndpoints(response);
         this.subscribeToEvents(response);
-        session.call(response["CONFIRM_REGISTER"]);
+        session.call(response["CONFIRM_REGISTER"],agentOptions);
       }.bind(this));
     };
 
