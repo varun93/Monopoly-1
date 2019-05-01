@@ -88,6 +88,10 @@ class Adjudicator(ApplicationSession):
 			"PREMPTIVE_BSM":True
 		}
 		
+		#determines the state to be used as initial state
+		#self.INITIAL_STATE = "DEFAULT"
+		self.INITIAL_STATE = "TEST_BUY_HOUSES"
+		
 		self.agent_options = {}
 		
 		#after timeout, don't wait for new players anymore

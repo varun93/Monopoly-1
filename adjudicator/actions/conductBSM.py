@@ -50,7 +50,7 @@ class ConductBSM(Action):
 						mortgageRequests.append((agentId,action[1]))
 						actionCount+=1
 					elif actionType=="BHS":
-						if self.state.isBuyingHousesSequenceValid(agentId,action[1]) and hasBuyingCapability(agentId,action[1]):
+						if self.state.isBuyingHousesSequenceValid(agentId,action[1]) and self.hasBuyingCapability(agentId,action[1]):
 							buyingHousesRequests.append((agentId,action[1]))
 							log("bsm","Player "+str(agentId)+" wants to buy houses.")
 							log("bsm",str(action[1]))
@@ -189,7 +189,7 @@ class ConductBSM(Action):
 					if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<2:
 						return "N"
 					else:						   
-						action[1][index] = (typecast(prop[0],int,-1),typecast(prop[1],int,-1),typecast(prop[2], bool, False))
+						action[1][index] = (typecast(prop[0],int,-1),typecast(prop[1],int,-1))
 						if action[1][index][0]<0 or action[1][index][0]>self.BOARD_SIZE-1:
 							return "N"
 						if action[1][index][1]<0 or action[1][index][1]>4:

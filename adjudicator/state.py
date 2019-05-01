@@ -36,7 +36,7 @@ class Debt:
 		return {"bank":self.bank,"otherPlayers":self.otherPlayers}
 
 class State:
-	def __init__(self, playerIds):		
+	def __init__(self, playerIds,properties=None):		
 		#List of id's of all the agents in the order in which the game will take place.
 		self.players = list(playerIds)
 		self.TOTAL_NO_OF_PLAYERS = len(playerIds)
@@ -45,7 +45,11 @@ class State:
 		self.currentPlayerId = None
 		#This causes same instance to be repeated for the entire list
 		#[Property(0,False,False,0)]*NUMBER_OF_PROPERTIES
-		self.properties = [Property(0,False,False,0,i) for i in range(NUMBER_OF_PROPERTIES)]
+		if properties == None:
+			self.properties = [Property(0,False,False,0,i) for i in range(NUMBER_OF_PROPERTIES)]
+		else:
+			#no validation here
+			self.properties = properties
 		self.positions = {}
 		self.cash = {}
 		self.bankrupt = {}
