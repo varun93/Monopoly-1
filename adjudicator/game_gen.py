@@ -48,7 +48,7 @@ class GameGen(ApplicationSession):
 		#called by the Start New Game UI
 		yield self.register(self.init_game,"com.monopoly.init_game")
 		yield self.register(self.fetch_games,"com.monopoly.fetch_games")
-		yield self.register(self.init_game,"com.monopoly.add_our_agent")
+		yield self.register(self.addOurAgent,"com.monopoly.add_our_agent")
 		
 	@inlineCallbacks
 	def init_game(self,*args):
