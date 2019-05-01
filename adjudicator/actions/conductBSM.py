@@ -178,38 +178,35 @@ class ConductBSM(Action):
 			if not ( isinstance(action[1], list) or isinstance(action[1], tuple) ):
 				return "N"
 			else:
-				for prop in action[1]:
+				for index,prop in enumerate(action[1]):
 					if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<2:
 						return "N"
 					else:						   
-						firstElem = typecast(prop[0],int,-1)
-						secondElem = typecast(prop[1],int,-1)
-						if firstElem<0 or firstElem>self.BOARD_SIZE-1:
+						action[1][index] = (typecast(prop[0],int,-1),typecast(prop[1],int,-1),typecast(prop[2], bool, False))
+						if action[1][index][0]<0 or action[1][index][0]>self.BOARD_SIZE-1:
 							return "N"
-						if secondElem<0 or secondElem>4:
+						if action[1][index][1]<0 or action[1][index][1]>4:
 							return "N"
 		elif type=="S":
 			if not ( isinstance(action[1], list) or isinstance(action[1], tuple) ):
 				return "N"
 			else:
-				for prop in action[1]:
+				for index,prop in enumerate(action[1]):
 					if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<3:
 						return "N"
-					else:						   
-						firstElem = typecast(prop[0],int,-1)
-						secondElem = typecast(prop[1],int,-1)
-						thirdElem = typecast(prop[2], bool, False)
-						if firstElem<0 or firstElem>self.BOARD_SIZE-1:
+					else:
+						action[1][index] = (typecast(prop[0],int,-1),typecast(prop[1],int,-1),typecast(prop[2], bool, False))
+						if action[1][index][0]<0 or action[1][index][0]>self.BOARD_SIZE-1:
 							return "N"
-						if secondElem<0 or secondElem>4:
+						if action[1][index][1]<0 or action[1][index][1]>4:
 							return "N"
 		elif type == "M" or type=="BHT":
 			if not isinstance(action[1], list) and not isinstance(action[1], tuple):
 				return "N"
 			else:
+				action[1] = [typecast(prop,int,-1) for prop in action[1]]
 				for prop in action[1]:
-					firstElem = typecast(prop,int,-1)
-					if firstElem<0 or firstElem>self.BOARD_SIZE-1:
+					if prop<0 or prop>self.BOARD_SIZE-1:
 						return "N"
 		return type
 	

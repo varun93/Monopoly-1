@@ -36,7 +36,13 @@ class App extends Component {
       null,
       res.gameId
     );
-    const response = await window.session.call(joinGameUri);
+    var agentOptions = {
+      "START_TURN": true,
+      "END_TURN"  : true,
+      "DICE_ROLL" : true,
+      "PREMPTIVE_BSM":true
+    };
+    const response = await window.session.call(joinGameUri,[agentOptions]);
     const { setMyId, setEndpoints } = this.props;
     const myId = response["agent_id"];
     setMyId(myId);

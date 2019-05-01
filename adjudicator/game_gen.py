@@ -7,6 +7,7 @@ from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner
 from autobahn import wamp
 from subprocess import Popen,PIPE
 import json
+import time
 
 class Game:
 	def __init__(self,gameId,numberOfPlayers,timeoutBehaviour,noOfGames,popenId):
@@ -75,6 +76,7 @@ class GameGen(ApplicationSession):
 		
 		#sys.executable gets the python executable used to start the current script
 		popen_id = Popen([sys.executable,"./newAdjudicator.py",str(gameId),str(numberOfPlayers),str(timeoutBehaviour),str(noOfGames)])
+		time.sleep(2)
 		
 		game = Game(gameId,numberOfPlayers,timeoutBehaviour,noOfGames,popen_id)
 		self.games_list.append(game)
