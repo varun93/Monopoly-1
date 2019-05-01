@@ -222,7 +222,6 @@ class App extends Component {
         state = JSON.parse(state);
         const { receieveMessage } = this.props;
         receieveMessage(state, "bsm");
-        window.session.publish(response["BSM_OUT"], []);
       })
       .then(subId => {
         this.subIds.push(subId);
