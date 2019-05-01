@@ -89,8 +89,8 @@ class Adjudicator(ApplicationSession):
 		}
 		
 		#determines the state to be used as initial state
-		# self.INITIAL_STATE = "DEFAULT"
-		self.INITIAL_STATE = "TEST_BUY_HOUSES"
+		self.INITIAL_STATE = "DEFAULT"
+		# self.INITIAL_STATE = "TEST_BUY_HOUSES"
 		
 		self.agent_options = {}
 		
