@@ -59,7 +59,8 @@ const reducer = (state, action) => {
     case actionTypes.RESET_FORM:
       return {
         ...state,
-        formData: {}
+        formData: {},
+        playerAction: ""
       };
 
     case actionTypes.TOGGLE_PROPERTY_MODAL:

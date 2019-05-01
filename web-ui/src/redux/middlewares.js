@@ -43,36 +43,31 @@ const middleware = store => next => async action => {
     const { formData, playerAction } = state;
     const payload = [];
 
-    let keyToExtract = "";
-
-    if (formData === null || !Object.keys(formData)) {
+    if (formData === null || Object.keys(formData).length === 0) {
       window.session.publish(endpoint, []);
       return;
     }
 
     if (playerAction === "buy-constructions") {
-      keyToExtract = "housesBought";
       payload[0] = "BHS";
       payload[1] = Object.keys(formData).map(key => [
         key,
-        formData[key][keyToExtract]
+        formData[key]["housesBought"]
       ]);
     } else if (playerAction === "sell-constructions") {
-      keyToExtract = "housesSold";
       payload[0] = "S";
       payload[1] = Object.keys(formData).map(key => [
         key,
-        formData[key][keyToExtract]
+        formData[key]["housesSold"]
       ]);
     } else if (playerAction === "mortage-unmortgage") {
-      keyToExtract = "mortgaged";
       payload[0] = "M";
-      payload[1] = Object.keys(formData).map(key => key);
+      payload[1] = Object.keys(formData).filter(
+        key => formData[key]["mortgaged"]
+      );
     }
-
     window.session.publish(endpoint, [payload]);
     dispatch(resetForm());
-    //toggle the modal
   }
 
   next(action);

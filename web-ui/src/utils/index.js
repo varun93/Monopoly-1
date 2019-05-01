@@ -87,7 +87,15 @@ export const getSellingCandidates = state => {
     .map(property => property.id);
 };
 
-//check the number in all the monopoly group elements should be zero
+const constructionsInMonopolyGroup = (properties, property, myId) => {
+  const group_elements = property.monopoly_group_elements;
+  for (let index = 0; index < group_elements.length; index++) {
+    const group_element = group_elements[index];
+    if (properties[group_element].houses > 0 || properties[group_element].hotel)
+      return false;
+  }
+};
+
 export const getMortgageCandidates = state => {
   const { properties, myId } = state;
 
@@ -96,6 +104,12 @@ export const getMortgageCandidates = state => {
       if (property.mortgaged) return false;
       if (!amIOwner(property, myId)) return false;
       if (property.houses > 0 || property.hotel) return false;
+      // if (
+      //   completedMonopoly(properties, property, myId) &&
+      //   constructionsInMonopolyGroup(properties, property, myId)
+      // )
+      //   return false;
+
       return true;
     })
     .map(property => property.id);
