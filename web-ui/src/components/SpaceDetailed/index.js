@@ -106,6 +106,7 @@ const SpaceDetailed = ({
               <Button
                 variant="primary"
                 onClick={() => {
+                  setMortgaged(false);
                   setFormData(selectedPropertyIndex, {
                     housesBought,
                     housesSold,

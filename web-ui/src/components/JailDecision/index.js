@@ -38,7 +38,7 @@ const JailDecision = ({
               style={{ marginBottom: "15px" }}
               block
             >
-              Pay $100
+              Pay $50
             </Button>
             <Button
               onClick={() => {
