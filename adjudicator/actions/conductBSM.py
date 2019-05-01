@@ -183,6 +183,8 @@ class ConductBSM(Action):
 			if not ( isinstance(action[1], list) or isinstance(action[1], tuple) ):
 				return "N"
 			else:
+				if len(action[1])<=0:
+					return "N"
 				for index,prop in enumerate(action[1]):
 					if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<2:
 						return "N"
@@ -196,6 +198,8 @@ class ConductBSM(Action):
 			if not ( isinstance(action[1], list) or isinstance(action[1], tuple) ):
 				return "N"
 			else:
+				if len(action[1])<=0:
+					return "N"
 				for index,prop in enumerate(action[1]):
 					if not ( isinstance(prop, list) or isinstance(prop, tuple) ) or len(prop)<3:
 						return "N"
@@ -209,6 +213,8 @@ class ConductBSM(Action):
 			if not isinstance(action[1], list) and not isinstance(action[1], tuple):
 				return "N"
 			else:
+				if len(action[1])<=0:
+					return "N"
 				action[1] = [typecast(prop,int,-1) for prop in action[1]]
 				for prop in action[1]:
 					if prop<0 or prop>self.BOARD_SIZE-1:
