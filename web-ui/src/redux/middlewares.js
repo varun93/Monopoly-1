@@ -45,6 +45,7 @@ const middleware = store => next => async action => {
 
     if (formData === null || Object.keys(formData).length === 0) {
       window.session.publish(endpoint, []);
+      dispatch(resetForm());
       return;
     }
 
