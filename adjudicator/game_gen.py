@@ -47,6 +47,7 @@ class GameGen(ApplicationSession):
 		#called by the Start New Game UI
 		yield self.register(self.init_game,"com.monopoly.init_game")
 		yield self.register(self.fetch_games,"com.monopoly.fetch_games")
+		yield self.register(self.init_game,"com.monopoly.add_our_agent")
 		
 	@inlineCallbacks
 	def init_game(self,*args):
@@ -73,7 +74,7 @@ class GameGen(ApplicationSession):
 		yield self.register(self.adjudicatorCommChannel,"com.monopoly.game{}.comm_channel".format(gameId))
 		
 		#sys.executable gets the python executable used to start the current script
-		popen_id = Popen([sys.executable,"../adjudicator/newAdjudicator.py",str(gameId),str(numberOfPlayers),str(timeoutBehaviour),str(noOfGames)])
+		popen_id = Popen([sys.executable,"./newAdjudicator.py",str(gameId),str(numberOfPlayers),str(timeoutBehaviour),str(noOfGames)])
 		
 		game = Game(gameId,numberOfPlayers,timeoutBehaviour,noOfGames,popen_id)
 		self.games_list.append(game)
@@ -116,6 +117,27 @@ class GameGen(ApplicationSession):
 	def fetch_games(self):
 		print("Inside fetch_games")
 		return [game.serialize() for game in self.games_list]
+	
+	def addOurAgent(self,*args):
+		if len(args) < 1:
+			return False
+		try:
+			gameId = int(args[0])
+		except:
+			return False
+		
+		found = False
+		for game in self.games_list:
+			if game.gameId == gameId:
+				found = True
+		if not found:
+			return False
+		
+		#sys.executable gets the python executable used to start the current script
+		popen_id = Popen([sys.executable,"./sampleAgents/TeamBoardwalk/agent_init.py",str(gameId)])
+		print("Our agent was added into game #"+str(gameId))
+		return True
+			
 		
 	def onDisconnect(self):
 		if reactor.running:
