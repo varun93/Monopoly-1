@@ -100,7 +100,7 @@ const SpaceDetailed = ({
             {/* no set form data required just publish! */}
             {[
               "mortage-unmortgage",
-              "sell-contructions",
+              "sell-constructions",
               "buy-constructions"
             ].indexOf(playerAction) !== -1 && (
               <Button
