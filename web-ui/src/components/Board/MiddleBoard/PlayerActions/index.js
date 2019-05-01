@@ -53,7 +53,6 @@ const PlayerActions = ({
           {(activateBuy || activateSell || activateMortgage) && (
             <Button
               onClick={() => {
-                console.log("Clicked on Publish");
                 publishAction();
               }}
               variant="danger"

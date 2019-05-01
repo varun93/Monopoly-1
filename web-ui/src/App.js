@@ -37,12 +37,12 @@ class App extends Component {
       res.gameId
     );
     var agentOptions = {
-      "START_TURN": true,
-      "END_TURN"  : true,
-      "DICE_ROLL" : true,
-      "PREMPTIVE_BSM":true
+      START_TURN: true,
+      END_TURN: true,
+      DICE_ROLL: true,
+      PREMPTIVE_BSM: true
     };
-    const response = await window.session.call(joinGameUri,[agentOptions]);
+    const response = await window.session.call(joinGameUri, [agentOptions]);
     const { setMyId, setEndpoints } = this.props;
     const myId = response["agent_id"];
     setMyId(myId);
@@ -222,7 +222,7 @@ class App extends Component {
         state = JSON.parse(state);
         const { receieveMessage } = this.props;
         receieveMessage(state, "bsm");
-        // window.session.publish(response["BSM_OUT"], []);
+        window.session.publish(response["BSM_OUT"], []);
       })
       .then(subId => {
         this.subIds.push(subId);
