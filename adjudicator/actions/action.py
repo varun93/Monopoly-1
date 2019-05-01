@@ -7,6 +7,7 @@ import constants
 from dice import Dice
 from state import State
 from cards import Cards
+from utils import replace_last
 
 @six.add_metaclass(abc.ABCMeta)
 class Action:
@@ -72,11 +73,17 @@ class Action:
 		self.context.publish(agent_attributes[actionClass], self.state.toJson())
 	
 	def timeoutHandler(self,actionClass):
+		#The timeout handler doesn't need to be invoked again for the current action
+		if self.timeoutId.active():
+			self.timeoutId.cancel()
 		for agentId in self.agentsYetToRespond:
 			#These agents have timed out. Use default actions for them.
 			#TODO: Lock subscribe so that these agents can't invoke it in between
 			print("Agent "+str(agentId)+" has timed out in class "+str(actionClass))
-			self.subscribe(agentId,self.DEFAULT_ACTIONS[actionClass])
+			default_action = self.DEFAULT_ACTIONS[actionClass]
+			actionClass = replace_last(actionClass,"_IN","_OUT")
+			agent_attributes = self.context.genAgentChannels(agentId,requiredChannel = actionClass)
+			self.context.subscribe(agent_attributes[actionClass],default_action)
 	
 	def canAccessSubscribe(self,agentId):
 		"""

@@ -36,6 +36,10 @@ def check_valid_cash(cash):
 		return 0
 	return cash
 
+def replace_last(source_string, replace_what, replace_with):
+    head, _sep, tail = source_string.rpartition(replace_what)
+    return head + replace_with + tail
+
 #Generator for circular range
 def crange(start, end, modulo):
     if start > end:

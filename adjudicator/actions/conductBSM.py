@@ -6,7 +6,12 @@ from config import log
 class ConductBSM(Action):
 	
 	def publish(self):
-		self.agentsYetToRespond = list(self.state.getLivePlayers())
+		self.agentsYetToRespond = []
+		for agentId in self.state.getLivePlayers():
+			if self.canAgentDoBSM[agentId]:
+				self.agentsYetToRespond.append(agentId)
+		self.expectedSubs = len(self.agentsYetToRespond)
+		print("Expecting subCount: ",self.expectedSubs)
 		self.bsmActions = []
 		currentPlayerIndex = self.state.getCurrentPlayerIndex()
 		for i in crange(currentPlayerIndex,currentPlayerIndex-1,self.TOTAL_NO_OF_PLAYERS):
@@ -32,7 +37,7 @@ class ConductBSM(Action):
 			#want to make this critical section as small as possible.
 			self.bsmActions.append( (agentId,bsmAction) )
 			
-			if self.validSubs>=len(self.state.getLivePlayers()):
+			if self.validSubs>=self.expectedSubs:
 				#if all the bsm requests have been received
 				actionCount = 0
 				mortgageRequests = []
