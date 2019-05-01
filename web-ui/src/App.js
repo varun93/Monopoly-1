@@ -31,6 +31,7 @@ class App extends Component {
 
   startGame = async () => {
     const res = await window.session.call("com.monopoly.init_game", [2, 1, 1]);
+    await window.session.call("com.monopoly.add_our_agent", [res.gameId]);
     const joinGameUri = substituteEndpoint(
       constants.JOIN_GAME_ENDPOINT,
       null,
