@@ -50,7 +50,11 @@ class HandleTrade(Action):
 				"""All agents have responded or have timed out"""
 				if actionCount == 0:
 					#end trade and start the post Trade BSM phase
-					self.publishBSM(self.context.conductBSM.nextAction)
+					#self.publishBSM(self.context.conductBSM.nextAction)
+					#TODO: Temporarily calling the nextAction stored in BSM so that the second BSM is not started here.
+					nextAction = getattr(self.context, self.context.conductBSM.nextAction)
+					nextAction.setContext(self.context)
+					nextAction.publish()
 				else:
 					self.context.tradeResponse.validTradeRequests = validTradeRequests
 					self.context.tradeResponse.setContext(self.context)
