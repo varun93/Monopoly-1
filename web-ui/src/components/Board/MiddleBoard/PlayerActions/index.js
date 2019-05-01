@@ -51,7 +51,14 @@ const PlayerActions = ({
             Mortgage/Unmortgage
           </Button>
           {(activateBuy || activateSell || activateMortgage) && (
-            <Button onClick={() => publishAction()} variant="danger" size="lg">
+            <Button
+              onClick={() => {
+                console.log("Clicked on Publish");
+                publishAction();
+              }}
+              variant="danger"
+              size="lg"
+            >
               Commit Action
             </Button>
           )}

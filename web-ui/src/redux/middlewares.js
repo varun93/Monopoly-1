@@ -58,17 +58,16 @@ const middleware = store => next => async action => {
       payload[0] = "S";
       endpoint = endpoints.BSM_OUT;
     } else if (playerAction === "mortage-unmortgage") {
-      keyToExtract = "mortgage";
+      keyToExtract = "mortgaged";
       payload[0] = "M";
       endpoint = endpoints.BSM_OUT;
     }
+
     payload[1] = Object.keys(formData).map(key => {
-      return [key, formData[key][keyToExtract]];
+      return key;
     });
 
-    console.log([payload, endpoint]);
-
-    window.session.publish(endpoint, payload);
+    window.session.publish(endpoint, [payload]);
     //toggle the modal
     dispatch(resetForm());
     next(action);

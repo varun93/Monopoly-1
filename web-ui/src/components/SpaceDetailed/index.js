@@ -27,7 +27,7 @@ const SpaceDetailed = ({
   const space = properties[selectedPropertyIndex];
   const [housesBought, setHousesBought] = useState(0);
   const [housesSold, setHousesSold] = useState(0);
-  const [mortaged, setMortgaged] = useState(false);
+  const [mortgaged, setMortgaged] = useState(false);
   const buyMortgage =
     ["buy_property", "auction_property"].indexOf(phase) !== -1;
   const closeButton = {
@@ -91,7 +91,7 @@ const SpaceDetailed = ({
               <Form.Group controlId="formMortgageProperty">
                 <Form.Check
                   onChange={event => setMortgaged(event.target.checked)}
-                  checked={mortaged}
+                  checked={mortgaged}
                   type="checkbox"
                   label="Mortgage Property"
                 />
@@ -109,7 +109,7 @@ const SpaceDetailed = ({
                   setFormData(selectedPropertyIndex, {
                     housesBought,
                     housesSold,
-                    mortaged
+                    mortgaged
                   });
                   handleClose();
                 }}

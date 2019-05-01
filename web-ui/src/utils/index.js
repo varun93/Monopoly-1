@@ -87,6 +87,7 @@ export const getSellingCandidates = state => {
     .map(property => property.id);
 };
 
+//check the number in all the monopoly group eleemtns should be zero
 export const getMortgageCandidates = state => {
   const { properties, myId } = state;
 
