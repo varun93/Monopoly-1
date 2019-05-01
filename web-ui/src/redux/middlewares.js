@@ -13,7 +13,6 @@ const middleware = store => next => async action => {
   const endpoint = endpoints.BSM_OUT;
 
   if (action.type === actionTypes.RECEIVE_MESSAGE && action.phase === "bsm") {
-    //execute bsm action
     next(action);
     state = store.getState();
 
@@ -27,15 +26,14 @@ const middleware = store => next => async action => {
       mortgageCandidates.length === 0
     ) {
       window.session.publish(endpoint, []);
-    } else {
-      dispatch(
-        setBSMCandidates({
-          buyingCandidates,
-          sellingCandidates,
-          mortgageCandidates
-        })
-      );
     }
+    dispatch(
+      setBSMCandidates({
+        buyingCandidates,
+        sellingCandidates,
+        mortgageCandidates
+      })
+    );
 
     return;
   }
@@ -48,6 +46,7 @@ const middleware = store => next => async action => {
     let keyToExtract = "";
 
     if (formData === null || !Object.keys(formData)) {
+      window.session.publish(endpoint, []);
       return;
     }
 

@@ -87,16 +87,14 @@ export const getSellingCandidates = state => {
     .map(property => property.id);
 };
 
-//check the number in all the monopoly group eleemtns should be zero
+//check the number in all the monopoly group elements should be zero
 export const getMortgageCandidates = state => {
   const { properties, myId } = state;
 
   return properties
     .filter(property => {
-      if (property.class !== "street") return false;
       if (property.mortgaged) return false;
       if (!amIOwner(property, myId)) return false;
-      //even if it is a completed monopoly there shouldn't be any constructions?
       if (property.houses > 0 || property.hotel) return false;
       return true;
     })

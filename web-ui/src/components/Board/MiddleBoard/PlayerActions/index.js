@@ -58,7 +58,7 @@ const PlayerActions = ({
               variant="danger"
               size="lg"
             >
-              Commit Action
+              Finish BSM
             </Button>
           )}
         </div>
