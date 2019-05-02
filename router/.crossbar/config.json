@@ -36,19 +36,19 @@
           "type": "web",
           "endpoint": {
             "type": "tcp",
-            "port": 80
+            "port": 8080
           },
           "paths": {
             "/": {
               "type": "static",
-              "directory": "/app/landing",
+              "directory": "/app/build",
               "options": {
                 "enable_directory_listing": true
               }
             },
-            "player": {
+            "game": {
               "type": "static",
-              "directory": "/app/build",
+              "directory": "/app/landing",
               "options": {
                 "enable_directory_listing": true
               }

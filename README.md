@@ -10,12 +10,16 @@ Monopoly game playing AI Agent and Adjudicator
 **Start**
 
 ```
-docker-compose build
-docker create -v /app --name webapp <docker-imagefile>
-docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --volumes-from webapp -p 80:80 crossbario/crossbar
-docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:80/ws" -e CBREALM="realm1" --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/game_gen.py
+git clone https://github.com/SanjayThomas/Monopoly.git 
+
+https://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#install_docker
+
+docker network create monopoly_network
+docker build -t webapp web-ui
+docker create -v /app --name webapp web-ui
+docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --network=monopoly_network --volumes-from webapp -p 8080:8080 crossbario/crossbar
+docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:8080/ws" -e CBREALM="realm1" --network=monopoly_network  --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/game_gen.py
 ```
-Note: The name of the imagefile should be in the stdout of `docker-compose build`
 
 ## Issue Log
 

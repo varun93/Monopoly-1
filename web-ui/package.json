@@ -2,7 +2,6 @@
   "name": "react-monopoly",
   "version": "0.1.0",
   "private": true,
-  "homepage": "/player",
   "dependencies": {
     "autobahn": "^18.10.2",
     "bootstrap": "^4.3.1",
