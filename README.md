@@ -17,8 +17,8 @@ https://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#i
 docker network create monopoly_network
 docker build -t webapp web-ui
 docker create -v /app --name webapp web-ui
-docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --network=monopoly_network --volumes-from webapp -p 8080:8080 crossbario/crossbar
-docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:8080/ws" -e CBREALM="realm1" --network=monopoly_network  --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/game_gen.py
+docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --network=monopoly_network --volumes-from webapp -p 3000:3000 crossbario/crossbar
+docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:3000/ws" -e CBREALM="realm1" --network=monopoly_network  --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/game_gen.py
 ```
 
 ## Issue Log
