@@ -225,7 +225,7 @@
         }
 
         //fetch the list of currently running games
-        const connection = new autobahn.Connection({url: 'ws://127.0.0.1:3000/ws', realm: 'realm1'});
+        const connection = new autobahn.Connection({url: 'ws://54.214.216.106:3000/ws', realm: 'realm1'});
 
         connection.onopen = session => {
           window.session = session;
