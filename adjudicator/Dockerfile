@@ -4,7 +4,6 @@ RUN pip install --upgrade autobahn
 
 WORKDIR /app
 COPY . /app
-COPY ../wait-for-it.sh /app
 
 ENV CBURL ws://crossbar:3000/ws
 ENV CBREALM realm1
