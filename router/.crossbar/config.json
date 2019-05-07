@@ -53,7 +53,7 @@
                 "enable_directory_listing": true
               }
             },
-            "our_agent": {
+            "sbu_agent": {
               "type": "static",
               "directory": "/app/build",
               "options": {
