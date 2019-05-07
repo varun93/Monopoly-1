@@ -41,14 +41,21 @@
           "paths": {
             "/": {
               "type": "static",
-              "directory": "/app/build",
+              "directory": "/app/landing",
               "options": {
                 "enable_directory_listing": true
               }
             },
             "game": {
               "type": "static",
-              "directory": "/app/landing",
+              "directory": "/app/game",
+              "options": {
+                "enable_directory_listing": true
+              }
+            },
+            "our_agent": {
+              "type": "static",
+              "directory": "/app/build",
               "options": {
                 "enable_directory_listing": true
               }

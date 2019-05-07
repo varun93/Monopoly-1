@@ -5,4 +5,6 @@ USER 0
 WORKDIR /node
 COPY . /node
 
-EXPOSE 80:80
+EXPOSE 3000:3000
+
+ENTRYPOINT crossbar start

@@ -7,18 +7,13 @@ services:
     networks:
       - gateway
     ports:
-      - "80:80"
+      - "3000:3000"
     volumes:
       - webapp
-  adjudicator:
+  game_gen:
     build: ./adjudicator
     networks:
       - gateway
-  game_gen:
-    build: ./game_gen
-    networks:
-      - gateway
-    command: ["python", "game_gen.py"]
   webapp:
     build: ./web-ui
     container_name: webapp
