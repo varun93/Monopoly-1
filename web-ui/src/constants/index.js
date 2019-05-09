@@ -1,4 +1,4 @@
-export const ROUTER_ENDPOINT = "ws://monopoly-ai.com/ws";
+export const ROUTER_ENDPOINT = "ws://54.185.10.135/ws";
 export const APPLICATION_REALM = "realm1";
 
 // action button string
