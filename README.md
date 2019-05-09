@@ -5,7 +5,7 @@ Monopoly game playing AI Agent and Adjudicator
 
 ## Installation and Setup
 
-`Install docker`
+`Install docker and Docker Compose`
 
 https://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#install_docker
 
@@ -14,11 +14,14 @@ https://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#i
 
 ```
 git clone https://github.com/SanjayThomas/Monopoly.git 
-docker network create monopoly_network
-docker build -t webapp web-ui
-docker create -v /app --name webapp webapp
-docker run -v  $PWD/router:/node -u 0 --rm --name=crossbar -it --network=monopoly_network --volumes-from webapp -p 3000:3000 crossbario/crossbar
-docker run -v $PWD/adjudicator:/app -e CBURL="ws://crossbar:3000/ws" -e CBREALM="realm1" --network=monopoly_network  --rm --link=crossbar -it -d crossbario/autobahn-python:cpy3 python /app/game_gen.py
+cd Monopoly
+docker-compose build
+# To start the Service
+docker-compose up -d 
+# To stop the service
+docker-compose down 
+# remove the volume if a new change has to been made
+docker volume rm monopoly_webapp
 ```
 
 ## Issue Log
