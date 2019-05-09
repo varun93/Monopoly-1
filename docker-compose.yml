@@ -7,16 +7,20 @@ services:
     networks:
       - gateway
     ports:
-      - "3000:3000"
+      - "80:80"
     volumes:
-      - webapp
+      - webapp:/app/
   game_gen:
     build: ./adjudicator
+    restart: on-failure
     networks:
       - gateway
   webapp:
     build: ./web-ui
     container_name: webapp
+    tty: true
+    volumes:
+      - webapp:/app/
 
 networks:
   gateway: {}
