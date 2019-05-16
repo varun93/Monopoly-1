@@ -6,8 +6,6 @@ Full Fledged Monopoly Platform
 
 `Install docker and Docker Compose`
 
-https://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#install_docker
-
 
 **Start**
 
