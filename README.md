@@ -1,7 +1,6 @@
 # Monopoly
 
-Data Science Project CSE 519
-Monopoly game playing AI Agent and Adjudicator
+Full Fledged Monopoly Platform
 
 ## Installation and Setup
 
