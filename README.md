@@ -12,8 +12,8 @@ https://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#i
 **Start**
 
 ```
-git clone https://github.com/SanjayThomas/Monopoly.git 
-cd Monopoly
+git clone repo
+cd repo
 docker-compose build
 # To start the Service
 docker-compose up -d 
