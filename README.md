@@ -2,6 +2,8 @@
 
 Full Fledged Monopoly Platform
 
+Live version can be seen [here](http://monopoly-ai.com/).
+
 ## Installation and Setup
 
 `Install docker and Docker Compose`
